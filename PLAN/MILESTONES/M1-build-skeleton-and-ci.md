@@ -60,7 +60,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
   - approach: ubuntu-latest, on push to master and on PRs. Checkout with submodules, cache `tools/godot/` and `.venv` keyed on `tools/godot.lock`, run `tools/bootstrap.sh`, configure/build/test the `dev` preset, then `tools/run_godot_tests.sh`. Keep it under ~10 minutes (cache the godot-cpp build dir).
   - verify: The workflow passes on this milestone's PR (`gh pr checks --watch`).
   - size: M
-- [ ] M1.P3.T2 — Developer docs
+- [x] M1.P3.T2 — Developer docs
   - files: docs/dev.md, README.md
   - approach: `docs/dev.md` states: bootstrap/build/test commands; the repo layout (core, cli, gdext, game, tools, data, docs); the unit and frame conventions and the one-way visual rule, copied from the board's `# Context and constraints`; where boat data lives. README links to it.
   - verify: Following `docs/dev.md` from a clean clone reproduces a green build and test run.
