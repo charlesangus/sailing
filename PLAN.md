@@ -1,6 +1,6 @@
 ---
 title: Realistic Sailing Sim — J/80 Tech Demo
-status: ready
+status: running
 ship: pr-per-milestone
 publish_decisions: docs/decisions/
 ---
@@ -61,7 +61,7 @@ boat are out.
 
 | ID | Milestone | Status | Deps | Owner | Epic | File |
 |----|-----------|--------|------|-------|------|------|
-| M1 | Build Skeleton and CI | todo | - | | E1 | [M1-build-skeleton-and-ci.md](PLAN/MILESTONES/M1-build-skeleton-and-ci.md) |
+| M1 | Build Skeleton and CI | doing | - | bosley | E1 | [M1-build-skeleton-and-ci.md](PLAN/MILESTONES/M1-build-skeleton-and-ci.md) |
 | M2 | J/80 Reference Dossier | todo | - | | E1 | [M2-j80-reference-dossier.md](PLAN/MILESTONES/M2-j80-reference-dossier.md) |
 | M3 | Rigid Body and Hydrostatics | todo | M1, M2 | | E1 | [M3-rigid-body-and-hydrostatics.md](PLAN/MILESTONES/M3-rigid-body-and-hydrostatics.md) |
 | M4 | Hull Resistance and Foils | todo | M3 | | E1 | [M4-hull-resistance-and-foils.md](PLAN/MILESTONES/M4-hull-resistance-and-foils.md) |
