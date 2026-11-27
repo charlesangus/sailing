@@ -232,3 +232,62 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 - Keel below the hull 0.08523 m^3 vs `volume_from_offsets` + fairing (0.0805 + 0.00612 = 0.08662), -1.6%. The fin and tip alone are 0.07920 m^3 vs 0.0805: about 0.0010 of the gap is the tip, an ellipsoidal cap (2/3 A8 h) where the offsets estimate used pi/4 A8 h, and 0.0003 is linear chord and thickness (a section area quadratic in depth) where the estimate interpolated area linearly. The mesh fairing is 0.00603 m^3 vs the morph's 0.00612; the morph used the centreline gap over the chord unweighted, and the gap is largest at the thin trailing edge.
 - Rudder 0.00954 m^3 vs the morph's 0.00956, -0.2%.
 - The total difference, -0.0014 m^3, is 0.1% of the 1.4029 m^3 displacement. It is within tolerance, so `morph.py` and the hull are unchanged.
+
+## Python-VPP polar
+
+`tools/vpp/run_pyvpp.py` writes `pyvpp_polar_nospi.csv`, a main + jib polar with no spinnaker, and `pyvpp_polar_upwind_check.md`, which compares its upwind speeds with the certificate and lists every input. Run `tools/vpp/fetch_pyvpp.sh` first, then `.venv/bin/python -I tools/vpp/run_pyvpp.py`. The output is deterministic.
+
+### Source
+
+- Python-VPP, Marin Lauber's Python implementation of the ORC VPP: https://github.com/marinlauber/Python-VPP, commit `9b9fe8f3f63d902a1df207691109e42932d0a9bb` (2026-11-23). MIT licence, copyright (c) 2020 Marin Lauber.
+- `fetch_pyvpp.sh` checks that commit out into the gitignored `tools/vpp/vendor/Python-VPP` and installs `tools/vpp/requirements.txt` into `.venv`.
+- PyPI has `python-vpp` 1.0.0 (2026-10-20), but it is not used. It predates commit `3b4b0a3` (2026-11-23), which fixes the residuary-resistance surface being read with its LVR and BTR axes swapped.
+
+### Inputs
+
+- **Sailing condition.** The boat (1438 kg) plus crew, sails and running rigging, 1809 kg in total. Crew is 350 kg, the class maximum (Class Rules 2024 C.4.1); the certificate's default of 411 kg exceeds that maximum. Mainsail 8 kg, jib 5 kg and running rigging 8 kg come from `mass.json`. The boat floats 40.9 mm below the certificate flotation plane.
+- **Hull.** Python-VPP takes canoe-body Lwl, volume, Bwl, Tc, wetted area and maximum section area at the sailing displacement. These are measured on `hull_physics.obj` with `tools/hull/dsyhs_table.hydrostatics` at the waterline where hull plus appendages displace 1809 kg, level trim. The same method at 1438 kg reproduces `hull_hydro.json` to 0.005 m in Lwl and 0.1% in volume. With crew aboard, the flat run aft immerses, so Lwl is 7.146 m against 6.71 m at measurement trim; the certificate's IMS L is 7.237 m. The appendages' volumes are not in `Vol`, which is the canoe body only, as Python-VPP defines it.
+- **Righting arm.** Computed on the union of the hull and appendage meshes, heeled 0-60 deg at level trim and the sailing displacement. The boat's VCG, +0.067 m above the flotation plane, is set so the meshes give the certificate's measured RM of 27.0 kg m per degree at 1438 kg. The certificate prints VCGM as -0.076 m. The 0.143 m difference means the morphed hull has less transverse waterplane inertia than ORC's measured hull; using the measured RM keeps the initial stiffness right. Crew, sails and running rigging are placed on the centreline at the heights listed in the check file.
+- **Foils.** Python-VPP's keel and rudder are trapezoids. The root chord is taken as given. The tip chord is set so chord x span equals the `foils` planform area: keel 0.96 / 0.793 m over 1.263 m, rudder 0.34 / 0.295 m over 1.145 m. Keel t/c 0.126 is thickness integrated over depth divided by chord integrated over depth; the rudder's is 0.12.
+- **Sails.** Main P 9.144 m, E 3.81 m, BAD = BAS 1.30 m, with roach 0.2004 so the area is the measured 20.91 m^2. Jib I = IG 9.563 m, J 2.895 m, LPG = HLP 2.95 m. Python-VPP computes the jib area as 0.5 I LPG = 14.11 m^2, 0.9% above the measured 13.98 m^2. HBI, the height of the base of I, is the freeboard at the mast minus the sinkage.
+- **Sweep.** TWS 6, 8, 10, 12, 14, 16 and 20 kn; TWA 20-180 deg in 1 deg steps; heel at most 35 deg, Python-VPP's default. Python-VPP solves each point for maximum boat speed over speed, heel, leeway, flat and reef.
+
+### CSV
+
+The columns match `orc_polar.csv`. Every point of the sweep is a `fixed` row, which includes the certificate's TWAs 52, 60, 75, 90, 110, 120, 135 and 150. `beat` and `run` are the TWAs on the 1 deg grid with the best upwind and downwind VMG, with the boat speed at that TWA.
+
+### Upwind against the certificate
+
+With the ORC eq. 4.30 crew moment, every upwind point is within 10% of the certificate. Beat VMG is +1.7% to +6.4% (6 kn +2.5%, 20 kn +6.4%), beat boat speed -4.6% to +5.1%, the 52 deg speed -4.3% to +2.2% and the 60 deg speed -4.5% to +0.7%. The beat optimum is inside the 20-180 deg grid at every TWS. The full table is in `pyvpp_polar_upwind_check.md`; the VMG and speed columns, VPP minus ORC:
+
+| TWS kn | ORC beat deg | VPP beat deg | VMG diff | beat bsp diff | 52 diff | 60 diff |
+|---|---|---|---|---|---|---|
+| 6 | 42.5 | 44 | +2.5% | +5.1% | +2.2% | +0.7% |
+| 8 | 41.2 | 38 | +5.2% | +0.5% | -0.8% | -2.3% |
+| 10 | 38.9 | 34 | +1.7% | -4.6% | -3.2% | -3.4% |
+| 12 | 37.8 | 33 | +1.8% | -4.1% | -3.4% | -4.5% |
+| 14 | 37.5 | 32 | +3.8% | -2.9% | -2.9% | -4.2% |
+| 16 | 37.2 | 31 | +4.5% | -2.9% | -2.1% | -3.7% |
+| 20 | 38.1 | 29 | +6.4% | -4.3% | -2.1% | -4.0% |
+
+The vendored crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m, with bmax = 1.4 Bwl (2.70 m), summed with N m righting moments. `run_pyvpp.py` replaces `Yacht._get_RmC` with ORC VPP Documentation 2023 eq. 4.30 (section 4.4.3, https://orc.org/uploads/files/ORC-VPP-Documentation-2023.pdf) in SI. The crew count is CW / 89 kg, 3.93 for 350 kg. All but two crew (LSM above 4.9 m) sit on the rail, at half the certificate beam of 2.488 m; the helm and trimmer sit at 70% of that arm; the sum is multiplied by g and cos(heel). That gives 3401 N m at 20 deg heel, (172 x 1.244 + 178 x 0.871) x 9.81 x cos 20 deg. The 2.5-7.5 deg heel ramp is Python-VPP's. Half the beam as the rail arm slightly overstates it, because the deck-edge half-beam at the crew station is a little less than half the maximum beam.
+
+### Known limitations
+
+- Crew moment: the vendored expression is replaced in `run_pyvpp.py` with ORC eq. 4.30 in SI, as described above. Half the maximum beam as the rail arm slightly overstates the moment.
+- Beat angle: Python-VPP beats 3-9 deg lower than the certificate from 8 kn up (29-34 deg against 37-39 deg at 10-20 kn) and 1.5 deg higher at 6 kn. No beat optimum is on the 20 deg grid floor, so none is grid-limited. The lower angle makes the beat VMG +2% to +6% against the certificate at 8-20 kn.
+- Python-VPP keeps the jib drawing at every angle with no blanketing behind the main, so the best run angles come out at 176-179 deg. This polar is the downwind calibration target.
+- Its keel volume formula ignores thickness.
+- It doubles the rudder aspect ratio.
+- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low. It is for the hydrostatics milestone.
+
+### Estimated inputs
+
+- Crew CG: 0.25 m above the sheer at 5.5 m aft of the stem, which is 0.913 m above the flotation plane.
+- Running rigging at the mast CG height. Sails at the centroids of their tack, head and clew.
+- Level trim, both upright and heeled.
+- Rudder span held at 1.145 m, although sinkage immerses another 0.04 m of blade.
+
+### Downwind
+
+Python-VPP keeps the jib drawing at every TWA and does not blanket it behind the main. The best run VMG falls at 176-179 deg.

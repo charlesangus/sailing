@@ -9,3 +9,4 @@ game/bin/
 game/.godot/
 /data/dsyhs/raw/
 __pycache__/
+/tools/vpp/vendor/
