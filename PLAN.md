@@ -20,8 +20,9 @@ boat are out.
 # Context and constraints
 
 - **Research basis.** The prior-art and feasibility survey is
-  `docs/research/prior-art-survey.md` (copied there by M1; the original is in the project
-  root's `.local/`). It names the sources each force model comes from: ORC VPP docs, DSYHS,
+  `.local/Realistic Sailing Sim — Prior Art & Feasibility Survey.md` in the project root
+  (`../../.local/` from a lane worktree). It is **local only — never commit or copy it into
+  the repo** (the repo is public). It names the sources each force model comes from: ORC VPP docs, DSYHS,
   Python-VPP, Kerner's boat-water model, Masuyama's tacking data, Tessendorf/Arc Blanc ocean.
 - **Stack.** Godot 4 (latest stable 4.x, pinned in M1) front end; a C++20 physics core
   (`core/`, static library `sailcore`) with **no Godot dependency**, wrapped by a godot-cpp

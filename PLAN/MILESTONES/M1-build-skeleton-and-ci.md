@@ -9,7 +9,6 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 
 **In:**
 - `tools/bootstrap.sh`, CMake presets, `core/`, `cli/`, `gdext/`, `game/`, CI workflow, dev docs.
-- The survey copied into `docs/research/`.
 
 **Out:**
 - Any physics (M3 - Rigid Body and Hydrostatics onwards).
@@ -25,7 +24,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 
 ## Phase 1.1: Repo and toolchain
 
-- [ ] M1.P1.T1 — Copy the prior-art survey into the repo
+- [ ] ~~M1.P1.T1 — Copy the prior-art survey into the repo~~ (cancelled: the survey stays local; see Decisions)
   - files: docs/research/prior-art-survey.md
   - approach: Copy `.local/Realistic Sailing Sim — Prior Art & Feasibility Survey.md` (project root) verbatim to `docs/research/prior-art-survey.md`. No edits.
   - verify: `diff` against the source file shows no differences.
@@ -73,3 +72,4 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 
 - 2026-11-27 — CMake + Ninja rather than SCons for godot-cpp: one build system for core, CLI and extension, and presets give CI and worktrees identical commands.
 - 2026-11-27 — Linux only: chosen by the user; the core stays portable C++20 so other platforms are additive later.
+- 2026-11-27 — Prior-art survey stays in `.local/`, never committed: the repo is public and the user wants the survey kept private; M1.P1.T1 cancelled.
