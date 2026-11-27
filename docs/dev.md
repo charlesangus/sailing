@@ -9,7 +9,7 @@ C++20 physics core (`core/`, static library `sailcore`) with no Godot dependency
 - Linux x86_64
 - g++ 13 or newer (C++20)
 - python3 with the `venv` module
-- git, curl, unzip
+- git, curl
 
 No system CMake or Godot is needed. `tools/bootstrap.sh` installs pinned CMake and Ninja into `.venv` and downloads the pinned Godot editor and export templates into `tools/godot/`, verifying their SHA-512 checksums (versions are in `tools/godot.lock`). Network access is required for bootstrap and for the first configure, which fetches Eigen and doctest.
 
@@ -31,7 +31,7 @@ tools/run_godot_tests.sh
 
 `tools/run_godot_tests.sh` expects the `dev` build to exist: it runs `build/dev/cli/sailsim` and the GDExtension library, then runs each `game/tests/*.gd` headless under the bootstrapped Godot.
 
-The first build compiles godot-cpp from source, which takes about 15 minutes on 4 cores. Later builds are incremental.
+The first build compiles godot-cpp from source, which takes about 15 minutes on 4 cores. Later builds are incremental, and CI relies on a ccache cache to avoid that cost on most runs.
 
 The `release` preset (`cmake --preset release`, `cmake --build --preset release`) builds an optimised core, CLI and GDExtension with tests off. The Godot test script uses the `dev` build.
 

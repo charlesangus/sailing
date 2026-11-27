@@ -14,14 +14,20 @@ source "$lock"
 if [ ! -x "$root/.venv/bin/python" ]; then
     python3 -m venv "$root/.venv"
 fi
-"$root/.venv/bin/python" -m pip install --quiet --disable-pip-version-check \
-    "cmake==$CMAKE_VERSION" "ninja==$NINJA_VERSION"
+if [ "$("$root/.venv/bin/python" -m pip list --format=freeze 2>/dev/null | grep -ciE "^(cmake==$CMAKE_VERSION|ninja==$NINJA_VERSION)$")" -ne 2 ]; then
+    "$root/.venv/bin/python" -m pip install --quiet --disable-pip-version-check \
+        "cmake==$CMAKE_VERSION" "ninja==$NINJA_VERSION"
+fi
 
 # Verify before anything is unpacked; a bad file is deleted so it is never reused.
 fetch() {
     local url="$1" sha="$2" out="$3"
     if [ -f "$out" ]; then
-        return 0
+        if [ "$(sha512sum "$out" | cut -d' ' -f1)" = "$sha" ]; then
+            return 0
+        fi
+        echo "bootstrap: cached $out failed checksum, re-downloading" >&2
+        rm -f "$out"
     fi
     local part="$out.part"
     if ! curl --fail --location --silent --show-error -o "$part" "$url"; then

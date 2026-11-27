@@ -12,6 +12,7 @@ target_include_directories(sailcore
 )
 target_link_libraries(sailcore PUBLIC Eigen3::Eigen)
 target_compile_features(sailcore PUBLIC cxx_std_20)
+set_target_properties(sailcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 sail_enable_warnings(sailcore)
 
 if(SAIL_BUILD_TESTS)
@@ -28,6 +29,7 @@ if(SAIL_BUILD_TESTS)
 
     add_executable(sailcore_tests tests/test_main.cpp tests/test_version.cpp)
     target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest)
+    target_compile_definitions(sailcore_tests PRIVATE SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}")
     sail_enable_warnings(sailcore_tests)
     doctest_discover_tests(sailcore_tests)
 endif()

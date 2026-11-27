@@ -7,13 +7,22 @@ cd "$repo_root"
 godot="$repo_root/tools/godot/godot"
 cli="$repo_root/build/dev/cli/sailsim"
 
+if [[ ! -x "$cli" ]]; then
+    echo "missing $cli: run 'cmake --build --preset dev' first" >&2
+    exit 1
+fi
+
 if [[ -z "${SAIL_EXPECTED_VERSION:-}" ]]; then
     SAIL_EXPECTED_VERSION="$("$cli" --version)"
 fi
 export SAIL_EXPECTED_VERSION
 
 # Creates .godot/extension_list.cfg, without which --script runs cannot see GDExtension classes.
-"$godot" --headless --path game --import >/dev/null 2>&1 || true
+if ! import_output="$("$godot" --headless --path game --import 2>&1)"; then
+    printf '%s\n' "$import_output" >&2
+    echo "godot --import failed" >&2
+    exit 1
+fi
 
 failed=()
 shopt -s nullglob
