@@ -17,10 +17,24 @@ if [[ -z "${SAIL_EXPECTED_VERSION:-}" ]]; then
 fi
 export SAIL_EXPECTED_VERSION
 
-# Creates .godot/extension_list.cfg, without which --script runs cannot see GDExtension classes.
-if ! import_output="$("$godot" --headless --path game --import 2>&1)"; then
+# --script runs only see GDExtension classes listed in .godot/extension_list.cfg. Without that file,
+# --import discovers and loads the extension mid-scan, and Godot 4.7.2 then segfaults on shutdown
+# (exit 134), so seed it to make the extension load at startup as it does in an existing checkout.
+shopt -s nullglob
+extensions=(game/*.gdextension)
+shopt -u nullglob
+if [[ ! -f game/.godot/extension_list.cfg && ${#extensions[@]} -gt 0 ]]; then
+    mkdir -p game/.godot
+    printf 'res://%s\n' "${extensions[@]#game/}" >game/.godot/extension_list.cfg
+fi
+
+import_status=0
+import_output="$("$godot" --headless --path game --import 2>&1)" || import_status=$?
+# A GDExtension that fails to load only logs an ERROR; --import still exits 0.
+if [[ $import_status -ne 0 ]] ||
+    grep -qE '^ERROR: .*([Ee]xtension|dynamic library)' <<<"$import_output"; then
     printf '%s\n' "$import_output" >&2
-    echo "godot --import failed" >&2
+    echo "godot --import failed (exit $import_status)" >&2
     exit 1
 fi
 
