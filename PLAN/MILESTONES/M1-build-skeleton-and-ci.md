@@ -42,7 +42,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 
 ## Phase 1.2: Godot extension
 
-- [ ] M1.P2.T1 — godot-cpp GDExtension library
+- [x] M1.P2.T1 — godot-cpp GDExtension library
   - files: .gitmodules, extern/godot-cpp (submodule), gdext/CMakeLists.txt, gdext/src/register_types.cpp, gdext/src/sail_sim.hpp, gdext/src/sail_sim.cpp
   - approach: Add godot-cpp as a submodule pinned to the tag matching `tools/godot.lock`. Build it through its CMake support as part of the top-level project. Shared library `sailgd` links sailcore and godot-cpp, outputs into `game/bin/`. Registers one class `SailSim` (extends Node) with a method `get_core_version()` returning `sailcore::version()`. All Godot types stay in `gdext/`.
   - verify: `cmake --build --preset dev` produces `game/bin/libsailgd.linux.*.so`; `nm -D` shows the GDExtension entry symbol.
