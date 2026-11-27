@@ -1,3 +1,9 @@
 /.local/
 /.plan/
 /.worktrees/
+.venv/
+tools/godot/
+build/
+dist/
+game/bin/
+game/.godot/
