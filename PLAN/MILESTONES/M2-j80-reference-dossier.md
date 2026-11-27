@@ -65,7 +65,7 @@ sim code. Every number recorded with its source and a confidence.
   - approach: Install Python-VPP (Marin Lauber's open-source implementation) into `.venv`; build its J/80 input from the dossier (hull particulars, appendages, rig, main + jib only, crew); run TWS 6, 8, 10, 12, 14, 16, 20 × TWA 30–180. Write the polar CSV in the same columns as `orc_polar.csv`, and a short comparison of its upwind speeds against the ORC certificate.
   - verify: Script reproduces the CSV; upwind speeds are within ~10% of the certificate (a sanity check that the inputs are right — not the calibration gate).
   - size: M
-- [ ] M2.P3.T2 — Dossier README
+- [x] M2.P3.T2 — Dossier README
   - files: data/boats/j80/README.md
   - approach: Summarise every file in the dossier, the certificate chosen and why, the DSYHS parent hull and scale factors, the downwind calibration target (non-spi certificate or Python-VPP — whichever M2.P1.T1 found), the stability targets (RM at 1°, LPS) for M3, and every value marked estimated.
   - verify: Every file in `data/boats/j80/` is listed; the downwind target is stated.
