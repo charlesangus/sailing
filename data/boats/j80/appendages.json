@@ -210,6 +210,12 @@
       "confidence": "estimated",
       "method": "z of Section 1 = -draft (1.501 m) + span (1.170 m)."
     },
+    "root_fairing": {
+      "profile": "H.1 Section 1 (chord 0.96 m, t 0.100 m, NACA 00xx), extruded vertically from root_z up to the canoe-body surface",
+      "section_area_m2": 0.0658,
+      "confidence": "estimated",
+      "method": "fills the gap between H.1 Section 1 and the morphed canoe body; height and volume are computed by tools/hull/morph.py and recorded in hull_hydro.json"
+    },
     "tip_z": {
       "value": -1.501,
       "unit": "m",

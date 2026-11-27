@@ -148,3 +148,47 @@ All of the following are marked `"confidence": "estimated"` with a `method`:
 - Keel fore-and-aft position on the hull.
 - Rudder tip shape below Section 5, and the rudder root height.
 - A measured bulb mass separate from the whole lead keel.
+
+## Hull morph
+
+`tools/hull/morph.py` builds `hull_visual.obj`, `hull_physics.obj` and `hull_hydro.json` from the closest Delft Systematic Yacht Hull Series hull (`data/dsyhs/README.md`). Run it with `.venv/bin/python -I tools/hull/morph.py`; `--check` recomputes hydrostatics from the written OBJs and fails on any miss. `hull_physics.obj` is checked to be watertight with outward winding; `hull_visual.obj` is for rendering only (normals split at creases) and need not be watertight.
+
+### Targets
+
+- **LWL** 6.71 m: J/Boats J/80 Tech Specs page (https://www.jboats.com/j80-tech-specs), confidence medium. It is the only plain LWL found; it is stored in `hull_hydro.json` `inputs`, which the script reads. The certificate LSM0 (6.967 m) and IMS L (7.237 m) are effective sailing lengths, 4-8% longer, which is consistent. J/Boats pairs it with its 1315 kg marketing displacement, so at 1438 kg the static waterline is probably a little longer.
+- **Displacement** 1438 kg / 1025 kg/m^3 = 1.4029 m^3. The density is the certificate flotation SG (1.025, p.2). Keel 0.0805 m^3 (appendages.json `volume_from_offsets`, including the GRP sump). Keel root fairing 0.0061 m^3 (see below). Rudder 0.0096 m^3: NACA 4-digit section areas (0.6851 c t) integrated over Sections 1-5, with the root at the flotation plane as in appendages.json, and no tip below Section 5. Canoe body 1.3067 m^3.
+- **BWL** 1.881 m, derived. The certificate sink, 8.99 kg/mm, is a waterplane area of 8.771 m^2. Dividing by LWL and the parent's Cw (0.695) gives BWL. The certificate beam (2.488 m) is 1.32 BWL, a strongly flared hull; the parent's own flare is 1.18.
+- **Tc** 0.2425 m, derived from the canoe volume before the keel fairing (1.3129 m^3) and the parent's Cb (0.429); it seeds the vertical scale, which is then iterated on volume, and the morphed Tc is 0.242 m. It disagrees with the keel root depth in appendages.json (0.331 m below the flotation plane): no DSYHS hull is fine enough (Cb >= 0.336) to reach that depth at this LWL, BWL and volume. The keel root fairing fills the difference, so the keel keeps its H.1 root depth and the certificate draft.
+- **LCB and Cp** are not on the certificate. They come from the parent (LCB 0.5455 Lwl aft of the FP, Cp 0.542) and are marked `derived`.
+
+### Parent hull
+
+The distance is sqrt(sum ln(p_parent / p_J80)^2) over Lwl/∇c^(1/3), Bwl/Tc and Lwl/Bwl. The J/80's Bwl and Tc are evaluated with each candidate's own Cw and Cb, so the distance measures how far the morph must distort that candidate. Cp and LCB are left out because the J/80's are unknown. The top five are model 61 (0.154), 30 (0.202), 49 (0.208), 50 (0.216) and 47 (0.227). The parent is **DSYHS model 61** (series 6), and the runner-up is model 30.
+
+### Scaling, overhangs and sheer
+
+- x, y and z are scaled by 3.228, 3.370 and 2.900 about the parent's DWL, iterated on the final mesh until LWL, BWL and canoe volume match.
+- The stem is placed at the morphed LCF plus the certificate LCF from stem on CL (4.276 m), and the transom at LOA (8.032 m) aft of it. The overhangs are stretched beyond the waterline ends only, by a C1 quadratic in x, from 0.381 to 0.432 m forward and from 0.724 to 0.890 m aft. The immersed hull stays affine.
+- The sheer is a quadratic through the certificate freeboards (p.2): FFM 0.877 m at SFFP 0.177 m, 0.744 m at the mast (J = 2.895 m aft of the stem, since SFJ = 0), and FAM 0.627 m at SAFP 8.015 m. The scaled DSYHS surface stops at a flat 0.635 m freeboard, so the topsides are extended vertically by up to 0.252 m forward and trimmed by up to 8 mm aft. The deck is flat at the sheer.
+
+### Topside flare
+
+The section points are flared before the surface is closed, so topology, deck and watertightness are unchanged. The girth point nearest the DWL is first moved onto the section's DWL crossing. Each half section is then straightened above that vertex (above its lowest point where the section is clear of the water): the turning angle at every girth vertex above it is multiplied by (1 - beta), and the straightened part is scaled uniformly about the DWL vertex back to the sheer height. Points at and below the DWL do not move. beta is solved per station so the sheer half-breadth becomes y_sheer (1 + (k0 - 1) w(x)). w(x) is a cos^2 taper peaking at the certificate max-beam station, 4.712 m from the stem (p.2), with half widths 4.712 m forward (0 at the stem) and 7.616 m aft (0.6 at the transom, keeping the wide stern). k0 = 1.1251 is solved for the certificate beam, 2.488 m. beta runs from 0 to 0.653 (0.635 at the peak), under a cap of 0.9 that keeps the topsides from going flat. Max beam goes from 2.212 to 2.488 m. It falls at the station 4.781 m from the stem both before and after the flare; the neighbouring stations are at 4.673 and 4.889 m. The flare leaves the canoe volume and BWL unchanged to the 6 decimals stored, and the waterplane area changes by +2e-5 relative (`hull_hydro.json` `flare`).
+
+Why straightening: the parent's topsides turn one way from the bilge to the sheer, rounding in towards the sheer. An outward offset added as a function of height cannot keep that. If it grows faster than linearly (the earlier (z / z_sheer)^2) its outward curvature beats the topsides' own curvature, and about 100 of the 112 sections turned concave above 0.35-0.92 of the freeboard. If it starts with a slope (sin, 1 - (1 - t)^2, linear), it puts a reverse turn and a 7-13 degree slope step at the DWL; that gave 21-35 sections with a new inflection. A C1 smoothstep ramp over the lowest 10-25% of the freeboard, joined to a linear or concave-down profile, still left 3-32. Straightening only reduces how much each vertex turns. Every vertex keeps its turn direction, so no section gains an inflection, and the segment leaving the DWL vertex keeps its direction, so there is no slope step at the waterline.
+
+Fairness (turning-direction sign changes along each half section, keel to sheer, before and after the flare): 0 of the 112 half sections gain an inflection. The DWL kink (the change in turning angle at the DWL vertex) is 0 deg. `--check` fails if more than 5% of sections gain an inflection. The flare is a modelling choice to reach the certificate beam, not a measured line.
+
+### Keel root fairing
+
+The keel keeps its H.1 `root_z` (-0.331 m), `span` (1.170 m) and `volume_from_offsets`, so its tip is at -1.501 m, the certificate draft. Between Section 1 and the morphed canoe body there is a gap on the centreline: 0.090 m at the root leading edge, 0.103 m at the trailing edge (0.089-0.103 m along the chord). appendages.json keel `root_fairing` fills it with Section 1 extruded vertically: area 0.6851 c t = 0.0658 m^2 times the mean gap over the root chord gives 0.0061 m^3. The gap depends on the vertical scale, so it is re-measured in every scale iteration and the fairing volume is part of the displacement sum. Heights and volume are in `hull_hydro.json` `result` (`keel_fairing_*`, `displacement_breakdown`). The keel root position fore and aft is itself estimated (appendages.json `root_leading_edge`).
+
+### Frame
+
+`hull_hydro.json` `transform` gives `stem_x_in_body` (3.787 m) and `flotation_z_in_body` (0). Add these to a point in the provisional stem/flotation frame of appendages.json, rig.json, sails.json and mass.json to get body coordinates. The DWL is the flotation plane because the displacement target is the measurement-trim displacement, with level trim assumed.
+
+### Estimated, and open issues
+
+- The overhang split, sheer extension, topside flare, keel root fairing and flat deck are modelling choices, not measured lines.
+- The canoe-body wetted area is 9.43 m^2. The certificate WS minus twice the keel and rudder lateral areas is 9.13 m^2.
+- The keel root (z = -0.331 m) sits 0.09-0.10 m below the morphed canoe-body bottom (Tc 0.242 m); the fairing bridges it. Either the J/80 canoe body has much slacker sections than any DSYHS hull, or the keel root depth needs another look.

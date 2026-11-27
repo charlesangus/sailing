@@ -1,0 +1,311 @@
+{
+  "frame": "Body frame: x forward, y to port, z up, metres. Origin on the centreline at the midpoint of Lwl on the DWL. The DWL is the certificate flotation plane (measurement trim, no crew), taken as level.",
+  "inputs": {
+    "lwl": {
+      "value": 6.71,
+      "unit": "m",
+      "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
+      "confidence": "medium",
+      "method": "published LWL 6.71 m (22 ft); read by tools/hull/morph.py",
+      "note": "Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
+    }
+  },
+  "transform": {
+    "stem_x_in_body": 3.7871,
+    "flotation_z_in_body": 0.0,
+    "rule": "p_body = p_provisional + (stem_x_in_body, 0, flotation_z_in_body), for the provisional frame of appendages.json, rig.json, sails.json and mass.json",
+    "method": "Stem at the morphed hull's LCF plus the certificate LCF from stem on CL (4.276 m); the overhangs are stretched so the stem and transom land there and LOA is 8.032 m. The displacement target is the measurement-trim displacement, so the DWL is the flotation plane.",
+    "confidence": "derived"
+  },
+  "parent": {
+    "hull_id": 61,
+    "overhang": 1.0,
+    "file": "SYSSER61_surface.igs",
+    "distance": 0.1535,
+    "runner_up": {
+      "hull_id": 30,
+      "overhang": 1.0,
+      "distance": 0.202
+    },
+    "top5": [
+      {
+        "hull_id": 61,
+        "overhang": 1.0,
+        "distance": 0.1535
+      },
+      {
+        "hull_id": 30,
+        "overhang": 1.0,
+        "distance": 0.202
+      },
+      {
+        "hull_id": 49,
+        "overhang": 1.0,
+        "distance": 0.2076
+      },
+      {
+        "hull_id": 50,
+        "overhang": 1.0,
+        "distance": 0.2162
+      },
+      {
+        "hull_id": 47,
+        "overhang": 1.0,
+        "distance": 0.2272
+      }
+    ],
+    "method": "Minimum of sqrt(sum ln(p_parent / p_boat)^2) over Lwl/∇c^(1/3), Bwl/Tc and Lwl/Bwl. The boat's Bwl and Tc are evaluated with each candidate's own Cw and Cb, so the distance measures how far the morph must distort that candidate. Cp and LCB are not on the certificate, so they are not in the distance; the morph inherits them. The ranking uses the canoe volume without the keel fairing, which is only known once the hull is morphed."
+  },
+  "scale": {
+    "sx": 3.22802,
+    "sy": 3.36839,
+    "sz": 2.90137,
+    "parent_x_at_body_origin": 1.03949,
+    "parent_z_dwl": 0.08336,
+    "rule": "body = (sx (x - parent_x_at_body_origin), sy y, sz (z - parent_z_dwl)) in parent metres, model scale, then the overhang stretch",
+    "overhang_fwd": {
+      "parent_m": 0.3814,
+      "target_m": 0.4321,
+      "a": 0.34863
+    },
+    "overhang_aft": {
+      "parent_m": 0.7236,
+      "target_m": 0.8899,
+      "a": 0.31779
+    },
+    "overhang_rule": "beyond each waterline end, at distance u outside it, x moves outward by a u^2; the immersed hull is untouched"
+  },
+  "sheer": {
+    "points": [
+      [
+        3.6101,
+        0.877
+      ],
+      [
+        0.8921,
+        0.744
+      ],
+      [
+        -4.2279,
+        0.627
+      ]
+    ],
+    "source": "ORC J/80 OD certificate 2019, p.2 (FFM at SFFP, freeboard at mast at J, FAM at SAFP)",
+    "fit": "quadratic through the three points",
+    "parent_freeboard_scaled": 0.6326,
+    "j80_freeboard_range": [
+      0.6269,
+      0.8874
+    ],
+    "max_extension_m": 0.2548,
+    "max_trim_m": 0.0057,
+    "note": "Where the scaled DSYHS surface stops below the sheer the topsides are extended vertically; where it is above, it is trimmed. Deck flat at the sheer. The flare below is applied after this."
+  },
+  "flare": {
+    "rule": "each half section is straightened above its DWL vertex (its lowest point where the section is clear of the water): the turning angle at every girth vertex above it is scaled by (1 - beta) and the straightened part is scaled uniformly about the DWL vertex back to the sheer height. beta (0 to FLARE_BETA_MAX) is solved per station so the sheer half-breadth becomes y_sheer (1 + (k0 - 1) w(x)); w = cos^2(pi/2 d / hw), d the distance from the peak, hw_fwd forward and hw_aft aft, 0 beyond hw",
+    "k0": 1.12505,
+    "beta_max_allowed": 0.9,
+    "beta_range": [
+      0.0,
+      0.653
+    ],
+    "beta_at_peak": 0.635,
+    "peak_from_stem": 4.712,
+    "half_width_fwd_m": 4.712,
+    "half_width_aft_m": 7.6163,
+    "w_at_transom": 0.6,
+    "method": "k0 solved by bisection for max beam 2.488 m (ORC J/80 OD certificate 2019, p.1). The peak is the certificate max_beam_station_from_stem; hw_fwd puts w = 0 at the stem and hw_aft leaves w = 0.6 at the transom so the wide stern is kept. Applied to the section points before the surface is closed, so topology and deck are unchanged. The girth point nearest the DWL is moved onto the section's DWL crossing and only points above it move, so the immersed hull, BWL and the waterplane do not. Straightening rather than adding an offset in z: every vertex keeps the sign of its turn, so the single-signed parent topsides stay single-signed, and the segment leaving the DWL vertex keeps its direction, so there is no slope step at the waterline. Offsets y s(z) or s(z) with s(0) = 0 either turn the topsides concave (s'' > 0, e.g. z^2) or put a reverse turn at the DWL (s'(0) > 0).",
+    "unflared": {
+      "canoe_volume": 1.306747,
+      "bwl": 1.881448,
+      "lwl": 6.71,
+      "waterplane_area": 8.767815,
+      "max_beam": 2.2116,
+      "max_beam_station_from_stem": 4.7814
+    },
+    "flared": {
+      "canoe_volume": 1.306747,
+      "bwl": 1.881448,
+      "lwl": 6.71,
+      "waterplane_area": 8.767972,
+      "max_beam": 2.488,
+      "max_beam_station_from_stem": 4.7814
+    },
+    "fairness": {
+      "method": "count of turning-direction sign changes along each starboard half section, keel to sheer, straight runs ignored, before and after the flare",
+      "stations": 112,
+      "stations_with_new_inflections": 0,
+      "new_inflection_span_from_stem_m": [],
+      "onset_fraction_of_freeboard": [],
+      "dwl_kink_method": "change in the turning angle at each section's DWL vertex, flared minus unflared",
+      "dwl_kink_deg_max": 0.0,
+      "max_fraction_with_new_inflections": 0.05
+    },
+    "confidence": "estimated"
+  },
+  "targets": {
+    "lwl": {
+      "value": 6.71,
+      "unit": "m",
+      "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
+      "confidence": "medium",
+      "method": "published LWL 6.71 m (22 ft); read by tools/hull/morph.py",
+      "note": "Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
+    },
+    "bwl": {
+      "value": 1.8814,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.1 (sink); DSYHS model 61, data/dsyhs/table.csv",
+      "confidence": "derived",
+      "method": "Aw / (Cw Lwl): waterplane area from the certificate sink, 8.99 kg/mm / rho = 8.771 m^2, with the parent's Cw 0.6947.",
+      "note": "Flare cross-check: certificate beam 2.488 m / Bwl = 1.322; the parent's own Bmax/Bwl is 1.176."
+    },
+    "tc": {
+      "value": 0.2425,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.1; DSYHS model 61, data/dsyhs/table.csv",
+      "confidence": "derived",
+      "method": "canoe volume / (Cb Lwl Bwl) with the parent's Cb 0.4288; the initial guess for the vertical scale, which is then iterated on volume.",
+      "note": "Shallower than the keel root depth below the flotation plane, 0.331 m (appendages.json keel root_z), which would put the canoe body deeper than any DSYHS Cb allows at this Lwl, Bwl and volume. The keel root fairing fills the gap."
+    },
+    "density": {
+      "value": 1025.0,
+      "unit": "kg/m^3",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "method": "flotation SG x 1000"
+    },
+    "displacement_volume": {
+      "value": 1.40293,
+      "unit": "m^3",
+      "source": "ORC J/80 OD certificate 2019, p.1",
+      "confidence": "high",
+      "method": "1438 kg / rho"
+    },
+    "keel_volume": {
+      "value": 0.0805,
+      "unit": "m^3",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "appendages.json keel volume_from_offsets"
+    },
+    "keel_fairing_volume": {
+      "value": 0.00612,
+      "unit": "m^3",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "appendages.json keel root_fairing: section area 0.0658 m^2 times the mean height from root_z up to the canoe body on the centreline over the root chord (0.0930 m); re-measured in each scale iteration."
+    },
+    "rudder_volume": {
+      "value": 0.00956,
+      "unit": "m^3",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "NACA 4-digit section area 0.6851 c t integrated trapezoidally over Sections 1-5; root at the flotation plane (appendages.json stock_axis), so all of it is immersed; nothing below Section 5."
+    },
+    "canoe_volume": {
+      "value": 1.30675,
+      "unit": "m^3",
+      "source": "ORC J/80 OD certificate 2019, p.1; J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "derived",
+      "method": "displacement volume - keel - keel fairing - rudder"
+    },
+    "waterplane_area": {
+      "value": 8.7707,
+      "unit": "m^2",
+      "source": "ORC J/80 OD certificate 2019, p.1",
+      "confidence": "derived",
+      "method": "sink kg/mm x 1000 / rho"
+    },
+    "lcb": {
+      "value": 0.5455,
+      "unit": "fraction of Lwl aft of the FP",
+      "source": "DSYHS model 61, data/dsyhs/table.csv",
+      "confidence": "derived",
+      "note": "not on the certificate; the morph keeps the parent's longitudinal distribution"
+    },
+    "cp": {
+      "value": 0.5422,
+      "unit": "-",
+      "source": "DSYHS model 61, data/dsyhs/table.csv",
+      "confidence": "derived",
+      "note": "not on the certificate; the parent's Cp"
+    }
+  },
+  "result": {
+    "lwl": 6.71,
+    "bwl": 1.8814,
+    "tc": 0.2417,
+    "canoe_volume": 1.30675,
+    "total_volume": 1.40293,
+    "displacement_kg": 1438.0,
+    "lcb_x_canoe": -0.3051,
+    "lcb_frac_lwl_aft_fp": 0.5455,
+    "lcb_x_total": -0.3436,
+    "lcf_x": -0.489,
+    "cp": 0.5419,
+    "cm": 0.7904,
+    "cb": 0.4283,
+    "cw": 0.6945,
+    "waterplane_area": 8.768,
+    "max_section_area": 0.3594,
+    "wetted_area_canoe": 9.4261,
+    "keel_fairing_height_le": 0.09,
+    "keel_fairing_height_te": 0.1026,
+    "keel_fairing_height_range": [
+      0.0893,
+      0.1026
+    ],
+    "keel_fairing_volume": 0.00612,
+    "displacement_breakdown": {
+      "canoe": 1.30675,
+      "keel": 0.0805,
+      "keel_fairing": 0.00612,
+      "rudder": 0.00956,
+      "total": 1.40293
+    },
+    "loa": 8.0319,
+    "max_beam": 2.488,
+    "max_beam_station_from_stem": 4.7814,
+    "units": "m, m^2, m^3, kg; x in the body frame"
+  },
+  "cross_checks": {
+    "loa": {
+      "mesh": 8.0319,
+      "certificate": 8.032
+    },
+    "max_beam": {
+      "mesh": 2.488,
+      "certificate": 2.488
+    },
+    "tc_vs_keel_root": {
+      "mesh": 0.2417,
+      "keel_root_depth": 0.331,
+      "note": "the keel root fairing (result keel_fairing_*) fills the gap, so root_z and the certificate draft are kept"
+    },
+    "wetted_area_canoe": {
+      "mesh": 9.4261,
+      "certificate_ws_minus_appendages": 9.126,
+      "method": "certificate WS minus twice the keel and rudder lateral areas"
+    },
+    "waterplane_area": {
+      "mesh": 8.768,
+      "certificate_sink": 8.7707
+    }
+  },
+  "meshes": {
+    "visual": {
+      "file": "hull_visual.obj",
+      "triangles": 20160,
+      "vertices": 10082,
+      "note": "for rendering only; split vertex normals at creases, not required to be watertight"
+    },
+    "physics": {
+      "file": "hull_physics.obj",
+      "triangles": 1598,
+      "vertices": 801,
+      "note": "watertight, outward winding; checked by --check"
+    }
+  },
+  "source_note": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs; ORC J/80 OD certificate 2019; J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; DSYHS geometry doi:10.4121/21501330"
+}
