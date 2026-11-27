@@ -1,0 +1,364 @@
+{
+  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. A later hull-morph task moves the origin to DWL midship. Section depths are measured down from each appendage's root section (Section 1).",
+  "keel": {
+    "material": {
+      "value": "lead-antimony, cast; fin and bulb are one casting; the upper fin is a GRP sump",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.1; J/Boats J/80 Tech Specs page",
+      "confidence": "high",
+      "note": "fin and bulb are one casting; the upper fin is a GRP sump"
+    },
+    "material_density": {
+      "value": 11000.0,
+      "unit": "kg/m^3",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.1",
+      "confidence": "estimated",
+      "method": "lead 11 340 and antimony 6 690 kg/m^3 mixed at about 4% Sb."
+    },
+    "sections": {
+      "value": [
+        {
+          "section": 1,
+          "depth_below_root_m": 0.0,
+          "chord_m": 0.96,
+          "max_thickness_m": 0.1,
+          "thickness_chord_ratio": 0.1042,
+          "leading_edge_radius_m": 0.0113,
+          "leading_edge_x_aft_of_root_le_m": 0.0
+        },
+        {
+          "section": 2,
+          "depth_below_root_m": 0.16,
+          "chord_m": 0.92,
+          "max_thickness_m": 0.1,
+          "thickness_chord_ratio": 0.1087,
+          "leading_edge_radius_m": 0.0123,
+          "leading_edge_x_aft_of_root_le_m": 0.056
+        },
+        {
+          "section": 3,
+          "depth_below_root_m": 0.32,
+          "chord_m": 0.88,
+          "max_thickness_m": 0.1,
+          "thickness_chord_ratio": 0.1136,
+          "leading_edge_radius_m": 0.0134,
+          "leading_edge_x_aft_of_root_le_m": 0.112
+        },
+        {
+          "section": 4,
+          "depth_below_root_m": 0.88,
+          "chord_m": 0.74,
+          "max_thickness_m": 0.1,
+          "thickness_chord_ratio": 0.1351,
+          "leading_edge_radius_m": 0.0149,
+          "leading_edge_x_aft_of_root_le_m": 0.308
+        },
+        {
+          "section": 5,
+          "depth_below_root_m": 0.92,
+          "chord_m": 0.74,
+          "max_thickness_m": 0.104,
+          "thickness_chord_ratio": 0.1405,
+          "leading_edge_radius_m": 0.0161,
+          "leading_edge_x_aft_of_root_le_m": 0.322
+        },
+        {
+          "section": 6,
+          "depth_below_root_m": 0.96,
+          "chord_m": 0.79,
+          "max_thickness_m": 0.12,
+          "thickness_chord_ratio": 0.1519,
+          "leading_edge_radius_m": 0.0203,
+          "leading_edge_x_aft_of_root_le_m": 0.336
+        },
+        {
+          "section": 7,
+          "depth_below_root_m": 1.04,
+          "chord_m": 1.01,
+          "max_thickness_m": 0.16,
+          "thickness_chord_ratio": 0.1584,
+          "leading_edge_radius_m": 0.0279,
+          "leading_edge_x_aft_of_root_le_m": 0.364
+        },
+        {
+          "section": 8,
+          "depth_below_root_m": 1.12,
+          "chord_m": 1.23,
+          "max_thickness_m": 0.2,
+          "thickness_chord_ratio": 0.1626,
+          "leading_edge_radius_m": 0.0358,
+          "leading_edge_x_aft_of_root_le_m": 0.392
+        }
+      ],
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Minimum offsets. Section 1 is where the hull fairbody meets the moulded keel sump. All sections are parallel (horizontal). Half widths are absolute; each section is a NACA 4-digit symmetric (00xx) thickness form scaled to its own thickness. Thickness for sections 1-4 (0.100 m) is confirmed by the listed leading-edge radii."
+    },
+    "tip": {
+      "value": "elliptical cross-sections below Section 8, about 0.050 m deep",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "The tip centreline profile column peaks at 50.0 mm, read as the depth below Section 8."
+    },
+    "span": {
+      "value": 1.17,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "Section 8 depth (1.120 m) + tip (0.050 m)."
+    },
+    "root_chord": {
+      "value": 0.96,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high"
+    },
+    "fin_min_chord": {
+      "value": 0.74,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Sections 4-5, at the bulb neck"
+    },
+    "leading_edge_sweep": {
+      "value": 19.29,
+      "unit": "deg",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "sweepback of the leading-edge profile"
+    },
+    "trailing_edge": {
+      "value": "1.0 mm half width at x/c = 1.0 (2 mm thick)",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high"
+    },
+    "fin_thickness": {
+      "value": 0.1,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "constant 100 mm from Section 1 to Section 4"
+    },
+    "section_profile": {
+      "value": "NACA 00xx",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "offset ratios Yc/Yc_max at all 16 stations match NACA 4-digit thickness to 0.001."
+    },
+    "bulb_length": {
+      "value": 1.23,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Section 8 chord"
+    },
+    "bulb_width": {
+      "value": 0.2,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Section 8 maximum thickness"
+    },
+    "bulb_height": {
+      "value": 0.29,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "from Section 4 (0.880 m, last section at fin thickness) to the tip."
+    },
+    "lateral_area": {
+      "value": 1.018,
+      "unit": "m^2",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "chord integrated over depth, with an elliptical tip."
+    },
+    "volume_from_offsets": {
+      "value": 0.0805,
+      "unit": "m^3",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "section area 0.6851 * chord * thickness (NACA 4-digit), integrated trapezoidally over depth, plus an elliptical tip cap. These are minimum offsets.",
+      "note": "The keel's displaced volume, lead plus the GRP sump above it; not the lead volume (see lead_top_depth_below_root and mass.json keel_lead_volume)."
+    },
+    "lead_top_depth_below_root": {
+      "value": 0.363,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "depth below Section 1 at which the lead volume from the tip up equals 0.0577 m^3 (635 kg / 11 000 kg/m^3)."
+    },
+    "ballast_centroid": {
+      "value": [
+        -4.342,
+        0.0,
+        -1.167
+      ],
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "centroid of the lead portion, from the lead top depth to the tip; x inherits the root_leading_edge estimate."
+    },
+    "root_z": {
+      "value": -0.331,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; ORC J/80 OD certificate 2019, p.1",
+      "confidence": "estimated",
+      "method": "z of Section 1 = -draft (1.501 m) + span (1.170 m)."
+    },
+    "tip_z": {
+      "value": -1.501,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.1",
+      "confidence": "high",
+      "note": "certificate draft"
+    },
+    "root_leading_edge": {
+      "value": [
+        -3.658,
+        0.0,
+        -0.331
+      ],
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; ORC J/80 OD certificate 2019, p.1",
+      "confidence": "estimated",
+      "method": "No public drawing locates the keel fore and aft. The root leading edge is placed so the keel's volume centroid (0.618 m aft of the root LE) falls at the certificate LCF, 4.276 m from the stem, as a stand-in for LCB."
+    },
+    "centroid": {
+      "value": [
+        -4.276,
+        0.0,
+        -0.976
+      ],
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "volume centroid of the offsets: 0.645 m below the root and 0.618 m aft of the root LE; x inherits the root_leading_edge estimate."
+    }
+  },
+  "rudder": {
+    "type": {
+      "value": "transom-hung, unbalanced; two pintles on the rudder into two gudgeons on the transom",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.5; J/80 Standard Building Specifications (1-Dec-20), item 34",
+      "confidence": "high"
+    },
+    "material": {
+      "value": "glass-reinforced plastic",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.3",
+      "confidence": "high"
+    },
+    "sections": {
+      "value": [
+        {
+          "section": 1,
+          "depth_below_root_m": 0.0,
+          "chord_m": 0.34,
+          "max_thickness_m": 0.0408,
+          "thickness_chord_ratio": 0.12,
+          "leading_edge_radius_m": 0.0054
+        },
+        {
+          "section": 2,
+          "depth_below_root_m": 0.29,
+          "chord_m": 0.34,
+          "max_thickness_m": 0.0408,
+          "thickness_chord_ratio": 0.12,
+          "leading_edge_radius_m": 0.0054
+        },
+        {
+          "section": 3,
+          "depth_below_root_m": 0.575,
+          "chord_m": 0.33,
+          "max_thickness_m": 0.0396,
+          "thickness_chord_ratio": 0.12,
+          "leading_edge_radius_m": 0.0052
+        },
+        {
+          "section": 4,
+          "depth_below_root_m": 0.86,
+          "chord_m": 0.3,
+          "max_thickness_m": 0.036,
+          "thickness_chord_ratio": 0.12,
+          "leading_edge_radius_m": 0.0047
+        },
+        {
+          "section": 5,
+          "depth_below_root_m": 1.145,
+          "chord_m": 0.26,
+          "max_thickness_m": 0.0312,
+          "thickness_chord_ratio": 0.12,
+          "leading_edge_radius_m": 0.0041
+        }
+      ],
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Minimum offsets; leading edge vertical; NACA 0012 form (t/c 0.120 at Sections 1-2)."
+    },
+    "span_to_section_5": {
+      "value": 1.145,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "The table ends at Section 5; tip shape below it is not given."
+    },
+    "root_chord": {
+      "value": 0.34,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high"
+    },
+    "tip_chord": {
+      "value": 0.26,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "note": "Section 5"
+    },
+    "section_profile": {
+      "value": "NACA 0012",
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "half width at x/c = 0.30 is 0.060 c at every section, and the offset ratios follow NACA 4-digit thickness."
+    },
+    "lateral_area": {
+      "value": 0.364,
+      "unit": "m^2",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "high",
+      "method": "chord integrated over Sections 1-5."
+    },
+    "stock_axis": {
+      "value": [
+        -8.082,
+        0.0,
+        0.0
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.1",
+      "confidence": "estimated",
+      "method": "pivot on the pintle line at the vertical leading edge, assumed 0.05 m aft of the transom (LOA 8.032 m). z is the root (Section 1), assumed at the waterplane where the blade leaves the transom; not given in any source."
+    },
+    "tip_z": {
+      "value": -1.145,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+      "confidence": "estimated",
+      "method": "root_z minus Section 5 depth."
+    },
+    "weight_min": {
+      "value": 22.0,
+      "unit": "kg",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.6",
+      "confidence": "high",
+      "note": "including fixed gudgeons, tiller and tiller straps"
+    }
+  }
+}
