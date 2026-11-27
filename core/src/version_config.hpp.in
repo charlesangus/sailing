@@ -1,0 +1,3 @@
+#pragma once
+
+#define SAIL_VERSION_STRING "@PROJECT_VERSION@"
