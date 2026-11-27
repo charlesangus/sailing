@@ -34,7 +34,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
   - approach: Bash, `set -euo pipefail`. Creates `.venv` (python3 -m venv) and pip-installs pinned `cmake` and `ninja`. Reads the Godot version, Linux x86_64 editor URL, export-templates URL and their SHA-512 sums from `tools/godot.lock` (pin the latest stable Godot 4.x); downloads into `tools/godot/` only if absent, verifies the hash, unzips, and symlinks `tools/godot/godot`. Idempotent. Add `.venv/`, `tools/godot/`, `build/`, `dist/` to `.gitignore`.
   - verify: Run it twice from a clean checkout: the first downloads and verifies, the second is a no-op; `tools/godot/godot --version` prints the pinned version; corrupting the lock hash makes it fail non-zero.
   - size: M
-- [ ] M1.P1.T3 — CMake project with core library, tests and CLI
+- [x] M1.P1.T3 — CMake project with core library, tests and CLI
   - files: CMakeLists.txt, CMakePresets.json, core/CMakeLists.txt, core/include/sail/version.hpp, core/src/version.cpp, core/tests/test_version.cpp, cli/CMakeLists.txt, cli/main.cpp, .clang-format
   - approach: Top-level CMake (3.24+, Ninja) with presets `dev` (Debug, tests on) and `release`. `sailcore` static lib, C++20, warnings as errors (`-Wall -Wextra -Wpedantic`), no Godot includes. doctest via FetchContent, test exe registered with ctest. `sailcore::version()` returns a string from a configure-time version. `sailsim` CLI links sailcore; `sailsim --version` prints it; use a tiny subcommand dispatcher later milestones extend. Eigen 3.4 via FetchContent made available to sailcore (used from M3).
   - verify: `cmake --preset dev && cmake --build --preset dev && ctest --preset dev` passes; `build/dev/cli/sailsim --version` prints the version.
