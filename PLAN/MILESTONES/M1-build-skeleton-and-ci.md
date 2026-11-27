@@ -55,7 +55,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 
 ## Phase 1.3: CI and conventions
 
-- [ ] M1.P3.T1 — GitHub Actions CI
+- [x] M1.P3.T1 — GitHub Actions CI
   - files: .github/workflows/ci.yml
   - approach: ubuntu-latest, on push to master and on PRs. Checkout with submodules, cache `tools/godot/` and `.venv` keyed on `tools/godot.lock`, run `tools/bootstrap.sh`, configure/build/test the `dev` preset, then `tools/run_godot_tests.sh`. Keep it under ~10 minutes (cache the godot-cpp build dir).
   - verify: The workflow passes on this milestone's PR (`gh pr checks --watch`).
