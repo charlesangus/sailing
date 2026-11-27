@@ -47,7 +47,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
   - approach: Add godot-cpp as a submodule pinned to the tag matching `tools/godot.lock`. Build it through its CMake support as part of the top-level project. Shared library `sailgd` links sailcore and godot-cpp, outputs into `game/bin/`. Registers one class `SailSim` (extends Node) with a method `get_core_version()` returning `sailcore::version()`. All Godot types stay in `gdext/`.
   - verify: `cmake --build --preset dev` produces `game/bin/libsailgd.linux.*.so`; `nm -D` shows the GDExtension entry symbol.
   - size: M
-- [ ] M1.P2.T2 — Godot project and headless smoke test
+- [x] M1.P2.T2 — Godot project and headless smoke test
   - files: game/project.godot, game/sailgd.gdextension, game/scenes/main.tscn, game/tests/smoke.gd, tools/run_godot_tests.sh
   - approach: Minimal Godot 4 project, main scene with a `SailSim` node. `sailgd.gdextension` points at `bin/` debug/release libs for linux.x86_64. `game/tests/smoke.gd` (extends SceneTree) instantiates `SailSim`, checks `get_core_version()` equals the CLI's version, and quits with exit code 0/1. `tools/run_godot_tests.sh` runs every `game/tests/*.gd` with `tools/godot/godot --headless --path game --script` and fails on any non-zero exit.
   - verify: `tools/run_godot_tests.sh` exits 0; breaking the version check makes it exit non-zero.
