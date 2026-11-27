@@ -69,7 +69,7 @@ sim code. Every number recorded with its source and a confidence.
   - files: data/boats/j80/README.md
   - approach: Summarise every file in the dossier, the certificate chosen and why, the DSYHS parent hull and scale factors, the downwind calibration target (non-spi certificate or Python-VPP — whichever M2.P1.T1 found), the stability targets (RM at 1°, LPS) for M3, and every value marked estimated.
   - verify: Every file in `data/boats/j80/` is listed; the downwind target is stated.
-  - size: S
+  - size: M
 
 **Verification gate:** `python -I tools/hull/morph.py --check` reports displacement, LWL and BWL within 2% of the certificate; `orc_polar.csv` and `pyvpp_polar_nospi.csv` exist and load; the README names the downwind target and every source.
 
