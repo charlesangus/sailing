@@ -1,0 +1,85 @@
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CC: gcc-13
+      CXX: g++-13
+      CMAKE_C_COMPILER_LAUNCHER: ccache
+      CMAKE_CXX_COMPILER_LAUNCHER: ccache
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_COMPRESS: "1"
+      CCACHE_MAXSIZE: 1G
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install ccache and compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ccache g++-13
+
+      - name: Restore toolchain cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools/godot
+            .venv
+          key: toolchain-${{ hashFiles('tools/godot.lock', 'tools/bootstrap.sh') }}
+
+      - name: Compute ccache key
+        id: ccache-key
+        run: echo "cpp=$(git -C extern/godot-cpp rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # ccache entries are keyed by compiler inputs, so they survive the absolute
+      # paths and timestamps that make a restored CMake build dir unusable.
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          key: ccache-${{ steps.ccache-key.outputs.cpp }}-${{ hashFiles('tools/godot.lock') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-${{ steps.ccache-key.outputs.cpp }}-${{ hashFiles('tools/godot.lock') }}-
+            ccache-${{ steps.ccache-key.outputs.cpp }}-
+            ccache-
+
+      - name: Bootstrap toolchain
+        run: tools/bootstrap.sh
+
+      - name: Add venv to PATH
+        run: echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Configure
+        run: cmake --preset dev
+
+      - name: Build
+        run: |
+          ccache --zero-stats
+          cmake --build --preset dev -j "$(nproc)"
+          ccache --show-stats
+
+      - name: Core tests
+        run: ctest --preset dev
+
+      - name: Godot tests
+        run: tools/run_godot_tests.sh
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-${{ steps.ccache-key.outputs.cpp }}-${{ hashFiles('tools/godot.lock') }}-${{ github.run_id }}
