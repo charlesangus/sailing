@@ -29,7 +29,7 @@ sim code. Every number recorded with its source and a confidence.
 
 ## Phase 2.1: Published data
 
-- [ ] M2.P1.T1 — Extract J/80 ORC certificate data
+- [x] M2.P1.T1 — Extract J/80 ORC certificate data
   - files: data/boats/j80/particulars.json, data/boats/j80/orc_polar.csv, data/boats/j80/orc_nospi_polar.csv (if found), data/boats/j80/sources.md
   - approach: Search data.orc.org public certificates for J/80s; choose a class-standard one (standard sails, class crew weight). Transcribe hull particulars (LOA, LWL/IMS L, beam, draft, displacement, righting moment at 1°, LPS / stability index, crew weight) to `particulars.json` as `{value, unit, source, confidence}`. Transcribe the polar table (boat speed by TWS 6–20 kn × TWA incl. beat and run angles) to `orc_polar.csv` (columns tws_kn, twa_deg, bsp_kn). Look for a non-spinnaker J/80 certificate and transcribe it the same way if one exists. Record URLs in `sources.md`.
   - verify: CSV loads in pandas with no gaps; spot-check five values against the PDF; `sources.md` names every certificate used.
@@ -78,3 +78,4 @@ sim code. Every number recorded with its source and a confidence.
 - 2026-11-27 — J/80 as the sole reference boat: the user chose it over YD-41/Alberg 30; it is well researched (IRENav full-scale trials) with many ORC certificates and a hull inside the DSYHS range.
 - 2026-11-27 — Hull mesh is the closest DSYHS hull morphed to J/80 particulars: no open J/80 lines exist (ORC offset files are proprietary); this gives real, fair, tank-tested geometry that hits J/80 hydrostatics.
 - 2026-11-27 — Reference certificate is ORC's 2019 J/80 one-design certificate (data.orc.org/public/od/2019/j80.od.pdf): current certificates sit behind a human-verification gate agents cannot pass; the user chose the OD certificate, which is class-standard by construction. Current certificates the user later supplies are added for spread only.
+- 2026-11-27 — The OD certificate has no non-spinnaker speed table, so the downwind target is the Python-VPP main+jib polar. Its beat/run rows give VMG; `orc_polar.csv` stores boat speed as VMG/|cos TWA| and `sources.md` keeps the raw VMGs.
