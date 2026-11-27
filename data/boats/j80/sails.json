@@ -1,0 +1,344 @@
+{
+  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. hull_hydro.json transform maps it to the body frame (origin at DWL midship): p_body = p + (stem_x_in_body, 0, flotation_z_in_body). Sail positions are in the boat's centreplane (y = 0) as for an unsheeted sail; mast assumed vertical.",
+  "area_formulas": {
+    "value": "ORC Rating Systems 2019 rule 109.1 (main measured area) and 111.1/111.2 (headsail measured area and default widths)",
+    "unit": "-",
+    "source": "ORC Rating Systems 2019",
+    "confidence": "high",
+    "note": "The certificate does not measure HQW, HTW or HUW for the jib. Rule 111.2 sets them for a headsail without leech roach (class G.4.1(d): leech not convex): HQW = 0.75 HLP + 0.25 HHB, HTW = 0.25 HLP + 0.75 HHB, HUW = 0.125 HLP + 0.875 HHB."
+  },
+  "jboats_sail_area_100": {
+    "value": 31.4,
+    "unit": "m^2",
+    "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
+    "confidence": "medium",
+    "note": "J/Boats' '100% SA'; P*E/2 + I*J/2 with J/Boats' own P, E, I and J gives 31.34 m^2, within 0.2%. A cross-check only, not a measured sail area."
+  },
+  "main": {
+    "luff_max": {
+      "value": 9.144,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.8.1 mast band distance; ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "The head may not be set above the upper band, so luff length is at most P."
+    },
+    "foot_max": {
+      "value": 3.81,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.8.2 boom band distance; ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high"
+    },
+    "leech_max": {
+      "value": 9.78,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "9780 mm. The P x E box with MHB would give 9.846 m, so a class sail sits slightly inside the bands."
+    },
+    "mqw": {
+      "value": 3.24,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "quarter width; class maximum 3239 mm (G.3.3)"
+    },
+    "mhw": {
+      "value": 2.48,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "half width; class maximum 2477 mm (G.3.3)"
+    },
+    "mtw": {
+      "value": 1.45,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "three-quarter width; class maximum 1448 mm (G.3.3)"
+    },
+    "muw": {
+      "value": 0.79,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "upper (7/8) width; no class limit"
+    },
+    "mhb": {
+      "value": 0.16,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "top width. Conflicts with the class maximum of 152 mm (G.3.3); the certificate value is used because it reproduces the certificate area."
+    },
+    "class_max_mqw": {
+      "value": 3.239,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "3239 mm"
+    },
+    "class_max_mhw": {
+      "value": 2.477,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "2477 mm"
+    },
+    "class_max_mtw": {
+      "value": 1.448,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "1448 mm"
+    },
+    "class_max_mhb": {
+      "value": 0.152,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "152 mm"
+    },
+    "area": {
+      "value": 20.91,
+      "unit": "m^2",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "Measured area 20.91; rated Area (r) 21.53; p.3 inventory lists 20.92."
+    },
+    "battens": {
+      "value": 4,
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.2(d)",
+      "confidence": "high",
+      "note": "four leech batten pockets"
+    },
+    "min_weight": {
+      "value": 8.0,
+      "unit": "kg",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
+      "confidence": "high",
+      "note": "excluding battens"
+    },
+    "tack": {
+      "value": [
+        -3.028,
+        0.0,
+        2.044
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "estimated",
+      "method": "aft face of mast (x = -(J + MDL1)) at boom band height (freeboard at mast + BAS)."
+    },
+    "head": {
+      "value": [
+        -3.028,
+        0.0,
+        11.188
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "estimated",
+      "method": "tack + P straight up the aft face; vertical mast assumed."
+    },
+    "clew": {
+      "value": [
+        -6.838,
+        0.0,
+        2.044
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "estimated",
+      "method": "tack + E aft along a horizontal boom."
+    },
+    "sheet_point_on_boom": {
+      "value": [
+        -6.055,
+        0.0,
+        1.95
+      ],
+      "unit": "m",
+      "source": "J/Boats J/80 rig profile drawing (J80-Rig-700.png)",
+      "confidence": "estimated",
+      "method": "mainsheet strop position scaled from the J/Boats profile (3.03 m aft of the mast aft face), on the underside of the boom."
+    },
+    "traveler_centre": {
+      "value": [
+        -6.152,
+        0.0,
+        0.773
+      ],
+      "unit": "m",
+      "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png); J/Boats J/80 rig profile drawing (J80-Rig-700.png)",
+      "confidence": "estimated",
+      "method": "x: mean of the plan drawing (-6.25 m) and the vertical mainsheet on the profile (-6.05 m). z: lower mainsheet block on the profile."
+    },
+    "traveler_span": {
+      "value": 1.17,
+      "unit": "m",
+      "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png)",
+      "confidence": "estimated",
+      "method": "track length across the cockpit scaled from the J/Boats deck plan; centred on y = 0."
+    },
+    "sheet_purchase": {
+      "value": "5:1 or 6:1 coarse, at most 12:1 with fine tune",
+      "unit": "-",
+      "source": "J/80 Standard Building Specifications (1-Dec-20), item 70",
+      "confidence": "high"
+    },
+    "traveler_purchase": {
+      "value": "2:1 to 3:1",
+      "unit": "-",
+      "source": "J/80 Standard Building Specifications (1-Dec-20), item 77",
+      "confidence": "high"
+    }
+  },
+  "jib": {
+    "hlu": {
+      "value": 9.3,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "luff length; class maximum 9300 mm (G.4.2)"
+    },
+    "hlp": {
+      "value": 2.95,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "luff perpendicular; class maximum 2950 mm (G.4.2)"
+    },
+    "hhw": {
+      "value": 1.48,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "half width. Class maximum is 1475 mm (G.4.2); the certificate rounds to 0.01 m."
+    },
+    "hhb": {
+      "value": 0.08,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "top width; class maximum 80 mm (G.4.2)"
+    },
+    "class_max_hhw": {
+      "value": 1.475,
+      "unit": "m",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.4.2",
+      "confidence": "high",
+      "note": "1475 mm"
+    },
+    "overlap": {
+      "value": 1.02,
+      "unit": "-",
+      "source": "ORC J/80 OD certificate 2019, p.3",
+      "confidence": "high",
+      "note": "102% of J"
+    },
+    "area": {
+      "value": 13.98,
+      "unit": "m^2",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "high",
+      "note": "also in the p.3 inventory"
+    },
+    "battens": {
+      "value": 3,
+      "unit": "-",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.4.1(c)",
+      "confidence": "high",
+      "note": "at most three furlable leech battens"
+    },
+    "min_weight": {
+      "value": 5.0,
+      "unit": "kg",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.4.2",
+      "confidence": "high",
+      "note": "including battens"
+    },
+    "tack": {
+      "value": [
+        0.0,
+        0.0,
+        0.886
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2-3",
+      "confidence": "estimated",
+      "method": "at the forestay deck point; the ORC p.3 drawing puts the tack on the sheer at the stem. Furler drum height is not modelled."
+    },
+    "head": {
+      "value": [
+        -2.732,
+        0.0,
+        9.775
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.2",
+      "confidence": "estimated",
+      "method": "tack + HLU along the line from the forestay deck point to the hounds."
+    },
+    "clew": {
+      "value": [
+        -3.201,
+        0.0,
+        1.262
+      ],
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.3",
+      "confidence": "estimated",
+      "method": "scaled from the ORC p.3 sail plan at 110.9 px/m. Check: its perpendicular distance to the luff is 2.949 m against HLP 2.95 m."
+    },
+    "foot": {
+      "value": 3.223,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.3",
+      "confidence": "estimated",
+      "method": "distance tack to clew from the positions above."
+    },
+    "leech": {
+      "value": 8.526,
+      "unit": "m",
+      "source": "ORC J/80 OD certificate 2019, p.3",
+      "confidence": "estimated",
+      "method": "distance head to clew from the positions above."
+    },
+    "track_length": {
+      "value": 1.0,
+      "unit": "m",
+      "source": "J/80 Standard Building Specifications (1-Dec-20), item 7",
+      "confidence": "high",
+      "note": "two anodised T-tracks, 1 m x 25 mm; car position optional"
+    },
+    "track_fwd_end": {
+      "value": [
+        -3.105,
+        0.553,
+        1.032
+      ],
+      "unit": "m",
+      "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png); J/Boats J/80 rig profile drawing (J80-Rig-700.png); J/80 Standard Building Specifications (1-Dec-20)",
+      "confidence": "estimated",
+      "method": "the slot drawn on the cabin top spans x -3.87 to -3.34 m (0.53 m) in the J/Boats plan; a 1 m track (building spec) is centred on it. y scaled from the plan, z is the cabin-top height scaled from the profile. Mirror y for starboard."
+    },
+    "track_aft_end": {
+      "value": [
+        -4.105,
+        0.553,
+        1.032
+      ],
+      "unit": "m",
+      "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png); J/Boats J/80 rig profile drawing (J80-Rig-700.png); J/80 Standard Building Specifications (1-Dec-20)",
+      "confidence": "estimated",
+      "method": "as track_fwd_end."
+    },
+    "sheet_purchase": {
+      "value": "1:1",
+      "unit": "-",
+      "source": "J/80 Standard Building Specifications (1-Dec-20), item 71",
+      "confidence": "high"
+    }
+  }
+}
