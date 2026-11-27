@@ -4,7 +4,11 @@ configure_file(
     @ONLY
 )
 
-add_library(sailcore STATIC src/version.cpp)
+add_library(sailcore STATIC
+    src/rigid_body.cpp
+    src/simulation.cpp
+    src/version.cpp
+)
 add_library(sail::core ALIAS sailcore)
 target_include_directories(sailcore
     PUBLIC include
@@ -27,7 +31,11 @@ if(SAIL_BUILD_TESTS)
     FetchContent_MakeAvailable(doctest)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
-    add_executable(sailcore_tests tests/test_main.cpp tests/test_version.cpp)
+    add_executable(sailcore_tests
+        tests/test_main.cpp
+        tests/test_rigid_body.cpp
+        tests/test_version.cpp
+    )
     target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest)
     target_compile_definitions(sailcore_tests PRIVATE SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}")
     sail_enable_warnings(sailcore_tests)
