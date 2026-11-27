@@ -29,7 +29,7 @@ sails yet — the deliverable is a green pipeline from core test to headless God
   - approach: Copy `.local/Realistic Sailing Sim — Prior Art & Feasibility Survey.md` (project root) verbatim to `docs/research/prior-art-survey.md`. No edits.
   - verify: `diff` against the source file shows no differences.
   - size: M
-- [ ] M1.P1.T2 — Write the toolchain bootstrap script
+- [x] M1.P1.T2 — Write the toolchain bootstrap script
   - files: tools/bootstrap.sh, tools/godot.lock, .gitignore
   - approach: Bash, `set -euo pipefail`. Creates `.venv` (python3 -m venv) and pip-installs pinned `cmake` and `ninja`. Reads the Godot version, Linux x86_64 editor URL, export-templates URL and their SHA-512 sums from `tools/godot.lock` (pin the latest stable Godot 4.x); downloads into `tools/godot/` only if absent, verifies the hash, unzips, and symlinks `tools/godot/godot`. Idempotent. Add `.venv/`, `tools/godot/`, `build/`, `dist/` to `.gitignore`.
   - verify: Run it twice from a clean checkout: the first downloads and verifies, the second is a no-op; `tools/godot/godot --version` prints the pinned version; corrupting the lock hash makes it fail non-zero.
@@ -73,3 +73,4 @@ sails yet — the deliverable is a green pipeline from core test to headless God
 - 2026-11-27 — CMake + Ninja rather than SCons for godot-cpp: one build system for core, CLI and extension, and presets give CI and worktrees identical commands.
 - 2026-11-27 — Linux only: chosen by the user; the core stays portable C++20 so other platforms are additive later.
 - 2026-11-27 — Prior-art survey stays in `.local/`, never committed: the repo is public and the user wants the survey kept private; M1.P1.T1 cancelled.
+- 2026-11-27 — Pinned Godot 4.7.2-stable with godot-cpp `10.0.0-stable` (api_version 4.7): godot-cpp has no `godot-4.7-stable` tag; from v10 it is versioned independently and targets 4.3+ via `api_version`. Ninja pinned at 1.13.0 (1.12.1 is not on PyPI).
