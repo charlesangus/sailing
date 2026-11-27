@@ -1,3 +1,7 @@
 /.local/
 /.plan/
 /.worktrees/
+.venv/
+tools/godot/
+build/
+dist/
