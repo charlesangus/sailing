@@ -5,3 +5,5 @@
 tools/godot/
 build/
 dist/
+game/bin/
+game/.godot/

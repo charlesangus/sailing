@@ -16,7 +16,9 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SAIL_BUILD_TESTS": "ON"
+        "SAIL_BUILD_TESTS": "ON",
+        "SAIL_BUILD_GDEXT": "ON",
+        "GODOTCPP_TARGET": "template_debug"
       }
     },
     {
@@ -24,7 +26,9 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "SAIL_BUILD_TESTS": "OFF"
+        "SAIL_BUILD_TESTS": "OFF",
+        "SAIL_BUILD_GDEXT": "ON",
+        "GODOTCPP_TARGET": "template_release"
       }
     }
   ],
