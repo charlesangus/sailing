@@ -42,7 +42,7 @@ sim code. Every number recorded with its source and a confidence.
 
 ## Phase 2.2: Hull geometry
 
-- [ ] M2.P2.T1 — Fetch and tabulate the DSYHS geometries
+- [x] M2.P2.T1 — Fetch and tabulate the DSYHS geometries
   - files: tools/fetch_dsyhs.sh, tools/hull/dsyhs_table.py, data/dsyhs/table.csv, .gitignore
   - approach: Script downloads the 4TU DSYHS geometries zip into `data/dsyhs/raw/` (gitignored) with a checksum check. Python (`.venv`, a pip IGES/OCC reader such as `cadquery-ocp`) computes each hull's Lwl, Bwl, Tc, displacement, LCB, Cp, Cm at its design waterline, writes `table.csv` (committed).
   - verify: Table has a row per hull; values for two hulls match the parameters published in the DSYHS literature within 2%.
@@ -80,3 +80,4 @@ sim code. Every number recorded with its source and a confidence.
 - 2026-11-27 — Reference certificate is ORC's 2019 J/80 one-design certificate (data.orc.org/public/od/2019/j80.od.pdf): current certificates sit behind a human-verification gate agents cannot pass; the user chose the OD certificate, which is class-standard by construction. Current certificates the user later supplies are added for spread only.
 - 2026-11-27 — The OD certificate has no non-spinnaker speed table, so the downwind target is the Python-VPP main+jib polar. Its beat/run rows give VMG; `orc_polar.csv` stores boat speed as VMG/|cos TWA| and `sources.md` keeps the raw VMGs.
 - 2026-11-27 — Keel ballast is 635 kg lead-antimony (J/Boats); the class H.1 offsets volume (0.0805 m³) includes the GRP sump below Section 1, so it is the keel's displaced volume, not its lead volume. 885 kg (offsets as all lead) would put the rest-of-boat CG above the deck. Positions in M2 files are stem/no-crew-waterplane relative until the hull morph fixes the DWL-midship origin.
+- 2026-11-27 — DSYHS geometries are 4TU doi:10.4121/21501330 (CC0, model scale, half hulls, appendages separate); the DWL comes from the companion hydrostatics table (doi:10.4121/21501375). Computed hydrostatics match the published table within 1.3% on the five check ratios for all 59 hulls, but wetted surface differs by up to 4.6% on models 11, 13, 18, 20, 31 and 33 (cause unknown); prefer the published Sc where a published value exists.
