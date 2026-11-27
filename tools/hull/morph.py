@@ -94,7 +94,7 @@ def rank_parents(table, lwl, vol_c, aw):
     }
     t["distance"] = np.sqrt(sum(np.log(t[k] / v) ** 2 for k, v in j.items()))
     for k, v in j.items():
-        t["j80_" + k] = v
+        t["boat_" + k] = v
     t["bwl_target"] = bwl
     t["tc_target"] = tc
     return t.sort_values(["distance", "overhang"], ascending=[True, False])
@@ -411,8 +411,7 @@ def run(args):
     part = json.loads((boat / "particulars.json").read_text())
     app = json.loads((boat / "appendages.json").read_text())
     out_json = boat / "hull_hydro.json"
-    prev = json.loads(out_json.read_text())
-    inputs = prev["inputs"]
+    name = val(part, "name")
     cert = part["displacement"]["source"].split(", p.")[0]
 
     rho = 1000.0 * val(part, "flotation_sg")
@@ -421,19 +420,18 @@ def run(args):
     vol_keel = val(app["keel"], "volume_from_offsets")
     keel_c = np.array(val(app["keel"], "centroid"))
     vol_rud, rud_c, k_naca = rudder_volume(app["rudder"])
-    vol_c = vol_total - vol_keel - vol_rud
-    z_flot = 0.0
-    root_z = val(app["keel"], "root_z") + z_flot
+    vol_c0 = vol_total - vol_keel - vol_rud
+    root_z = val(app["keel"], "root_z")
     root_le = np.array(val(app["keel"], "root_leading_edge"))
     root_chord = val(app["keel"], "root_chord")
     fair_area = app["keel"]["root_fairing"]["section_area_m2"]
-    lwl_t = val(inputs, "lwl")
+    lwl_t = val(part, "lwl")
     aw_cert = val(part, "sink") * 1000.0 / rho
 
     table = pd.read_csv(args.table)
-    ranked = rank_parents(table, lwl_t, vol_c, aw_cert)
-    cols = ["hull_id", "overhang", "distance", "lwl_vol13", "j80_lwl_vol13", "bwl_tc", "j80_bwl_tc", "lwl_bwl", "j80_lwl_bwl"]
-    print("Parent candidates (log-ratio distance; j80_* are the boat's values with that parent's Cw, Cb):")
+    ranked = rank_parents(table, lwl_t, vol_c0, aw_cert)
+    cols = ["hull_id", "overhang", "distance", "lwl_vol13", "boat_lwl_vol13", "bwl_tc", "boat_bwl_tc", "lwl_bwl", "boat_lwl_bwl"]
+    print(f"Parent candidates (log-ratio distance; boat_* are the {name}'s values with that parent's Cw, Cb):")
     print(ranked[cols].head(5).round(3).to_string(index=False))
     parent, runner = ranked.iloc[0], ranked.iloc[1]
     bwl_t, tc_t = float(parent.bwl_target), float(parent.tc_target)
@@ -486,7 +484,7 @@ def run(args):
     rings0, h0 = rings, h
     beam0, beam0_x = max_beam(rings0)
     beam_t, station_t = val(part, "beam"), val(part, "max_beam_station_from_stem")
-    w_transom = 0.6
+    w_transom = args.flare_transom_weight
     hw_fwd = station_t
     hw_aft = (loa - station_t) / (2.0 / np.pi * math.acos(math.sqrt(w_transom)))
     flare = {"peak_x": stem_x - station_t, "hw_fwd": hw_fwd, "hw_aft": hw_aft}
@@ -516,13 +514,13 @@ def run(args):
     onset = [r(min(onset), 2), r(max(onset), 2)] if onset else []
     xb_st = morph.x_map(morph.xs, sx, x0, fwd, aft)
     parent_fb = (morph.z_top - z_dwl) * sz
-    j80_fb = sheer(xb_st)
+    boat_fb = sheer(xb_st)
 
     pv, pf = physics_mesh(v, f, args.physics_tris)
     normals = corner_normals(v, f, args.crease_deg)
     frame_note = "body frame: x forward, y port, z up, m; origin at Lwl midpoint on the DWL, centreline"
-    write_obj(boat / "hull_visual.obj", v, f, normals, header=(f"J/80 visual hull morphed from DSYHS {parent.file}", frame_note))
-    write_obj(boat / "hull_physics.obj", pv, pf, header=(f"J/80 physics hull decimated from hull_visual.obj", frame_note))
+    write_obj(boat / "hull_visual.obj", v, f, normals, header=(f"{name} visual hull morphed from DSYHS {parent.file}", frame_note))
+    write_obj(boat / "hull_physics.obj", pv, pf, header=(f"{name} physics hull decimated from hull_visual.obj", frame_note))
 
     vol_tot_mesh = hf["vol_m3"] + vol_keel + vol_fair + vol_rud
     keel_b = keel_c + [stem_x, 0.0, 0.0]
@@ -536,10 +534,10 @@ def run(args):
     tc_keel_root = -val(app["keel"], "root_z")
     beam_max = 2.0 * np.abs(v[:, 1]).max()
     parent_src = f"DSYHS model {int(parent.hull_id)}, data/dsyhs/table.csv"
-    jb = inputs["lwl"]["source"]
+    jb = part["lwl"]["source"]
 
     targets = {
-        "lwl": inputs["lwl"],
+        "lwl": part["lwl"],
         "bwl": item(
             r(bwl_t), "m", f"{cert}, p.1 (sink); {parent_src}", "derived",
             method=(
@@ -555,8 +553,9 @@ def run(args):
         "tc": item(
             r(tc_t), "m", f"{cert}, p.1; {parent_src}", "derived",
             method=(
-                f"canoe volume / (Cb Lwl Bwl) with the parent's Cb {parent.cb:.4f}; the initial guess for "
-                "the vertical scale, which is then iterated on volume."
+                f"canoe volume before the keel fairing ({vol_c0:.4f} m^3: displacement volume - keel - rudder) "
+                f"/ (Cb Lwl Bwl) with the parent's Cb {parent.cb:.4f}; the initial guess for the vertical "
+                "scale, which is then iterated on volume with the fairing counted."
             ),
             note=(
                 f"Shallower than the keel root depth below the flotation plane, {tc_keel_root:.3f} m "
@@ -587,9 +586,17 @@ def run(args):
         "waterplane_area": item(r(aw_cert), "m^2", f"{cert}, p.1", "derived", method="sink kg/mm x 1000 / rho"),
         "lcb": item(
             r(hf["lcb_frac_lwl"]), "fraction of Lwl aft of the FP", parent_src, "derived",
+            method=(
+                "canoe-body LCB of the morphed hull as a fraction of Lwl; the immersed hull is an affine "
+                "scale of the parent, so this is the parent's LCB carried through it"
+            ),
             note="not on the certificate; the morph keeps the parent's longitudinal distribution",
         ),
-        "cp": item(r(parent.cp), "-", parent_src, "derived", note="not on the certificate; the parent's Cp"),
+        "cp": item(
+            r(parent.cp), "-", parent_src, "derived",
+            method="the parent's Cp from data/dsyhs/table.csv, which the affine scale leaves unchanged",
+            note="not on the certificate",
+        ),
     }
 
     result = {
@@ -633,7 +640,6 @@ def run(args):
             "Lwl on the DWL. The DWL is the certificate flotation plane (measurement trim, no crew), "
             "taken as level."
         ),
-        "inputs": inputs,
         "transform": {
             "stem_x_in_body": r(stem_x),
             "flotation_z_in_body": 0.0,
@@ -680,9 +686,9 @@ def run(args):
             "source": f"{cert}, p.2 (FFM at SFFP, freeboard at mast at J, FAM at SAFP)",
             "fit": "quadratic through the three points",
             "parent_freeboard_scaled": r(parent_fb),
-            "j80_freeboard_range": [r(j80_fb.min()), r(j80_fb.max())],
-            "max_extension_m": r(max(0.0, (j80_fb - parent_fb).max())),
-            "max_trim_m": r(max(0.0, (parent_fb - j80_fb).max())),
+            "boat_freeboard_range": [r(boat_fb.min()), r(boat_fb.max())],
+            "max_extension_m": r(max(0.0, (boat_fb - parent_fb).max())),
+            "max_trim_m": r(max(0.0, (parent_fb - boat_fb).max())),
             "note": "Where the scaled DSYHS surface stops below the sheer the topsides are extended vertically; where it is above, it is trimmed. Deck flat at the sheer. The flare below is applied after this.",
         },
         "flare": {
@@ -888,6 +894,8 @@ def main(argv=None):
     ap.add_argument("--deck", type=int, default=11, help="interior deck points per station")
     ap.add_argument("--physics-tris", type=int, default=1600)
     ap.add_argument("--crease-deg", type=float, default=40.0)
+    ap.add_argument("--flare-transom-weight", type=float, default=0.6,
+                    help="flare taper weight w at the transom (1 = full flare, 0 = none)")
     ap.add_argument("--check", action="store_true", help="only recompute and check the written meshes")
     args = ap.parse_args(argv)
     if not args.check:

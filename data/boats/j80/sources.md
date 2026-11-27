@@ -11,11 +11,13 @@
 - Current J/80 certificates exist on data.orc.org, but they sit behind a human-verification gate and were not used.
 - The PDF is image-only with no text layer. All values were transcribed by reading the rendered pages.
 
-Every number in `particulars.json` and `orc_polar.csv` is cited as "ORC J/80 OD certificate 2019, p.N".
+Every certificate number in `particulars.json` and `orc_polar.csv` is cited as "ORC J/80 OD certificate 2019, p.N". The two exceptions in `particulars.json` are `lwl` (J/Boats, see Hull morph below) and `name`.
+
+The certificate also lists asymmetric spinnaker and bowsprit measurements (ISP, TPS, spinnaker area and girths, p.2-3). They are out of scope for the main + jib dossier and are not carried into any data file.
 
 ### Files derived from it
 
-- `particulars.json`: hull, stability, crew, rig and sail particulars. Values are in SI. Where the certificate used another unit (righting moment in kg*m), the original appears in `note`. Displacement is printed as `1.438kg`, with `.` as a thousands separator, so it is 1438 kg.
+- `particulars.json`: hull, stability, crew, rig and main/jib particulars, plus the J/Boats `lwl` and the boat `name` the tools print. Values are in SI. Where the certificate used another unit (righting moment in kg*m), the original appears in `note`. Displacement is printed as `1.438kg`, with `.` as a thousands separator, so it is 1438 kg.
 - `orc_polar.csv`: the p.1 "Velocity Prediction in Knots for True Wind Speeds" table. TWS is 6, 8, 10, 12, 14, 16 and 20 kn. The `fixed` rows are TWA 52, 60, 75, 90, 110, 120, 135 and 150 deg.
   - `beat` rows: the TWA is the certificate's Beat Angle. The certificate gives Beat VMG, not boat speed. `bsp_kn` is derived as `VMG / cos(beat angle)` and rounded to 0.01 kn.
   - `run` rows: the TWA is the certificate's Gybe Angle. `bsp_kn` is derived as `Run VMG / -cos(gybe angle)` and rounded to 0.01 kn.
@@ -29,7 +31,7 @@ No non-spinnaker J/80 velocity table or separate non-spinnaker certificate was f
 ### Certificate oddities, transcribed as printed
 
 - Crew Weight Default is 411 kg, which is above the Maximum of 350 kg. The Minimum of 263 kg applies only when the NoR and SI invoke it.
-- There is no plain LWL. The certificate gives IMSL 7.237 m, RL 7.210 m and LSM0 6.967 m. `ims_l` stands in for waterline length.
+- There is no plain LWL. The certificate gives IMSL 7.237 m, RL 7.210 m and LSM0 6.967 m, which are rating length measures; `ims_l` records IMSL as one. The waterline length used is J/Boats' 6.71 m (`particulars.json` `lwl`).
 
 ### Not on certificate
 
@@ -63,7 +65,7 @@ No non-spinnaker J/80 velocity table or separate non-spinnaker certificate was f
 
 ### J/Boats J/80 pages and drawings
 
-- Tech specs: https://www.jboats.com/j80-tech-specs. LOA 8.00 m, LWL 6.71 m, beam 2.51 m, draft 1.49 m, ballast 635 kg (1,400 lb), displacement 1315 kg (2,900 lb), I 9.60, ISP 10.06, J 2.90, P 9.14, E 3.81 m, 100% SA 31.40 m^2. https://www.jboats.com/j80 states the 1,400 lb lead keel is a 48% ballast ratio.
+- Tech specs: https://www.jboats.com/j80-tech-specs. LOA 8.00 m, LWL 6.71 m, beam 2.51 m, draft 1.49 m, ballast 635 kg (1,400 lb), displacement 1315 kg (2,900 lb), I 9.60, J 2.90, P 9.14, E 3.81 m, 100% SA 31.40 m^2 (`sails.json` `jboats_sail_area_100`, an informational cross-check in `tools/dossier_checks.py`). https://www.jboats.com/j80 states the 1,400 lb lead keel is a 48% ballast ratio.
 - Rig profile drawing: https://www.jboats.com/images/slides/j80/700x350/J80-Rig-700.png
 - Deck plan drawing: https://www.jboats.com/images/slides/j80/700x350/J80-Plan-700.png
 - The drawings have no scale bar. The profile was scaled from P (9.144 m between the mast bands, 114.6 px/m). The plan was scaled from LOA and maximum beam (about 76 px/m). Every value taken from them is marked `estimated`, and its `method` says how it was scaled.
@@ -75,13 +77,13 @@ No non-spinnaker J/80 velocity table or separate non-spinnaker certificate was f
 
 ## Frame used in rig.json, sails.json, appendages.json and mass.json
 
-The DWL midship is not fixed yet, so every position uses a provisional frame, stated in each file's `frame` field:
+These files use a provisional frame anchored on certificate references, stated in each file's `frame` field:
 
 - x forward, y to port, z up, in metres.
 - x = 0 at the stem: the forward end of LOA, which is also the forestay deck point because SFJ = 0. Points aft of the stem have negative x.
 - z = 0 on the certificate's measurement-trim flotation plane, the plane its freeboards are measured from.
 
-In sailing trim, with crew aboard, the boat sinks about 39 mm (350 kg at 8.99 kg/mm). A later hull-morph task moves the origin to DWL midship.
+In sailing trim, with crew aboard, the boat sinks about 39 mm (350 kg at 8.99 kg/mm). `hull_hydro.json` `transform` maps this frame to the body frame of the hull meshes (origin at DWL midship): p_body = p + (stem_x_in_body, 0, flotation_z_in_body), with stem_x_in_body 3.7871 m.
 
 Positions assume a vertical mast, as P, IG and J are measured. The J/Boats profile shows about 3.2 deg of aft rake, recorded as `mast_rake`.
 
@@ -89,7 +91,7 @@ Positions assume a vertical mast, as P, IG and J are measured. The J/Boats profi
 
 ORC/IMS measured displacement does not include crew. IMS B4.1 requires the boat to be "dry in light ship condition without crew". B4.2 also removes sails, sheets and running rigging. Battery and the outboard as carried while racing stay in.
 
-So the mass check compares the sum of the items marked `in_displacement: true` with the full 1438 kg, and does not subtract crew. Crew (class maximum 350 kg), sails and running rigging are listed separately.
+So the mass check compares the sum of the items marked `in_displacement: true` with the full 1438 kg, and does not subtract crew. The compare is informational, not a pass/fail check: hull/deck/fittings is a residual from the builder's weight, so the sum lands near it by construction. Crew (class maximum 350 kg), sails and running rigging are listed separately.
 
 The class builder's weight, 1425-1450 kg (D.5.1), covers hull, keel, rudder, deck, spars, and standing and running rigging. It excludes battery, sails and portable equipment. It brackets the certificate's 1438 kg, which is an independent confirmation.
 
@@ -97,10 +99,10 @@ J/Boats' 1315 kg displacement is a marketing figure that disagrees with both. It
 
 ## Conflicts and how each was resolved
 
-- Keel ballast: J/Boats publishes 635 kg (1,400 lb) and `mass.json` uses it (confidence medium). The H.1 minimum offsets integrate to 0.0805 m^3 (centroid 0.653 m below Section 1), which would be about 885 kg at 11,000 kg/m^3, but that volume is the keel's displaced volume, not its lead volume. H.1 note 1 says Section 1 is the intersection of the hull fairbody with the moulded keel sump, so the offsets shape includes a GRP sump above the lead.
+- Keel ballast: J/Boats publishes 635 kg (1,400 lb) and `mass.json` uses it (confidence medium). The H.1 minimum offsets integrate to 0.0805 m^3 (centroid 0.645 m below Section 1), which would be about 885 kg at 11,000 kg/m^3, but that volume is the keel's displaced volume, not its lead volume. H.1 note 1 says Section 1 is the intersection of the hull fairbody with the moulded keel sump, so the offsets shape includes a GRP sump above the lead.
   - Material: lead strengthened with antimony (Class Rules 2024 E.2.1, same text in 2006; J/Boats "cast from lead and antimony"), about 11,000 kg/m^3 (lead 11,340 and antimony 6,690 kg/m^3 at about 4% Sb).
   - There is one casting and no separate bulb: a flared foot (Sections 5-8 widen to 200 mm, plus an elliptical tip, note 3).
-  - Derived in `mass.json`: `keel_lead_volume` 0.0577 m^3 (635 / 11,000), `keel_sump_volume` 0.0228 m^3 (offsets minus lead), `bulb_mass` 321 kg (0.0292 m^3 below Section 4, lead filling from the tip up). The sump's mass is part of the hull/deck residual. In `appendages.json`, `lead_top_depth_below_root` and `ballast_centroid` locate the lead within the shape.
+  - Derived in `mass.json`: `keel_lead_volume` 0.0577 m^3 (635 / 11,000), `keel_sump_volume` 0.0228 m^3 (offsets minus lead), `bulb_mass` 322 kg (0.0292 m^3 below Section 4, lead filling from the tip up). The sump's mass is part of the hull/deck residual. In `appendages.json`, `lead_top_depth_below_root` and `ballast_centroid` locate the lead within the shape.
   - VCG sanity check: with VCGM -0.076 m from the certificate, 635 kg puts the rest-of-boat CG at about +0.64 to +0.79 m, which is plausible. 885 kg would put it at +1.36 m, above the deck.
   - Ballast ratio: 635/1438 = 0.442 against the certificate displacement, which hydrostatics use. J/Boats' 48% is 635/1315, using its lighter displacement figure.
 - Keel offset table: the extracted Appendix H.1 table has eight half-width columns for nine headings (Sections 1-8 plus "Tip CL Profile below 8"). Columns were assigned by checking each section's listed leading-edge radius against the NACA 4-digit relation r = 1.1019 (t/c)^2 c. Under that check, Sections 1-4 are 100 mm thick, and Sections 5-8 are 104, 120, 160 and 200 mm. The last column is the tip profile. The radii reproduce to within 0.2 mm for Sections 4-8 and within 0.9 mm for Sections 1-3.
@@ -141,6 +143,7 @@ All of the following are marked `"confidence": "estimated"` with a `method`:
   - keel lead and sump volumes, bulb mass
   - ballast ratio
   - crew count
+  - crew CG position (mid-cockpit, a seated height above the sheer), used for the crew VCG in the VPP
 
 ## Not found in any public source
 
@@ -155,7 +158,7 @@ All of the following are marked `"confidence": "estimated"` with a `method`:
 
 ### Targets
 
-- **LWL** 6.71 m: J/Boats J/80 Tech Specs page (https://www.jboats.com/j80-tech-specs), confidence medium. It is the only plain LWL found; it is stored in `hull_hydro.json` `inputs`, which the script reads. The certificate LSM0 (6.967 m) and IMS L (7.237 m) are effective sailing lengths, 4-8% longer, which is consistent. J/Boats pairs it with its 1315 kg marketing displacement, so at 1438 kg the static waterline is probably a little longer.
+- **LWL** 6.71 m: J/Boats J/80 Tech Specs page (https://www.jboats.com/j80-tech-specs), confidence medium. It is the only plain LWL found; it is stored in `particulars.json` `lwl`, which the script reads. The certificate LSM0 (6.967 m) and IMS L (7.237 m) are effective sailing lengths, 4-8% longer, which is consistent. J/Boats pairs it with its 1315 kg marketing displacement, so at 1438 kg the static waterline is probably a little longer.
 - **Displacement** 1438 kg / 1025 kg/m^3 = 1.4029 m^3. The density is the certificate flotation SG (1.025, p.2). Keel 0.0805 m^3 (appendages.json `volume_from_offsets`, including the GRP sump). Keel root fairing 0.0061 m^3 (see below). Rudder 0.0096 m^3: NACA 4-digit section areas (0.6851 c t) integrated over Sections 1-5, with the root at the flotation plane as in appendages.json, and no tip below Section 5. Canoe body 1.3067 m^3.
 - **BWL** 1.881 m, derived. The certificate sink, 8.99 kg/mm, is a waterplane area of 8.771 m^2. Dividing by LWL and the parent's Cw (0.695) gives BWL. The certificate beam (2.488 m) is 1.32 BWL, a strongly flared hull; the parent's own flare is 1.18.
 - **Tc** 0.2425 m, derived from the canoe volume before the keel fairing (1.3129 m^3) and the parent's Cb (0.429); it seeds the vertical scale, which is then iterated on volume, and the morphed Tc is 0.242 m. It disagrees with the keel root depth in appendages.json (0.331 m below the flotation plane): no DSYHS hull is fine enough (Cb >= 0.336) to reach that depth at this LWL, BWL and volume. The keel root fairing fills the difference, so the keel keeps its H.1 root depth and the certificate draft.
@@ -167,9 +170,9 @@ The distance is sqrt(sum ln(p_parent / p_J80)^2) over Lwl/∇c^(1/3), Bwl/Tc and
 
 ### Scaling, overhangs and sheer
 
-- x, y and z are scaled by 3.228, 3.370 and 2.900 about the parent's DWL, iterated on the final mesh until LWL, BWL and canoe volume match.
+- x, y and z are scaled by 3.228, 3.368 and 2.901 about the parent's DWL, iterated on the final mesh until LWL, BWL and canoe volume match.
 - The stem is placed at the morphed LCF plus the certificate LCF from stem on CL (4.276 m), and the transom at LOA (8.032 m) aft of it. The overhangs are stretched beyond the waterline ends only, by a C1 quadratic in x, from 0.381 to 0.432 m forward and from 0.724 to 0.890 m aft. The immersed hull stays affine.
-- The sheer is a quadratic through the certificate freeboards (p.2): FFM 0.877 m at SFFP 0.177 m, 0.744 m at the mast (J = 2.895 m aft of the stem, since SFJ = 0), and FAM 0.627 m at SAFP 8.015 m. The scaled DSYHS surface stops at a flat 0.635 m freeboard, so the topsides are extended vertically by up to 0.252 m forward and trimmed by up to 8 mm aft. The deck is flat at the sheer.
+- The sheer is a quadratic through the certificate freeboards (p.2): FFM 0.877 m at SFFP 0.177 m, 0.744 m at the mast (J = 2.895 m aft of the stem, since SFJ = 0), and FAM 0.627 m at SAFP 8.015 m. The scaled DSYHS surface stops at a flat 0.635 m freeboard, so the topsides are extended vertically by up to 0.255 m forward and trimmed by up to 6 mm aft. The deck is flat at the sheer.
 
 ### Topside flare
 
@@ -235,7 +238,7 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 
 ## Python-VPP polar
 
-`tools/vpp/run_pyvpp.py` writes `pyvpp_polar_nospi.csv`, a main + jib polar with no spinnaker, and `pyvpp_polar_upwind_check.md`, which compares its upwind speeds with the certificate and lists every input. Run `tools/vpp/fetch_pyvpp.sh` first, then `.venv/bin/python -I tools/vpp/run_pyvpp.py`. The output is deterministic.
+`tools/vpp/run_pyvpp.py` writes `pyvpp_polar_nospi.csv`, a main + jib polar with no spinnaker, and `pyvpp_polar_upwind_check.md`, which compares its upwind speeds with the certificate and lists every input. Run `tools/vpp/fetch_pyvpp.sh` first, then `.venv/bin/python -I tools/vpp/run_pyvpp.py` (`--boat-dir` picks another dossier directory). The output is deterministic.
 
 ### Source
 
@@ -275,15 +278,15 @@ The vendored crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m, wit
 ### Known limitations
 
 - Crew moment: the vendored expression is replaced in `run_pyvpp.py` with ORC eq. 4.30 in SI, as described above. Half the maximum beam as the rail arm slightly overstates the moment.
-- Beat angle: Python-VPP beats 3-9 deg lower than the certificate from 8 kn up (29-34 deg against 37-39 deg at 10-20 kn) and 1.5 deg higher at 6 kn. No beat optimum is on the 20 deg grid floor, so none is grid-limited. The lower angle makes the beat VMG +2% to +6% against the certificate at 8-20 kn.
+- Beat angle: Python-VPP beats 3.2-9.1 deg lower than the certificate from 8 kn up (29-38 deg against 37.2-41.2 deg at 8-20 kn) and 1.5 deg higher at 6 kn. No beat optimum is on the 20 deg grid floor, so none is grid-limited. Beat VMG is +1.7% to +6.4% against the certificate across 6-20 kn. The check file computes these figures from each run.
 - Python-VPP keeps the jib drawing at every angle with no blanketing behind the main, so the best run angles come out at 176-179 deg. This polar is the downwind calibration target.
 - Its keel volume formula ignores thickness.
 - It doubles the rudder aspect ratio.
-- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low. It is for the hydrostatics milestone.
+- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low.
 
 ### Estimated inputs
 
-- Crew CG: 0.25 m above the sheer at 5.5 m aft of the stem, which is 0.913 m above the flotation plane.
+- Crew CG: 0.25 m above the sheer at 5.5 m aft of the stem (`mass.json` `crew_cg_above_sheer`, `crew_cg_x`), which is 0.913 m above the flotation plane.
 - Running rigging at the mast CG height. Sails at the centroids of their tack, head and clew.
 - Level trim, both upright and heeled.
 - Rudder span held at 1.145 m, although sinkage immerses another 0.04 m of blade.

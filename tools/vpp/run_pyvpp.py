@@ -26,7 +26,6 @@ import numpy as np
 import trimesh
 
 ROOT = Path(__file__).resolve().parents[2]
-BOAT = ROOT / "data" / "boats" / "j80"
 VENDOR = ROOT / "tools" / "vpp" / "vendor" / "Python-VPP"
 PYVPP_COMMIT = "9b9fe8f3f63d902a1df207691109e42932d0a9bb"
 
@@ -42,14 +41,9 @@ ORC_FIXED_TWA = [52, 60, 75, 90, 110, 120, 135, 150]
 GZ_HEEL_DEG = np.arange(0.0, 60.1, 5.0)
 G = 9.80665
 
-# Crew sitting on the deck edge: the CG is about a seated hip-to-chest height
-# above the sheer, at mid-cockpit. Neither is in any source.
-CREW_X_FROM_STEM = -5.5
-CREW_CG_ABOVE_SHEER = 0.25
 
-
-def load(name):
-    with open(BOAT / name) as f:
+def load(boat, name):
+    with open(boat / name) as f:
         return json.load(f)
 
 
@@ -114,14 +108,15 @@ def sheer_z(points, x):
     return float(np.polyval(np.polyfit(xs, zs, 2), x))
 
 
-def build_inputs():
-    part, hh, app = load("particulars.json"), load("hull_hydro.json"), load("appendages.json")
-    rig, sails, mass = load("rig.json"), load("sails.json"), load("mass.json")
+def build_inputs(boat):
+    part, hh = load(boat, "particulars.json"), load(boat, "hull_hydro.json")
+    app, rig = load(boat, "appendages.json"), load(boat, "rig.json")
+    sails, mass = load(boat, "sails.json"), load(boat, "mass.json")
     rho = 1000.0 * v(part, "flotation_sg")
     stem_x = hh["transform"]["stem_x_in_body"]
 
-    hull = trimesh.load(BOAT / "hull_physics.obj", force="mesh", process=False)
-    appm = trimesh.load(BOAT / "appendages.obj", force="mesh", process=False)
+    hull = trimesh.load(boat / "hull_physics.obj", force="mesh", process=False)
+    appm = trimesh.load(boat / "appendages.obj", force="mesh", process=False)
     # The keel top sits 0.020 m inside the canoe body; the union removes the overlap.
     boat = trimesh.boolean.union([hull, appm], engine="manifold")
     tris, hull_tris = boat.vertices[boat.faces], hull.vertices[hull.faces]
@@ -139,7 +134,7 @@ def build_inputs():
     zg_boat = (gz1_at_zero - gz1_cert) / math.sin(math.radians(1.0))
 
     sheer = hh["sheer"]["points"]
-    z_crew = sheer_z(sheer, CREW_X_FROM_STEM + stem_x) + CREW_CG_ABOVE_SHEER
+    z_crew = sheer_z(sheer, v(mass, "crew_cg_x") + stem_x) + v(mass, "crew_cg_above_sheer")
     z_main = np.mean([v(sails, "main", k)[2] for k in ("tack", "head", "clew")])
     z_jib = np.mean([v(sails, "jib", k)[2] for k in ("tack", "head", "clew")])
     # Running rigging is spread over the rig; put it at the mast CG.
@@ -160,6 +155,9 @@ def build_inputs():
 
     p, e = v(rig, "p"), v(rig, "e")
     return {
+        "name": v(part, "name"),
+        "cert": {"rm1_kgm": v(part, "righting_moment_1deg") / G, "vcgm": v(part, "vcgm"),
+                 "crew_default": v(part, "crew_weight_default")},
         "rho": rho,
         "sinkage": zw,
         "mass": {"boat": m_boat, "crew": m_crew, **carried, "sailing": m_sail},
@@ -263,9 +261,9 @@ def write_csv(path, tws_kn, twa, bsp):
     path.write_text("\n".join(lines) + "\n")
 
 
-def read_orc():
+def read_orc(boat):
     rows = {}
-    for line in (BOAT / "orc_polar.csv").read_text().splitlines()[1:]:
+    for line in (boat / "orc_polar.csv").read_text().splitlines()[1:]:
         tws, twa, bsp, kind = line.split(",")
         rows.setdefault(int(float(tws)), {})[(kind, float(twa))] = float(bsp)
     return rows
@@ -275,11 +273,11 @@ def pct(a, b):
     return f"{100.0 * (a - b) / b:+.1f}%"
 
 
-def write_check(path, inp, yacht, tws_kn, twa, bsp):
-    orc = read_orc()
-    y = inp["yacht"]
+def write_check(path, boat, inp, yacht, tws_kn, twa, bsp):
+    orc = read_orc(boat)
+    y, cert = inp["yacht"], inp["cert"]
     out = [
-        "# J/80 Python-VPP main + jib polar: upwind check against the ORC certificate",
+        f"# {inp['name']} Python-VPP main + jib polar: upwind check against the ORC certificate",
         "",
         "Written by `tools/vpp/run_pyvpp.py`. ORC values are the 2019 OD certificate "
         "(`orc_polar.csv`), which is with spinnaker; upwind the spinnaker plays no part, "
@@ -295,7 +293,7 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
         "| ORC 60 | VPP 60 | 60 diff |",
         "|" + "---|" * 15,
     ]
-    floor_hits = []
+    floor_hits, beat_diff, vmg_diff, run_twa = [], [], [], []
     for i, tws in enumerate(tws_kn):
         o = orc[tws]
         (obeat, obsp), = [(a, s) for (k, a), s in o.items() if k == "beat"]
@@ -308,6 +306,9 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
             floor_hits.append(tws)
         else:
             vbeat_txt = f"{vbeat:g}"
+        beat_diff.append((tws, vbeat - obeat))
+        vmg_diff.append(100.0 * (vvmg - ovmg) / ovmg)
+        run_twa.append(twa[optimum(twa, bsp[i], False)])
         j52, j60 = int(np.flatnonzero(twa == 52)[0]), int(np.flatnonzero(twa == 60)[0])
         o52, o60 = o[("fixed", 52.0)], o[("fixed", 60.0)]
         out.append(
@@ -317,6 +318,13 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
             f"| {o60:.2f} | {bsp[i, j60]:.2f} | {pct(bsp[i, j60], o60)} |")
     m, z = inp["mass"], inp["zg"]
     sails_area = {s.type: s.area for s in yacht.sails}
+    beat_txt = ", ".join(f"{d:+.1f} at {t} kn" for t, d in beat_diff)
+    if floor_hits:
+        grid_txt = (f"The beat optimum is at the {twa[0]:g} deg grid floor at "
+                    f"{', '.join(str(t) for t in floor_hits)} kn, so those angles are grid-limited.")
+    else:
+        grid_txt = (f"The beat optimum is inside the {twa[0]:g}-{twa[-1]:g} deg grid at every "
+                    "TWS, so none is grid-limited.")
     out += [
         "",
         "## Inputs",
@@ -340,7 +348,7 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
         f"| Loa, Boa | {y['Loa']:.3f}, {y['Boa']:.3f} m | certificate |",
         f"| Ff, Fa | {y['Ff']:.3f}, {y['Fa']:.3f} m | certificate FFM, FAM - sinkage |",
         f"| crew_weight | {y['crew_weight']:.0f} kg | class maximum (certificate default "
-        "411 kg exceeds it) |",
+        f"{cert['crew_default']:.0f} kg exceeds it) |",
         f"| Keel Cu, Cl, Span, t/c | {inp['keel']['Cu']:.3f}, {inp['keel']['Cl']:.3f}, "
         f"{inp['keel']['Span']:.3f} m, {inp['keel']['Tc_ratio']:.3f} | appendages.json foils; "
         "Cl keeps the planform area; t/c is thickness over chord integrated over depth |",
@@ -359,7 +367,8 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
         "Righting arm: the hull and appendage meshes heeled at level trim, at the sailing "
         f"displacement, with G at {z['sailing']:.3f} m. The boat's own VCG, "
         f"{z['boat_from_rm1']:+.3f} m, is the one at which the meshes reproduce the "
-        "certificate's measured RM of 27.0 kg m per degree at 1438 kg (the meshes give "
+        f"certificate's measured RM of {cert['rm1_kgm']:.1f} kg m per degree at "
+        f"{m['boat']:.0f} kg (the meshes give "
         f"GZ(1 deg) = {inp['gz1_mesh_at_zg0']:.4f} m with G on the flotation plane). "
         f"Crew CG {z['crew']:.3f} m, mainsail {z['mainsail']:.3f} m, jib {z['jib']:.3f} m "
         f"and running rigging {z['running_rigging']:.3f} m above the flotation plane.",
@@ -383,19 +392,17 @@ def write_check(path, inp, yacht, tws_kn, twa, bsp):
         "- Crew moment: replaced with ORC eq. 4.30 in SI (see above). Half the maximum "
         "beam is used as the rail arm, which slightly overstates it, since the deck-edge "
         "half-beam at the crew station is a little less.",
-        "- Beat angle: Python-VPP beats 3-9 deg lower than the certificate from 8 kn up "
-        "(29-34 deg against 37-39 deg at 10-20 kn), and 1.5 deg higher at 6 kn. The beat "
-        "optimum is inside the 20-180 deg grid at every TWS, so none is grid-limited, but "
-        "the lower angle makes the beat VMG +2% to +6% against the certificate at 8-20 kn.",
+        f"- Beat angle, Python-VPP minus the certificate, in deg: {beat_txt}. {grid_txt} "
+        f"The beat VMG differs from the certificate by {min(vmg_diff):+.1f}% to "
+        f"{max(vmg_diff):+.1f}% across the TWS range.",
         "- Python-VPP keeps the jib drawing at every TWA with no blanketing behind the "
-        "main, so the best run angles come out at 176-179 deg. This polar is the "
-        "downwind calibration target.",
+        f"main, so the best run angles come out at {min(run_twa):g}-{max(run_twa):g} deg. "
+        "This polar is the downwind calibration target.",
         "- Its keel volume formula ignores thickness.",
         "- It doubles the rudder aspect ratio.",
         f"- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is "
-        f"{z['boat_from_rm1']:+.3f} m, against the certificate's VCGM of -0.076 m. This "
-        "suggests the morphed hull's waterplane inertia is low; it is for the hydrostatics "
-        "milestone.",
+        f"{z['boat_from_rm1']:+.3f} m, against the certificate's VCGM of "
+        f"{cert['vcgm']:+.3f} m. This suggests the morphed hull's waterplane inertia is low.",
         "",
     ]
     path.write_text("\n".join(out))
@@ -405,17 +412,20 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--inputs-only", action="store_true",
                     help="print the mapped Python-VPP inputs and stop")
+    ap.add_argument("--boat-dir", type=Path, default=ROOT / "data" / "boats" / "j80",
+                    help="dossier directory to read and write (default data/boats/j80)")
     args = ap.parse_args(argv)
+    boat = args.boat_dir
     logging.basicConfig(level=logging.WARNING)
     check_vendor()
     t0 = time.perf_counter()
-    inp = build_inputs()
+    inp = build_inputs(boat)
     if args.inputs_only:
         print(json.dumps(inp, indent=1))
         return
     yacht, bsp = run_vpp(inp, TWS_KN, TWA_DEG)
-    write_csv(BOAT / "pyvpp_polar_nospi.csv", TWS_KN, TWA_DEG, bsp)
-    write_check(BOAT / "pyvpp_polar_upwind_check.md", inp, yacht, TWS_KN, TWA_DEG, bsp)
+    write_csv(boat / "pyvpp_polar_nospi.csv", TWS_KN, TWA_DEG, bsp)
+    write_check(boat / "pyvpp_polar_upwind_check.md", boat, inp, yacht, TWS_KN, TWA_DEG, bsp)
     print(f"run_pyvpp: wrote pyvpp_polar_nospi.csv and pyvpp_polar_upwind_check.md "
           f"in {time.perf_counter() - t0:.1f} s")
 

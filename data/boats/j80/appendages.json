@@ -1,5 +1,5 @@
 {
-  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. A later hull-morph task moves the origin to DWL midship. Section depths are measured down from each appendage's root section (Section 1).",
+  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. hull_hydro.json transform maps it to the body frame (origin at DWL midship): p_body = p + (stem_x_in_body, 0, flotation_z_in_body). Section depths are measured down from each appendage's root section (Section 1).",
   "keel": {
     "material": {
       "value": "lead-antimony, cast; fin and bulb are one casting; the upper fin is a GRP sump",
@@ -230,7 +230,7 @@
         -0.331
       ],
       "unit": "m",
-      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; ORC J/80 OD certificate 2019, p.1",
+      "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; ORC J/80 OD certificate 2019, p.1-2",
       "confidence": "estimated",
       "method": "No public drawing locates the keel fore and aft. The root leading edge is placed so the keel's volume centroid (0.618 m aft of the root LE) falls at the certificate LCF, 4.276 m from the stem, as a stand-in for LCB."
     },

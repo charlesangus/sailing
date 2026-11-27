@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Downloads the DSYHS hull geometries (doi:10.4121/21501330) and the series'
-# model-scale hydrostatics table (doi:10.4121/21501375) from 4TU.ResearchData.
+# model-scale hydrostatics table (doi:10.4121/21501375) from 4TU.ResearchData,
+# and installs the pinned hull-tool dependencies into .venv.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -47,15 +48,19 @@ fetch() {
     mv "$part" "$out"
 }
 
+"$root/.venv/bin/python" -m pip install --quiet --disable-pip-version-check \
+    -r "$root/tools/hull/requirements.txt"
+
 mkdir -p "$raw"
 fetch "$GEOM_URL" "$GEOM_SHA256" "$GEOM_FILE"
 fetch "$HYDRO_URL" "$HYDRO_SHA256" "$HYDRO_FILE"
 
-if [ ! -f "$raw/IGS/.unpacked" ]; then
+# The marker holds the zip checksum, so a different zip is re-extracted.
+if [ "$(cat "$raw/IGS/.unpacked" 2>/dev/null)" != "$GEOM_SHA256" ]; then
     rm -rf "${raw:?}/IGS"
     # zipfile.extractall drops absolute paths and ".." components from members.
     "$root/.venv/bin/python" -I -m zipfile -e "$raw/$GEOM_FILE" "$raw"
-    touch "$raw/IGS/.unpacked"
+    echo "$GEOM_SHA256" > "$raw/IGS/.unpacked"
 fi
 
 echo "fetch_dsyhs: ok ($(find "$raw/IGS" -name '*.igs' | wc -l) IGES files in $raw/IGS)"

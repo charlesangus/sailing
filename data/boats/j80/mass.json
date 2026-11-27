@@ -1,5 +1,5 @@
 {
-  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. A later hull-morph task moves the origin to DWL midship.",
+  "frame": "Provisional frame: x forward, y to port, z up, metres. Origin x=0 at the stem (forward end of LOA, which is also the forestay deck point since SFJ=0), so points aft of the stem have negative x. y=0 on the centreline. z=0 on the ORC measurement-trim flotation plane (no crew, no sails), the plane the certificate freeboards are measured from. hull_hydro.json transform maps it to the body frame (origin at DWL midship): p_body = p + (stem_x_in_body, 0, flotation_z_in_body).",
   "displacement_basis": {
     "value": "The certificate displacement (1438 kg) is measured in IMS Measurement Trim: dry, light ship, without crew (IMS B4.1), and with sails, sheets and running rigging removed (B4.2(c),(d)). It includes battery and the outboard as carried (B4.1(b),(e)). So it is compared with the sum of in_displacement items with no crew term.",
     "unit": "-",
@@ -61,7 +61,7 @@
     "mast": {
       "value": 33.1,
       "unit": "kg",
-      "source": "ORC J/80 OD certificate 2019, p.1; J/80 Class Rules 2024 (effective 2024-06-01), C.8.1",
+      "source": "ORC J/80 OD certificate 2019, p.2; J/80 Class Rules 2024 (effective 2024-06-01), C.8.1",
       "confidence": "high",
       "note": "MWT; class minimum",
       "in_displacement": true
@@ -172,5 +172,20 @@
     "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.4.1",
     "confidence": "estimated",
     "method": "the class sets no crew number; 4 crew at about 87 kg reach the 350 kg cap, and 4 to 5 is usual."
+  },
+  "crew_cg_x": {
+    "value": -5.5,
+    "unit": "m",
+    "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png)",
+    "confidence": "estimated",
+    "method": "mid-cockpit on the deck plan, where the crew sit hiking; no source gives a crew position. Provisional frame (stem origin).",
+    "note": "used by tools/vpp/run_pyvpp.py for the crew VCG only; the VPP takes the crew righting arm from ORC eq. 4.30"
+  },
+  "crew_cg_above_sheer": {
+    "value": 0.25,
+    "unit": "m",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "seated hip-to-chest height above the sheer for crew sitting on the deck edge; no source gives a crew height."
   }
 }

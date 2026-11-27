@@ -1,15 +1,5 @@
 {
   "frame": "Body frame: x forward, y to port, z up, metres. Origin on the centreline at the midpoint of Lwl on the DWL. The DWL is the certificate flotation plane (measurement trim, no crew), taken as level.",
-  "inputs": {
-    "lwl": {
-      "value": 6.71,
-      "unit": "m",
-      "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
-      "confidence": "medium",
-      "method": "published LWL 6.71 m (22 ft); read by tools/hull/morph.py",
-      "note": "Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
-    }
-  },
   "transform": {
     "stem_x_in_body": 3.7871,
     "flotation_z_in_body": 0.0,
@@ -93,7 +83,7 @@
     "source": "ORC J/80 OD certificate 2019, p.2 (FFM at SFFP, freeboard at mast at J, FAM at SAFP)",
     "fit": "quadratic through the three points",
     "parent_freeboard_scaled": 0.6326,
-    "j80_freeboard_range": [
+    "boat_freeboard_range": [
       0.6269,
       0.8874
     ],
@@ -149,8 +139,8 @@
       "unit": "m",
       "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
       "confidence": "medium",
-      "method": "published LWL 6.71 m (22 ft); read by tools/hull/morph.py",
-      "note": "Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
+      "method": "published LWL 6.71 m (22 ft); the LWL target of tools/hull/morph.py",
+      "note": "Not on the certificate, which gives no plain LWL. Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
     },
     "bwl": {
       "value": 1.8814,
@@ -165,7 +155,7 @@
       "unit": "m",
       "source": "ORC J/80 OD certificate 2019, p.1; DSYHS model 61, data/dsyhs/table.csv",
       "confidence": "derived",
-      "method": "canoe volume / (Cb Lwl Bwl) with the parent's Cb 0.4288; the initial guess for the vertical scale, which is then iterated on volume.",
+      "method": "canoe volume before the keel fairing (1.3129 m^3: displacement volume - keel - rudder) / (Cb Lwl Bwl) with the parent's Cb 0.4288; the initial guess for the vertical scale, which is then iterated on volume with the fairing counted.",
       "note": "Shallower than the keel root depth below the flotation plane, 0.331 m (appendages.json keel root_z), which would put the canoe body deeper than any DSYHS Cb allows at this Lwl, Bwl and volume. The keel root fairing fills the gap."
     },
     "density": {
@@ -222,6 +212,7 @@
       "unit": "fraction of Lwl aft of the FP",
       "source": "DSYHS model 61, data/dsyhs/table.csv",
       "confidence": "derived",
+      "method": "canoe-body LCB of the morphed hull as a fraction of Lwl; the immersed hull is an affine scale of the parent, so this is the parent's LCB carried through it",
       "note": "not on the certificate; the morph keeps the parent's longitudinal distribution"
     },
     "cp": {
@@ -229,7 +220,8 @@
       "unit": "-",
       "source": "DSYHS model 61, data/dsyhs/table.csv",
       "confidence": "derived",
-      "note": "not on the certificate; the parent's Cp"
+      "method": "the parent's Cp from data/dsyhs/table.csv, which the affine scale leaves unchanged",
+      "note": "not on the certificate"
     }
   },
   "result": {

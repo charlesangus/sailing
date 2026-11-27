@@ -3,7 +3,9 @@
 `table.csv` holds the upright bare canoe-body hydrostatics of every hull in the
 DSYHS geometry dataset, computed from its IGES surfaces by
 `tools/hull/dsyhs_table.py`. The raw files are not committed;
-`tools/fetch_dsyhs.sh` downloads them into `raw/` and checks their SHA-256.
+`tools/fetch_dsyhs.sh` installs the pinned hull-tool dependencies
+(`tools/hull/requirements.txt`) into `.venv`, downloads the files into `raw/` and
+checks their SHA-256.
 
 ## Sources
 

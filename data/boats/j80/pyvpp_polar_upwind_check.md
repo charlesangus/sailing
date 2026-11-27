@@ -49,8 +49,8 @@ Python-VPP's own crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m,
 ## Known limitations
 
 - Crew moment: replaced with ORC eq. 4.30 in SI (see above). Half the maximum beam is used as the rail arm, which slightly overstates it, since the deck-edge half-beam at the crew station is a little less.
-- Beat angle: Python-VPP beats 3-9 deg lower than the certificate from 8 kn up (29-34 deg against 37-39 deg at 10-20 kn), and 1.5 deg higher at 6 kn. The beat optimum is inside the 20-180 deg grid at every TWS, so none is grid-limited, but the lower angle makes the beat VMG +2% to +6% against the certificate at 8-20 kn.
+- Beat angle, Python-VPP minus the certificate, in deg: +1.5 at 6 kn, -3.2 at 8 kn, -4.9 at 10 kn, -4.8 at 12 kn, -5.5 at 14 kn, -6.2 at 16 kn, -9.1 at 20 kn. The beat optimum is inside the 20-180 deg grid at every TWS, so none is grid-limited. The beat VMG differs from the certificate by +1.7% to +6.4% across the TWS range.
 - Python-VPP keeps the jib drawing at every TWA with no blanketing behind the main, so the best run angles come out at 176-179 deg. This polar is the downwind calibration target.
 - Its keel volume formula ignores thickness.
 - It doubles the rudder aspect ratio.
-- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low; it is for the hydrostatics milestone.
+- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low.

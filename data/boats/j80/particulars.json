@@ -1,4 +1,19 @@
 {
+  "name": {
+    "value": "J/80",
+    "unit": "-",
+    "source": "ORC J/80 OD certificate 2019, p.1",
+    "confidence": "high",
+    "note": "printed as 'J-80 ONE DESIGN'; the tools use it in file headers and labels"
+  },
+  "lwl": {
+    "value": 6.71,
+    "unit": "m",
+    "source": "J/Boats J/80 Tech Specs page, https://www.jboats.com/j80-tech-specs",
+    "confidence": "medium",
+    "method": "published LWL 6.71 m (22 ft); the LWL target of tools/hull/morph.py",
+    "note": "Not on the certificate, which gives no plain LWL. Cross-checks: the certificate LSM0 6.967 m and IMS L 7.237 m are 4-8% longer, as expected: IMS lengths are effective sailing lengths from the immersed section-area distribution in sunk and heeled conditions, not the static waterline. LOA 8.032 m minus 6.71 m leaves 1.32 m of overhang in total, which the morph splits between bow and stern so the certificate LCF from stem holds. J/Boats quotes 1315 kg displacement; at the certificate's 1438 kg the boat floats about 14 mm deeper (sink 8.99 kg/mm), so its static LWL is slightly longer than 6.71 m."
+  },
   "loa": {
     "value": 8.032,
     "unit": "m",
@@ -11,7 +26,7 @@
     "unit": "m",
     "source": "ORC J/80 OD certificate 2019, p.1",
     "confidence": "high",
-    "note": "IMSL, the IMS sailing length; the certificate gives no plain LWL"
+    "note": "IMSL, the IMS sailing length, a certificate length measure; the certificate gives no plain LWL (see lwl)"
   },
   "rl": {
     "value": 7.21,
@@ -234,25 +249,11 @@
     "confidence": "high",
     "note": "IG; 'I Jib' on p.3"
   },
-  "rig_isp": {
-    "value": 10.073,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high",
-    "note": "ISP; 'I Spin' on p.3"
-  },
   "rig_j": {
     "value": 2.895,
     "unit": "m",
     "source": "ORC J/80 OD certificate 2019, p.2",
     "confidence": "high"
-  },
-  "rig_tps": {
-    "value": 4.8,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high",
-    "note": "TPS, tack point of spinnaker (bowsprit)"
   },
   "rig_bas": {
     "value": 1.3,
@@ -407,43 +408,6 @@
     "value": 102,
     "unit": "%",
     "source": "ORC J/80 OD certificate 2019, p.3",
-    "confidence": "high"
-  },
-  "asym_spinnaker_area": {
-    "value": 64.99,
-    "unit": "m^2",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high",
-    "note": "p.3 inventory lists 65.00, asymmetric on centerline"
-  },
-  "asym_slu": {
-    "value": 12.2,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high"
-  },
-  "asym_sle": {
-    "value": 9.9,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high"
-  },
-  "asym_sl": {
-    "value": 11.05,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high"
-  },
-  "asym_shw": {
-    "value": 6.98,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
-    "confidence": "high"
-  },
-  "asym_sfl": {
-    "value": 7.37,
-    "unit": "m",
-    "source": "ORC J/80 OD certificate 2019, p.2",
     "confidence": "high"
   },
   "heavy_weather_jib_area": {

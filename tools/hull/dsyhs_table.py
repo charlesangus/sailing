@@ -114,7 +114,7 @@ def hydrostatics(tris, tc):
     p0, p1, p2 = wet[:, 0], wet[:, 1], wet[:, 2]
     n = 0.5 * np.cross(p1 - p0, p2 - p0)
     area = np.linalg.norm(n, axis=1)
-    # Model 43 is modelled as a full hull; every other file is a port half.
+    # Model 43 is modelled as a full hull; every other file is a starboard half.
     full = tris[:, :, 1].max() > 0.01 * -tris[:, :, 1].min()
     k = 1.0 if full else 2.0
     # Exact for linear integrands; (z - zw) * x is quadratic, so use the
