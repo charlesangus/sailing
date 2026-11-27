@@ -28,7 +28,7 @@ and trim and reproducing the certificate's righting-moment figures.
 
 ## Phase 3.1: Rigid body
 
-- [ ] M3.P1.T1 — Rigid-body state and integrator
+- [x] M3.P1.T1 — Rigid-body state and integrator
   - files: core/include/sail/rigid_body.hpp, core/src/rigid_body.cpp, core/include/sail/simulation.hpp, core/src/simulation.cpp, core/tests/test_rigid_body.cpp
   - approach: Eigen types. State: world position, orientation quaternion, body-frame linear and angular velocity. Mass, body inertia tensor, 6×6 added-mass matrix (diagonal for now). Body-frame force/moment accumulator. Semi-implicit Euler at dt = 1/200 s with the full gyroscopic term (ω × Iω) and quaternion renormalisation. `Simulation::advance(real_dt)` runs fixed steps through an accumulator (max 20 substeps, excess dropped) and exposes an interpolation alpha. Force modules plug in through a `ForceModule` interface (`accumulate(const State&, double t, Wrench&)`), so later milestones add modules without touching the integrator.
   - verify: doctest: free fall matches g·t²/2 within 0.1%; torque-free spin about a principal axis conserves angular momentum within 0.1% over 60 s; an intermediate-axis spin tumbles (Dzhanibekov) rather than staying fixed; accumulator gives the same state for 100×0.01 s and 1000×0.001 s calls.
@@ -77,3 +77,4 @@ and trim and reproducing the certificate's righting-moment figures.
 - 2026-11-27 — Valid to 180° heel, no flooding: user chose knockdowns and self-righting without a water-ingress model.
 - 2026-11-27 — Crew as a movable point mass: user chose auto-hiking; this milestone exposes `set_crew_position`, M5 drives it.
 - 2026-11-27 — Semi-implicit Euler at 200 Hz: one hydrostatics evaluation per step keeps cost low; the survey's stability advice is 100–200 Hz with damping.
+- 2026-11-27 — The integrator solves body-frame Kirchhoff equations on total momentum (M_rb + M_A)·ν, so added-mass Coriolis and Munk-moment terms are included; later hydrodynamic modules must not add Munk-type terms again. The accumulator counts integer nanoseconds so time slicing cannot defer a step.
