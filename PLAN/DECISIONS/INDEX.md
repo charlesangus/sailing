@@ -1,0 +1,3 @@
+- 2026-11-27 — stack-godot-cpp: Godot 4 + C++20 core via godot-cpp, Linux only → DECISIONS/2026-11-27-stack-godot-cpp.md
+- 2026-11-27 — j80-reference-boat: J/80 main+jib, DSYHS hull morphed, ORC/non-spi/Python-VPP targets → DECISIONS/2026-11-27-j80-reference-boat.md
+- 2026-11-27 — demo-scope: survey steps 1–6, no audio, user sole playtester → DECISIONS/2026-11-27-demo-scope.md

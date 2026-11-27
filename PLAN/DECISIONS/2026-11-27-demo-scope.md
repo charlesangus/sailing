@@ -1,0 +1,3 @@
+# Demo scope: survey PoC steps 1–6, no audio, user is the sole playtester
+
+The tech demo covers steps 1–6 of the survey's proof-of-concept plan: hydrostatics, resistance and foils, sails calibrated to the polar, wind and unsteady effects with tacking, the FFT ocean up to ~3 m Hs, and feedback. It stops before N-sail generalisation to other rigs and a second boat. Also out: audio, multiplayer, Windows/macOS, wake and spray, flooding, motor, real weather. Keyboard+mouse and gamepad are supported equally. The user is the only playtester. Rationale: these were the user's scope choices during planning on 2026-11-27.

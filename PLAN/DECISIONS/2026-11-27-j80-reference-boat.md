@@ -1,0 +1,3 @@
+# Reference boat: J/80, main + jib, DSYHS hull morphed to its particulars
+
+The demo's only boat is the J/80, a 26' Bermuda sloop, sailing with main and jib only (no asymmetric spinnaker). Its hull mesh is the closest DSYHS hull, scaled affinely to the J/80's certificate particulars, because ORC offset files are proprietary and no open J/80 lines exist. Calibration targets: the J/80 ORC certificate polar upwind and reaching; downwind, a non-spinnaker J/80 certificate if one exists, else Python-VPP run on the dossier with main + jib. Rationale: the user chose the J/80 for its research record (IRENav full-scale trials) and its many certificates, and chose the morphed DSYHS hull over a from-scratch parametric fit or a pure DSYHS boat.
