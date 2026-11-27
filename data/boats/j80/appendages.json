@@ -366,5 +366,253 @@
       "confidence": "high",
       "note": "including fixed gudgeons, tiller and tiller straps"
     }
+  },
+  "foils": {
+    "frame": "Body frame: x forward, y to port, z up, metres; origin on the centreline at the midpoint of Lwl on the DWL (hull_hydro.json transform). Unlike the rest of this file, which is in the provisional frame.",
+    "mesh": "appendages.obj, objects keel and rudder",
+    "keel": {
+      "span": {
+        "value": 1.263,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "from the canoe body on the centreline (mean over the root chord) down to the keel tip; includes the root fairing"
+      },
+      "root_chord": {
+        "value": 0.96,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "chord of the mesh section at the root (Section 1)"
+      },
+      "tip_chord": {
+        "value": 1.23,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "chord of the mesh section at the last table section",
+        "note": "Section 8, the widest bulb section, directly above the 0.050 m elliptical tip; the fin's narrowest chord is 0.74 m at Sections 4-5"
+      },
+      "leading_edge_sweep": {
+        "value": 19.29,
+        "unit": "deg",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "least-squares slope of the mesh leading edge over the fin, Section 1 to Section 4 (above the bulb)"
+      },
+      "quarter_chord_sweep": {
+        "value": 16.04,
+        "unit": "deg",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "derived",
+        "method": "least-squares slope of the mesh quarter-chord line over the fin, Section 1 to Section 4 (above the bulb)"
+      },
+      "thickness_chord_ratio_root": {
+        "value": 0.1042,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "max thickness / chord of the mesh section at the root"
+      },
+      "thickness_chord_ratio_tip": {
+        "value": 0.1626,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "max thickness / chord of the mesh section at the tip_chord station"
+      },
+      "planform_area": {
+        "value": 1.1071,
+        "unit": "m^2",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "chord of horizontal mesh sections integrated from the canoe body to the tip; includes the root fairing. The H.1 part (Section 1 to the tip) is planform_area_h1."
+      },
+      "geometric_aspect_ratio": {
+        "value": 1.4408,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "span^2 / planform_area"
+      },
+      "effective_aspect_ratio": {
+        "value": 2.8817,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "2x geometric: the fin is attached to the hull with no gap, so the hull bottom acts as a reflection plane. An upper bound; heel and leeway lower it.",
+        "note": "An assumption, not a measurement; the physics may replace it with its own end-plate model."
+      },
+      "quarter_chord_centre": {
+        "value": [
+          -0.2836,
+          0.0,
+          -0.8639
+        ],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "chord-weighted mean of the quarter-chord points of horizontal mesh sections over the span, i.e. the quarter-chord point at the planform area centroid's depth"
+      },
+      "wetted_area": {
+        "value": 2.4028,
+        "unit": "m^2",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "area of the mesh triangles whose centroid is below hull_visual.obj"
+      },
+      "volume_below_hull": {
+        "value": 0.08523,
+        "unit": "m^3",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "mesh volume minus its intersection with hull_physics.obj (manifold3d boolean): fin, bulb, tip and the root fairing below the canoe body"
+      },
+      "planform_area_h1": {
+        "value": 1.0175,
+        "unit": "m^2",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "high",
+        "method": "as planform_area, Section 1 down to the tip only; compare appendages.json keel lateral_area"
+      },
+      "root_overlap": {
+        "value": 0.00131,
+        "unit": "m^3",
+        "source": "tools/hull/appendages.py",
+        "confidence": "derived",
+        "method": "the root fairing extends 0.020 m into the canoe body at every root vertex, so the overlap is 0.020 m times the Section 1 area (0.0657 m^2); volume_below_hull excludes it"
+      },
+      "root_fairing_height": {
+        "value": [
+          0.0894,
+          0.1026
+        ],
+        "unit": "m",
+        "source": "tools/hull/appendages.py",
+        "confidence": "derived",
+        "method": "range over the Section 1 outline of the height from root_z up to hull_visual.obj"
+      }
+    },
+    "rudder": {
+      "span": {
+        "value": 1.145,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "from the root at the flotation plane (appendages.json stock_axis z) down to Section 5; nothing below Section 5"
+      },
+      "root_chord": {
+        "value": 0.34,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "chord of the mesh section at the root (Section 1)"
+      },
+      "tip_chord": {
+        "value": 0.26,
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "chord of the mesh section at the last table section",
+        "note": "Section 5; the blade ends flat there"
+      },
+      "leading_edge_sweep": {
+        "value": 0.0,
+        "unit": "deg",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "least-squares slope of the mesh leading edge over the whole span"
+      },
+      "quarter_chord_sweep": {
+        "value": -1.0,
+        "unit": "deg",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "derived",
+        "method": "least-squares slope of the mesh quarter-chord line over the whole span"
+      },
+      "thickness_chord_ratio_root": {
+        "value": 0.12,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "max thickness / chord of the mesh section at the root"
+      },
+      "thickness_chord_ratio_tip": {
+        "value": 0.12,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "high",
+        "method": "max thickness / chord of the mesh section at the tip_chord station"
+      },
+      "planform_area": {
+        "value": 0.3636,
+        "unit": "m^2",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "chord of horizontal mesh sections integrated from the root to Section 5"
+      },
+      "geometric_aspect_ratio": {
+        "value": 3.6052,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "span^2 / planform_area"
+      },
+      "effective_aspect_ratio": {
+        "value": 3.6052,
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "1x geometric: transom-hung, so the root sits clear of the hull with no end plate. The free surface at the root acts partly as a reflection plane at low Froude number, which this ignores.",
+        "note": "An assumption, not a measurement; the physics may replace it with its own end-plate model."
+      },
+      "quarter_chord_centre": {
+        "value": [
+          -4.3748,
+          0.0,
+          -0.5485
+        ],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "chord-weighted mean of the quarter-chord points of horizontal mesh sections over the span, i.e. the quarter-chord point at the planform area centroid's depth"
+      },
+      "wetted_area": {
+        "value": 0.7479,
+        "unit": "m^2",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "area of the mesh triangles below the flotation plane (the root face at z = 0 is excluded)"
+      },
+      "volume_below_hull": {
+        "value": 0.00954,
+        "unit": "m^3",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; appendages.obj from tools/hull/appendages.py",
+        "confidence": "estimated",
+        "method": "mesh volume; the blade is clear of the hull, so none of it is inside hull_physics.obj"
+      },
+      "stock_position": {
+        "value": [
+          -4.2949,
+          0.0,
+          0.0
+        ],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan; ORC J/80 OD certificate 2019, p.1",
+        "confidence": "estimated",
+        "method": "appendages.json rudder stock_axis converted to the body frame: on the vertical leading edge at the root"
+      },
+      "stock_axis_direction": {
+        "value": [
+          0.0,
+          0.0,
+          1.0
+        ],
+        "unit": "-",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "estimated",
+        "method": "vertical, along the leading edge, which H.1 gives as vertical; the transom rake of the pintle line is not in any source"
+      }
+    }
   }
 }

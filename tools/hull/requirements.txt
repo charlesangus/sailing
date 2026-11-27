@@ -1,5 +1,6 @@
 cadquery-ocp==8.0.1.1.0
 fast-simplification==0.2.0
+manifold3d==3.5.5
 numpy==2.5.5
 openpyxl==3.1.5
 pandas==3.1.1

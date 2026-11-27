@@ -192,3 +192,43 @@ The keel keeps its H.1 `root_z` (-0.331 m), `span` (1.170 m) and `volume_from_of
 - The overhang split, sheer extension, topside flare, keel root fairing and flat deck are modelling choices, not measured lines.
 - The canoe-body wetted area is 9.43 m^2. The certificate WS minus twice the keel and rudder lateral areas is 9.13 m^2.
 - The keel root (z = -0.331 m) sits 0.09-0.10 m below the morphed canoe-body bottom (Tc 0.242 m); the fairing bridges it. Either the J/80 canoe body has much slacker sections than any DSYHS hull, or the keel root depth needs another look.
+
+## Appendage meshes and foils
+
+`tools/hull/appendages.py` builds `appendages.obj` (objects `keel` and `rudder`, body frame) and the `foils` block of `appendages.json` from the H.1 offsets in `appendages.json`, converted to the body frame with the `hull_hydro.json` transform. Run it with `.venv/bin/python -I tools/hull/appendages.py`; `--check` recomputes everything from the written OBJ and the hull meshes and fails on any miss. Each object is a single watertight solid with outward winding (keel 3076 triangles, rudder 1686).
+
+### Sections
+
+- Every table section is a horizontal NACA 4-digit thickness form with the open trailing edge (half width 0.0105 t at x/c = 1, about the 1 mm H.1 gives), 41 cosine-spaced stations a side on the keel and 33 on the rudder. Between table sections the leading edge, chord and thickness are linear in depth, as in the trapezoidal `volume_from_offsets`.
+- The keel's leading edge follows `leading_edge_x_aft_of_root_le_m` (a constant 19.29 deg sweep). Below Section 8 the tip is 9 rings plus an apex over 0.050 m, with chord and thickness both scaled by cos(theta) at depth 0.050 sin(theta) about the Section 8 x/c = 0.3 station: a quarter-ellipse in profile and in front view.
+- The rudder's leading edge is vertical on the stock axis (0.05 m aft of the transom), from its root at the flotation plane to a flat foot at Section 5, with nothing below Section 5, as in the morph's rudder volume.
+
+### How the roots meet the hull
+
+- **Keel:** the Section 1 outline is carried straight up from `root_z`. Every outline vertex gets a ring vertex on `hull_visual.obj` (the hull bottom found straight above it) and a top vertex 0.020 m higher, inside the canoe body, closed by a flat-strip cap. There is no gap at any root vertex; against `hull_physics.obj`, whose bottom is up to 3 mm below the visual surface here, the surface ring is within 3 mm. The fairing height is 0.089-0.103 m, as in `hull_hydro.json`. The overlap inside the hull is 0.020 m x the Section 1 area, 0.00131 m^3, stored as `foils.keel.root_overlap`. `volume_below_hull` is the mesh minus its manifold3d intersection with `hull_physics.obj`, so it excludes the overlap.
+- **Rudder:** `type` is transom-hung, not a spade. The blade hangs on the transom pintles, and its root at the flotation plane is 0.05 m aft of the transom and 0.106 m below its bottom edge (the transom is clear of the water). So the rudder does not touch the hull, and `--check` reports that root-to-hull test as N/A instead of failing it. It checks that the leading edge lies on `stock_axis` instead.
+
+### Foils block
+
+Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--check`:
+
+| | keel | rudder |
+|---|---|---|
+| span | 1.263 m (canoe body to tip, including the 0.093 m fairing; H.1 alone 1.170 m) | 1.145 m |
+| root / tip chord | 0.960 / 1.230 m (Section 8, the bulb) | 0.340 / 0.260 m |
+| LE / quarter-chord sweep | 19.29 / 16.04 deg (Sections 1-4) | 0.00 / -1.00 deg |
+| t/c root / tip | 0.1042 / 0.1626 | 0.120 / 0.120 |
+| planform area | 1.107 m^2 (H.1 part 1.018 m^2) | 0.364 m^2 |
+| geometric / effective AR | 1.44 / 2.88 | 3.61 / 3.61 |
+| quarter-chord centre | (-0.284, 0, -0.864) m | (-4.375, 0, -0.549) m |
+| wetted area | 2.403 m^2 | 0.748 m^2 |
+| volume below the hull | 0.08523 m^3 | 0.00954 m^3 |
+
+- **Effective aspect ratio** is an assumption: 2x geometric for the keel, because a fin fixed to the hull with no gap treats the hull bottom as a reflection plane (an upper bound, lowered by heel and leeway), and 1x for the rudder, which hangs clear of the hull with no end plate. The physics may replace both with its own end-plate model.
+- **Rudder stock:** (-4.2949, 0, 0) m with a vertical axis. H.1 gives the leading edge as vertical, and no source gives the rake of the transom pintle line.
+
+### Volumes against the displacement accounting
+
+- Keel below the hull 0.08523 m^3 vs `volume_from_offsets` + fairing (0.0805 + 0.00612 = 0.08662), -1.6%. The fin and tip alone are 0.07920 m^3 vs 0.0805: about 0.0010 of the gap is the tip, an ellipsoidal cap (2/3 A8 h) where the offsets estimate used pi/4 A8 h, and 0.0003 is linear chord and thickness (a section area quadratic in depth) where the estimate interpolated area linearly. The mesh fairing is 0.00603 m^3 vs the morph's 0.00612; the morph used the centreline gap over the chord unweighted, and the gap is largest at the thin trailing edge.
+- Rudder 0.00954 m^3 vs the morph's 0.00956, -0.2%.
+- The total difference, -0.0014 m^3, is 0.1% of the 1.4029 m^3 displacement. It is within tolerance, so `morph.py` and the hull are unchanged.
