@@ -6,6 +6,7 @@ configure_file(
 
 add_library(sailcore STATIC
     src/boat_data.cpp
+    src/damping.cpp
     src/hydrostatics.cpp
     src/mass_model.cpp
     src/mesh.cpp
@@ -22,6 +23,7 @@ target_link_libraries(sailcore PUBLIC Eigen3::Eigen PRIVATE nlohmann_json::nlohm
 target_compile_features(sailcore PUBLIC cxx_std_20)
 set_target_properties(sailcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 sail_enable_warnings(sailcore)
+sail_optimise_debug(sailcore)
 
 if(SAIL_BUILD_TESTS)
     FetchContent_Declare(
@@ -36,6 +38,7 @@ if(SAIL_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
     add_executable(sailcore_tests
+        tests/test_damping.cpp
         tests/test_hydrostatics.cpp
         tests/test_main.cpp
         tests/test_mass_model.cpp
@@ -48,5 +51,6 @@ if(SAIL_BUILD_TESTS)
         SAIL_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
     )
     sail_enable_warnings(sailcore_tests)
+    sail_optimise_debug(sailcore_tests)
     doctest_discover_tests(sailcore_tests)
 endif()

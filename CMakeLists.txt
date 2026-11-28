@@ -43,6 +43,12 @@ function(sail_enable_warnings target)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
 endfunction()
 
+# Eigen at -O0 runs the per-triangle hydrostatics two orders of magnitude slower, which makes
+# simulation tests unusable in Debug. -O1 inlines Eigen while keeping asserts and usable debug info.
+function(sail_optimise_debug target)
+    target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-O1>)
+endfunction()
+
 # ctest only looks for CTestTestfile.cmake in the build root, so this must not live in core/.
 if(SAIL_BUILD_TESTS)
     enable_testing()
