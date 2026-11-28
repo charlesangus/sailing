@@ -1,0 +1,73 @@
+{
+  "generator": "tools/scene/make_bay.py",
+  "generator_version": 1,
+  "seed": 7,
+  "heightmap": {
+    "file": "heightmap.png",
+    "sha256": "67e0086135ea435ff401cf1d3bd9fcba38c4ef87ed2fde8c3a2699fb6ecf6241",
+    "width_px": 1024,
+    "height_px": 1024,
+    "format": "PNG greyscale, 16 bit big-endian samples, not interlaced, filter type 0 on every row"
+  },
+  "pixel_size_m": 4.0,
+  "frame": "core world frame: x east, y north, z up, sea level z = 0",
+  "origin": {
+    "x_m": -2048.0,
+    "y_m": 2048.0,
+    "note": "world x, y of the centre of pixel (col 0, row 0), the image's top-left sample"
+  },
+  "axes": {
+    "col": "east: x_m = origin.x_m + col * pixel_size_m",
+    "row": "south: y_m = origin.y_m - row * pixel_size_m (row 0 is the northern edge)"
+  },
+  "height_encoding": {
+    "scale_m": 0.0025,
+    "offset_m": -60.0,
+    "formula": "z_m = value * scale_m + offset_m",
+    "sea_level_m": 0.0
+  },
+  "sampling": {
+    "method": "bilinear between pixel centres",
+    "col": "(x_m - origin.x_m) / pixel_size_m",
+    "row": "(origin.y_m - y_m) / pixel_size_m",
+    "integer_coordinates": "an integer (col, row) is a pixel centre",
+    "outside": "clamp col and row to [0, size - 1]",
+    "seabed": "z_m < 0 is the seabed and the water depth is -z_m"
+  },
+  "start": {
+    "x_m": 0.0,
+    "y_m": -1600.0,
+    "heading_deg": 0.0,
+    "heading_convention": "compass: clockwise from north, 0 = north, 90 = east",
+    "note": "open water south of the harbour mouth, heading in through it"
+  },
+  "layout": {
+    "open_sea": "south, deepening to about 34 m at the southern edge",
+    "west_headland_tip_xy_m": [
+      -650.0,
+      -850.0
+    ],
+    "east_headland_tip_xy_m": [
+      650.0,
+      -800.0
+    ],
+    "harbour_mouth_y_m": -825.0,
+    "harbour_mouth_3m_channel_x_m": [
+      -344.0,
+      368.0
+    ],
+    "inner_bay": "x within about +-1500 m, y from about -400 to the beach, 8 to 12 m deep",
+    "beach_centre_xy_m": [
+      0.0,
+      1150.0
+    ],
+    "beach": "north shore, x within about +-800 m, shoaling over about 200 to 400 m"
+  },
+  "stats": {
+    "water_fraction": 0.63,
+    "water_at_least_5m_fraction": 0.925,
+    "max_depth_m": 37.51,
+    "max_land_m": 63.25,
+    "land_above_10m_fraction": 0.301
+  }
+}

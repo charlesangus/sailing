@@ -24,10 +24,11 @@ set_target_properties(sailgd PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "$<1:${PROJECT_SOURCE_DIR}/game/bin>"
 )
 
-# SailBoat reads the dossiers from res://data/..., which these links make the repo's data/. They
-# are links rather than copies so an edited dossier is seen without a rebuild; game/data/.gdignore
-# keeps the editor from importing the CSV and OBJ files as resources.
-foreach(_sail_data_dir boats sails foils hull)
+# SailBoat reads the dossiers, and the terrain builder the scenes, from res://data/..., which these
+# links make the repo's data/. They are links rather than copies so edited data is seen without a
+# rebuild; game/data/.gdignore keeps the editor from importing the CSV, OBJ and PNG files as
+# resources.
+foreach(_sail_data_dir boats sails foils hull scenes)
     file(CREATE_LINK ../../data/${_sail_data_dir}
          ${PROJECT_SOURCE_DIR}/game/data/${_sail_data_dir} SYMBOLIC)
 endforeach()
