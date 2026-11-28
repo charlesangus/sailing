@@ -7,10 +7,10 @@ certificate). Run tools/vpp/fetch_pyvpp.sh first, then
 `.venv/bin/python -I tools/vpp/run_pyvpp.py`.
 
 Python-VPP sails the boat at its sailing displacement, so the hull inputs are
-measured on hull_physics.obj + appendages.obj floated at the certificate
-displacement plus crew, sails and running rigging, not at the measurement trim
-of hull_hydro.json. The righting-arm curve comes from the same meshes, with the
-boat's VCG at the certificate VCGM.
+read from hull_hydro.json `conditions.sailing` (written by
+tools/hull/condition_hydro.py), not from its measurement-trim `result`. The
+righting-arm curve comes from hull_physics.obj + appendages.obj floated at the
+same displacement, with the boat's VCG at the certificate VCGM.
 """
 
 import argparse
@@ -23,7 +23,6 @@ import time
 from pathlib import Path
 
 import numpy as np
-import trimesh
 
 ROOT = Path(__file__).resolve().parents[2]
 VENDOR = ROOT / "tools" / "vpp" / "vendor" / "Python-VPP"
@@ -32,7 +31,7 @@ PYVPP_COMMIT = "9b9fe8f3f63d902a1df207691109e42932d0a9bb"
 # -I leaves the script directory off sys.path.
 sys.path.insert(0, str(ROOT / "tools" / "hull"))
 sys.path.insert(0, str(VENDOR / "src"))
-from dsyhs_table import clip_below, hydrostatics  # noqa: E402
+from condition_hydro import float_plane, immersed, load_meshes, read, sailing_mass  # noqa: E402
 from python_vpp import YachtMod  # noqa: E402
 
 TWS_KN = [6, 8, 10, 12, 14, 16, 20]
@@ -68,34 +67,6 @@ def heel(tris, phi):
     return tris @ np.array([[1.0, 0.0, 0.0], [0.0, c, -s], [0.0, s, c]]).T
 
 
-def immersed(tris, zw):
-    """Volume and (y, z) centroid of a closed mesh below z = zw.
-
-    Same divergence-theorem reduction as dsyhs_table.hydrostatics, with the
-    edge-midpoint rule because y (z - zw) and z (z - zw) are quadratic.
-    """
-    wet, _ = clip_below(tris, zw)
-    p0, p1, p2 = wet[:, 0], wet[:, 1], wet[:, 2]
-    nz = 0.5 * np.cross(p1 - p0, p2 - p0)[:, 2]
-    mids = np.stack([(p0 + p1) / 2, (p1 + p2) / 2, (p2 + p0) / 2], axis=1)
-    hz = mids[:, :, 2] - zw
-    vol = np.sum(hz.mean(axis=1) * nz)
-    my = np.sum((mids[:, :, 1] * hz).mean(axis=1) * nz)
-    mz = np.sum((mids[:, :, 2] * hz).mean(axis=1) * nz)
-    return abs(vol), my / vol, mz / vol
-
-
-def float_plane(tris, vol):
-    lo, hi = float(tris[:, :, 2].min()), float(tris[:, :, 2].max())
-    for _ in range(40):
-        mid = 0.5 * (lo + hi)
-        if immersed(tris, mid)[0] < vol:
-            lo = mid
-        else:
-            hi = mid
-    return 0.5 * (lo + hi)
-
-
 def righting_arm(tris, vol, zg, phi):
     """GZ at heel phi, level trim, with G on the centreline at height zg."""
     t = heel(tris, phi)
@@ -115,17 +86,13 @@ def build_inputs(boat):
     rho = 1000.0 * v(part, "flotation_sg")
     stem_x = hh["transform"]["stem_x_in_body"]
 
-    hull = trimesh.load(boat / "hull_physics.obj", force="mesh", process=False)
-    appm = trimesh.load(boat / "appendages.obj", force="mesh", process=False)
-    # The keel top sits 0.020 m inside the canoe body; the union removes the overlap.
-    boat = trimesh.boolean.union([hull, appm], engine="manifold")
-    tris, hull_tris = boat.vertices[boat.faces], hull.vertices[hull.faces]
+    tris, _ = load_meshes(boat)
+    cond = read(boat)
 
-    m_boat = v(part, "displacement")
-    m_crew = v(mass, "crew_weight_max_class")
+    comp = sailing_mass(mass)
+    m_boat, m_crew, m_sail = v(part, "displacement"), comp["crew"], comp["sailing"]
+    carried = {k: comp[k] for k in ("mainsail", "jib", "running_rigging")}
     items = mass["items"]
-    carried = {k: items[k]["value"] for k in ("mainsail", "jib", "running_rigging")}
-    m_sail = m_boat + m_crew + sum(carried.values())
 
     # ORC's VCGM is z up from the flotation plane, so a negative value is below it.
     zg_boat = v(part, "vcgm")
@@ -144,8 +111,7 @@ def build_inputs(boat):
                + carried["jib"] * z_jib + carried["running_rigging"] * z_rr) / m_sail
 
     vol_sail = m_sail / rho
-    zw = float_plane(tris, vol_sail)
-    canoe = hydrostatics(hull_tris, zw - float(hull_tris[:, :, 2].min()))
+    zw = cond["sinkage_m"]
     gz = [righting_arm(tris, vol_sail, zg_sail, p) if p > 0 else 0.0 for p in GZ_HEEL_DEG]
 
     keel, rudder = app["foils"]["keel"], app["foils"]["rudder"]
@@ -168,13 +134,13 @@ def build_inputs(boat):
         "gz1_mesh_at_zg0": gz1_at_zero,
         "rm1_mesh_nm": rm1_mesh,
         "yacht": {
-            "Lwl": canoe["lwl_m"],
-            "Vol": canoe["vol_m3"],
-            "Bwl": canoe["bwl_m"],
-            "Tc": canoe["tc_m"],
-            "WSA": canoe["sc_m2"],
+            "Lwl": cond["lwl"],
+            "Vol": cond["canoe_volume"],
+            "Bwl": cond["bwl"],
+            "Tc": cond["tc"],
+            "WSA": cond["wetted_area_canoe"],
             "Tmax": v(part, "draft") + zw,
-            "Amax": canoe["ax_m2"],
+            "Amax": cond["max_section_area"],
             "Mass": m_sail,
             "Loa": v(part, "loa"),
             "Boa": v(part, "beam"),
