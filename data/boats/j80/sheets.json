@@ -1,0 +1,65 @@
+{
+  "comments": "Sheet and shape-control mapping for sail::SheetController. The sheeting geometry (sail corners, mainsheet strop on the boom, traveler, jib tracks) is read from sails.json; this file holds the parameters that turn the controls into sail angles, ORC flat and reef. A sheet runs linearly in length from its longest (control 0, the sail at max_angle with the main's traveler car centred or the jib car mid-track) to its shortest (control 1, two-blocked at the same lead). Backstay 0..1 lowers flat linearly from 1 to flat_at_full_backstay; jib car 0 (forward) to 1 (aft) multiplies the jib's flat from 1 to flat_with_car_aft. The reef moves the area from full hoist to reefed_area_fraction of it over transition_time.",
+  "main": {
+    "max_angle": {
+      "value": 80.0,
+      "unit": "deg",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "boom angle off the centreline at which the main lies against the aft lower shrouds and swept spreaders when fully eased; data/sails/README.md takes the ORC main as easing to about 90 degrees, and swept spreaders stop a real boom some 10 degrees short of that"
+    },
+    "flat_at_full_backstay": {
+      "value": 0.7,
+      "unit": "-",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "the J/80's masthead backstay bends the mast and flattens the main; 0.7, inside the 0.1 to 1 range of the ORC fcdmult table (ORC VPP Documentation 2023, 5.4.3), is taken as the most a full backstay achieves"
+    },
+    "reefed_area_fraction": {
+      "value": 0.75,
+      "unit": "-",
+      "source": "estimate; no J/80 reef measurement",
+      "confidence": "low",
+      "method": "one slab reef on the J/80 main; reef band roughly 20–30% of the luff up from the tack, removing about a quarter of the area"
+    }
+  },
+  "jib": {
+    "max_angle": {
+      "value": 60.0,
+      "unit": "deg",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "clew angle off the centreline with the jib sheet run out; beyond about 60 degrees AWA minus the ORC jib's 32 degree ease a jib is blanketed and collapses rather than drawing"
+    },
+    "flat_at_full_backstay": {
+      "value": 0.85,
+      "unit": "-",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "on a masthead rig the backstay tensions the forestay and takes out headstay sag, flattening the jib less than mast bend flattens the main"
+    },
+    "flat_with_car_aft": {
+      "value": 0.92,
+      "unit": "-",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "moving the car aft over the 1 m track (sails.json track_length) tightens the foot and opens the leech; taken as an 8 percent de-power at the aft end, a small effect against the backstay's"
+    },
+    "reefed_area_fraction": {
+      "value": 1.0,
+      "unit": "-",
+      "source": "modelling choice",
+      "confidence": "low",
+      "method": "the jib is not reefed; the reef control acts on the main only"
+    }
+  },
+  "reef": {
+    "transition_time": {
+      "value": 10.0,
+      "unit": "s",
+      "source": "specification for the sheet and trim controls",
+      "confidence": "low",
+      "method": "the time from full hoist to reefed and back; a practised crew slab-reefs a small keelboat in roughly this time"
+    }
+  }
+}

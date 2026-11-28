@@ -19,6 +19,7 @@ add_library(sailcore STATIC
     src/mesh.cpp
     src/rigid_body.cpp
     src/sails.cpp
+    src/sheets.cpp
     src/simulation.cpp
     src/version.cpp
     src/wind.cpp
@@ -61,6 +62,7 @@ if(SAIL_BUILD_TESTS)
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
         tests/test_sails.cpp
+        tests/test_sheets.cpp
         tests/test_version.cpp
         tests/test_wind.cpp
     )
