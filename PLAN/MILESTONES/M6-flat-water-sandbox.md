@@ -29,7 +29,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
 
 ## Phase 6.1: Bridge and input
 
-- [ ] M6.P1.T1 — `SailBoat` GDExtension node
+- [x] M6.P1.T1 — `SailBoat` GDExtension node
   - files: gdext/src/sail_boat.hpp, gdext/src/sail_boat.cpp, gdext/src/frames.hpp, gdext/src/register_types.cpp, game/tests/test_sail_boat.gd
   - approach: `SailBoat` (Node3D) owns a core `BoatSim` (M5: it already assembles the whole sailing boat — sails, sheets, windage, crew, appendages — and exposes `set_controls`, `set_wind`, `step()`) built from a `boat_dir` property (`res://` path resolved to `data/boats/j80`, copied or symlinked into the game at build). `_process(delta)` calls `advance(delta)` and sets its transform from the interpolated state via `frames.hpp` (core Z-up → Godot Y-up, the only conversion point). Exposes control setters (tiller, mainsheet, traveler, backstay, jib sheets, jib car, reef) and read-only state (BSP, heel, leeway, AWA/AWS, TWA/TWS, rudder angle, hinge moment, per-sail angle/AoA/luff state, boom angle), and wind setters (TWS, direction). The wind is a `LogProfileWind` (TWS at 10 m, ORC log profile), the same field the polar was calibrated in, so sim speeds match `sim_polar.csv`.
   - verify: `game/tests/test_sail_boat.gd` headless: with trimmed sails at TWA 90°, after 30 s simulated the boat's speed is within 10% of the calibrated polar (`data/boats/j80/sim_polar.csv`, which also stores the trims) at TWS 10.
@@ -83,5 +83,6 @@ panel scaffold and a debug HUD. Constant uniform wind.
 ## Decisions
 
 - 2026-11-28 — Freshness check at claim: `SailBoat` wraps M5's `BoatSim` rather than a bare `Simulation`; the sandbox wind is `LogProfileWind` (constant, but height-profiled as calibrated); grounding joins `BoatSim`'s modules.
+- 2026-11-28 — `SailBoat` calls `BoatSim::advance`, which runs the crew controller before each fixed step through a new `Simulation::advance` hook (calling `simulation().advance()` directly would freeze the crew the polar was calibrated with). Core exceptions are caught at the GDExtension boundary; on error the node goes inert. Boat data reaches the game as configure-time symlinks game/data/{boats,sails,foils,hull} → data/* (gitignored), so the res:// path is res://data/boats/j80.
 - 2026-11-27 — Coastline scene with simple grounding: user chose a bay with coastline over open water, with bathymetry contact physics and no land wind shadow.
 - 2026-11-27 — Keyboard+mouse and gamepad equally: user's choice; both are tested in headless input tests.
