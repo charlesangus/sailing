@@ -27,7 +27,7 @@ turning behaviour.
 
 ## Phase 4.1: Hull resistance
 
-- [ ] M4.P1.T4 — Sailing-condition hydrostatics in the dossier
+- [x] M4.P1.T4 — Sailing-condition hydrostatics in the dossier
   - files: tools/hull/morph.py (or a new tools/hull/condition_hydro.py), data/boats/j80/hull_hydro.json, data/boats/j80/README.md, data/boats/j80/sources.md
   - approach: The resistance models take hull parameters at the sailing condition (boat + 350 kg crew + sails/gear, 1809 kg per mass.json), but hull_hydro.json only holds them at measurement trim. Measure Lwl, Bwl, Tc, ∇c, LCB, LCF, Cp, Cm, Aw, wetted area Sc and max section area on hull_physics.obj + appendages.obj at the sailing displacement, level trim, with `tools/hull/dsyhs_table.py`'s `hydrostatics` (as tools/vpp/run_pyvpp.py already does for its subset); write them as a `conditions.sailing` block (keeping the measurement block), with method/provenance. Make run_pyvpp.py read its hull inputs from this block instead of re-measuring, so both share one source.
   - verify: the script regenerates the block deterministically; its Lwl/Bwl/Tc/∇c/Sc equal what run_pyvpp.py `--inputs-only` used before (within 1e-6); `morph.py --check` still passes.
