@@ -20,6 +20,7 @@ add_library(sailcore STATIC
     src/rigid_body.cpp
     src/simulation.cpp
     src/version.cpp
+    src/wind.cpp
 )
 add_library(sail::core ALIAS sailcore)
 target_include_directories(sailcore
@@ -59,6 +60,7 @@ if(SAIL_BUILD_TESTS)
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
         tests/test_version.cpp
+        tests/test_wind.cpp
     )
     target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest nlohmann_json::nlohmann_json)
     target_compile_definitions(sailcore_tests PRIVATE
