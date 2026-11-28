@@ -1,0 +1,67 @@
+{
+  "comments": "Canoe-body force coefficients for sail::HullForceModule. The keel and rudder are separate foil modules and are not counted here. Hull dimensions (lwl, tc, lcb_x_canoe, sinkage_m) come from hull_hydro.json conditions.sailing.result and the water density from hull_resistance.json water, so the absolute values below follow the hull. Velocities are water-relative at the centre of lateral resistance (CLR), including the yaw-rate part of the point velocity but not the roll- and pitch-rate parts, whose damping belongs to damping.json. Resistance: the hull_resistance.json model at the axial speed |u_ax| (horizontal velocity along the horizontal heading), directed opposite the horizontal velocity; the cross-flow part of the velocity is resisted by the sway terms below instead. Side force: R. T. Jones low-aspect-ratio wing theory (NACA Report 835, 1946), C_L = pi*AR*alpha/2, i.e. L = q*(pi/2)*b^2*alpha independent of planform area, applied to the canoe body mirrored in a rigid free surface (span b = 2*Tc) and halved: L = 0.5*rho*pi*Tc^2*U^2*beta. It is written as L = k*u_ax*u_lat with k = slope_multiplier*0.5*rho*pi*Tc^2, which equals the linear law at small leeway, vanishes at beam-on drift, and is symmetric for inflow from astern. Jones's induced drag is L*alpha/2. Sway and yaw damping: generalised force -(b_lin*q + b_quad*|q|*q), as in damping.json. Sway and yaw have no hydrostatic stiffness, so they cannot be given as fractions of critical damping; instead b_quad is cross-flow drag (Hoerner, Fluid-Dynamic Drag, 1965, ch. 3) over a lateral profile whose draft is Tc*(1 - (2x/Lwl)^2): sway b_quad = 0.5*rho*C_D*A_lat with A_lat = (2/3)*Lwl*Tc, yaw b_quad = 0.5*rho*C_D*Tc*Lwl^4/96 (the strip integral of |x|^3 over that profile, about mid-Lwl). b_lin = b_quad * crossover speed for sway and b_quad * crossover speed / (Lwl/2) for yaw, so below the crossover the damping is linear.",
+  "centre_of_lateral_resistance": {
+    "depth_fraction_of_tc": {
+      "value": 0.424,
+      "unit": "-",
+      "source": "elliptic spanwise loading on the canoe body mirrored in the free surface",
+      "confidence": "low",
+      "method": "the CLR is at hull-frame x = lcb_x_canoe and z = sinkage_m - depth_fraction_of_tc*tc, i.e. on the sailing flotation plane less this fraction of the canoe draft; 4/(3*pi) = 0.424 is the centroid of a half-elliptic load from the root, and the parabolic draft profile's lateral-area centroid (0.40) is close to it"
+    }
+  },
+  "side_force": {
+    "slope_multiplier": {
+      "value": 1.0,
+      "unit": "-",
+      "source": "R. T. Jones, Properties of low-aspect-ratio pointed wings at speeds below and above the speed of sound, NACA Report 835 (1946)",
+      "confidence": "low",
+      "method": "multiplies Jones's lift slope; 1.0 takes the slender-wing value unchanged. The canoe body's aspect ratio is about 0.1, where Jones is the right limit, but the free surface is not a rigid wall at speed and heel changes the immersed profile, neither of which is modelled"
+    },
+    "induced_drag_factor": {
+      "value": 0.5,
+      "unit": "-",
+      "source": "R. T. Jones, NACA Report 835 (1946)",
+      "confidence": "medium",
+      "method": "induced drag = factor * |L| * |sin(beta)|, Jones's D_i = L*alpha/2 at small angle"
+    },
+    "blend_speed": {
+      "value": 0.1,
+      "unit": "m/s",
+      "source": "numerical choice",
+      "confidence": "high",
+      "method": "side force and induced drag are multiplied by smoothstep(U/blend_speed), so the leeway angle, undefined at rest, never sets a force direction below this speed"
+    }
+  },
+  "sway": {
+    "crossflow_drag_coefficient": {
+      "value": 0.5,
+      "unit": "-",
+      "source": "estimate from Hoerner, Fluid-Dynamic Drag (1965), ch. 3, cross-flow drag of elongated bodies, and ch. 10 for flat-bottomed ship sections",
+      "confidence": "low",
+      "method": "the mirrored J/80 section is an ellipse of half-width 0.96 m by half-height 0.28 m moving along its long axis, a bluff-to-streamlined shape whose drag on its height lies well below a flat plate's 2; 0.5 on the lateral area is a mid estimate, with the keel and rudder carrying most of the boat's lateral damping in their own modules"
+    },
+    "linear_crossover_speed": {
+      "value": 0.1,
+      "unit": "m/s",
+      "source": "estimate",
+      "confidence": "low",
+      "method": "b_lin = b_quad * crossover speed: the speed below which skin friction and wave radiation, roughly linear, exceed the cross-flow drag"
+    }
+  },
+  "yaw": {
+    "crossflow_drag_coefficient": {
+      "value": 0.5,
+      "unit": "-",
+      "source": "same as sway",
+      "confidence": "low",
+      "method": "the sway cross-flow coefficient applied strip by strip to the lateral velocity x*r"
+    },
+    "linear_crossover_speed": {
+      "value": 0.1,
+      "unit": "m/s",
+      "source": "estimate",
+      "confidence": "low",
+      "method": "lateral speed at the waterline ends, r*Lwl/2, below which yaw damping is linear; b_lin = b_quad * crossover speed / (Lwl/2)"
+    }
+  }
+}
