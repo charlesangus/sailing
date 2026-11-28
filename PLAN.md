@@ -64,7 +64,7 @@ boat are out.
 | M1 | Build Skeleton and CI | done | - | bosley | E1 | [M1-build-skeleton-and-ci.md](PLAN/MILESTONES/M1-build-skeleton-and-ci.md) |
 | M2 | J/80 Reference Dossier | done | - | bosley | E1 | [M2-j80-reference-dossier.md](PLAN/MILESTONES/M2-j80-reference-dossier.md) |
 | M3 | Rigid Body and Hydrostatics | done | M1, M2 | bosley | E1 | [M3-rigid-body-and-hydrostatics.md](PLAN/MILESTONES/M3-rigid-body-and-hydrostatics.md) |
-| M4 | Hull Resistance and Foils | todo | M3 | | E1 | [M4-hull-resistance-and-foils.md](PLAN/MILESTONES/M4-hull-resistance-and-foils.md) |
+| M4 | Hull Resistance and Foils | doing | M3 | bosley | E1 | [M4-hull-resistance-and-foils.md](PLAN/MILESTONES/M4-hull-resistance-and-foils.md) |
 | M5 | Sails and Polar Calibration | todo | M4 | | E1 | [M5-sails-and-polar-calibration.md](PLAN/MILESTONES/M5-sails-and-polar-calibration.md) |
 | M6 | Flat-Water Sandbox | todo | M5 | | E3 | [M6-flat-water-sandbox.md](PLAN/MILESTONES/M6-flat-water-sandbox.md) |
 | M7 | Wind Field and Tacking | todo | M6 | | E2 | [M7-wind-field-and-tacking.md](PLAN/MILESTONES/M7-wind-field-and-tacking.md) |
