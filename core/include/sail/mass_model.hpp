@@ -32,8 +32,22 @@ MassProperties combine(std::span<const MassItem> items);
 // the waterline centre rho pi (b^2 - T^2)^2/16. They are integrated over an equivalent prism of
 // length L = length_factor * LWL (default Cp * LWL), with pitch and yaw from heave and sway times
 // L^2/12. Rotational terms are about the waterline centre, not the CG, and leave out the keel.
-// The matrix is constant in the body frame and does not follow immersion or heel, so it
-// overstates the heave and sway terms, and their Munk moments, at large heel or inverted.
+//
+// The matrix is constant in the body frame: it does not follow heel, draft, trim or waves. It is
+// kept constant because the implicit-midpoint integrator conserves energy only with constant M; a
+// pose-dependent M needs momentum carried across each update plus the 0.5 nu^T dM/dq nu force, or
+// it injects or removes energy, and constant infinite-frequency added mass is also what Cummins
+// time-domain seakeeping uses. Two errors follow, sized from J/80 hull_physics.obj sections at
+// constant displacement, half-ellipses matched to each section's waterline beam and area:
+// - The flat upright section's heave term rotates with the hull. At heel phi the world-horizontal
+//   added mass is cos^2 * sway + sin^2 * heave; with heave about 15x sway that is 3.2x the heeled
+//   section's value at 30 deg and 4.3x at 45 deg, so the sideways effective mass of a sailing
+//   J/80 (1809 kg) is about 47% high at 30 deg. The rotated heave term also gives a spurious
+//   Munk pitch moment (Z_w - X_u) u w from leeway, about 1.6 kN*m at 3 m/s, 4 deg, 30 deg heel.
+// - The heeled section shape. At 30 deg its horizontal term is +40%, vertical -33% and roll
+//   about the waterline centre -62% of upright, so the roll inertia Ixx + A_roll is about 9% high.
+// Beyond about 60 deg heel and inverted the half-ellipse strip model does not describe the
+// immersed body at all, and an emerging hull keeps its full added mass.
 Mat6 strip_added_mass(const HullDims& hull, const AddedMassCoefficients& coeffs, double density,
                       double rigid_mass);
 
