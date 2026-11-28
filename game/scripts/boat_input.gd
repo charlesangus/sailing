@@ -13,11 +13,15 @@ const HELM_CENTRE_RATE := 4.0
 
 const PAD_ACTIONS: Array[StringName] = [
 	&"steer_axis_left", &"steer_axis_right", &"mainsheet_in", &"mainsheet_out", &"jib_sheet_in",
-	&"jib_sheet_out", &"traveler_windward", &"traveler_leeward", &"backstay_on", &"backstay_off",
-	&"jib_car_forward", &"jib_car_aft",
+	&"jib_sheet_out", &"traveler_windward", &"traveler_leeward", &"backstay_pad_on",
+	&"backstay_pad_off", &"jib_car_forward", &"jib_car_aft", &"orbit_left", &"orbit_right",
+	&"orbit_up", &"orbit_down", &"zoom_in", &"zoom_out",
 ]
 
 @export var boat_path: NodePath
+## Cleared by the camera rig while the right stick orbits the camera, so it does not also trim the
+## backstay. The backstay keys always work.
+var pad_backstay_enabled := true
 
 var _boat: Node
 
@@ -45,7 +49,7 @@ func _process(delta: float) -> void:
 			_boat.jib_sheet_starboard = clampf(_boat.jib_sheet_starboard + (jib_in - jib_out) * SHEET_RATE * delta, 0.0, 1.0)
 
 	_boat.traveler = _held(_boat.traveler, &"traveler_leeward", &"traveler_windward", TRAVELER_RATE * delta, -1.0, 1.0)
-	_boat.backstay = _held(_boat.backstay, &"backstay_on", &"backstay_off", SHEET_RATE * delta, 0.0, 1.0)
+	_boat.backstay = clampf(_boat.backstay + _backstay_push() * SHEET_RATE * delta, 0.0, 1.0)
 	_boat.jib_car = _held(_boat.jib_car, &"jib_car_aft", &"jib_car_forward", SHEET_RATE * delta, 0.0, 1.0)
 
 	if Input.is_action_just_pressed(&"reef_toggle"):
@@ -61,6 +65,15 @@ func _process(delta: float) -> void:
 func _held(value: float, increase: StringName, decrease: StringName, step: float, lo: float, hi: float) -> float:
 	var push := Input.get_action_strength(increase) - Input.get_action_strength(decrease)
 	return clampf(value + push * step, lo, hi)
+
+
+func _backstay_push() -> float:
+	var on := Input.get_action_strength(&"backstay_on")
+	var off := Input.get_action_strength(&"backstay_off")
+	if pad_backstay_enabled:
+		on = maxf(on, Input.get_action_strength(&"backstay_pad_on"))
+		off = maxf(off, Input.get_action_strength(&"backstay_pad_off"))
+	return on - off
 
 
 # The stick sets the tiller directly. Keys ramp it, and it self-centres once they are released, so

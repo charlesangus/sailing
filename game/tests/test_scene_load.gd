@@ -77,7 +77,7 @@ func _initialize() -> void:
 		_fail("shallow point is not shallower than deep point")
 		return
 
-	main.set_process(false)
+	main.get_node("CameraRig").set_process(false)
 	camera.global_position = Vector3(1000.0, 5.0, -700.0)
 	await process_frame
 	await process_frame

@@ -95,15 +95,22 @@ Actions are declared in `game/project.godot` and read by `game/scripts/boat_inpu
 | mainsheet in / out | W / S | right trigger / right bumper | 0.25 of travel per s |
 | jib sheet in / out | E / Q | left trigger / left bumper | leeward jib sheet, 0.25 of travel per s |
 | traveler windward / leeward | R / F | d-pad up / down | 0.5 per s over -1..1 |
-| backstay on / off | T / G | right stick up / down | 0.25 per s (an in/out pair, not a toggle) |
+| backstay on / off | T / G | right stick up / down, except in orbit mode | 0.25 per s (an in/out pair, not a toggle) |
 | jib car forward / aft | Z / X | d-pad left / right | 0.25 per s |
 | reef toggle | B | A | shakes out or reefs |
-| camera switch | C | Y | `camera_switch_requested` signal |
+| camera switch | C | Y | `camera_switch_requested` signal; the camera rig cycles chase, orbit, helm |
+| orbit left / right | J / L, right mouse drag | right stick X (orbit mode) | 2 rad per s; orbit mode only |
+| orbit up / down | I / K, right mouse drag | right stick Y (orbit mode) | 1 rad per s, 5 to 85 degrees; orbit mode only |
+| zoom in / out | `=` / `-`, mouse wheel | left stick up / down | exponential, 6 to 80 m; orbit mode only |
 | drop mark | Space | X | `mark_drop_requested` signal |
 | settings panel | Esc | Start | `settings_toggled` signal |
 
 Helm: the stick sets the tiller directly (deadzone 0.15, rescaled). Keys ramp it to full in 0.5 s and it self-centres at 4 per s once they are released.
 
 Jib sheet: it acts on the sheet of the side the jib is on. `awa_deg >= 0` (wind over the starboard side) is starboard tack with the jib to port, so the port sheet is driven; otherwise the starboard sheet.
+
+Cameras: `game/scripts/camera_rig.gd` holds three modes. Chase sits 16 m behind and 5 m above the boat on a heading smoothed with a 1 s time constant, and ignores heel. Orbit circles the boat at 22 m and 20 degrees to start, with the limits above, and the camera stays above the water. Helm is a camera on the hull frame, 0.5 m to the windward side of the tiller and 1.65 m above the flotation plane (1 m over the deck), looking 8 degrees down; right mouse drag looks around (100 degrees to each side).
+
+The right stick is the backstay on a pad, so the rig clears `BoatInput.pad_backstay_enabled` while in orbit mode and the stick orbits instead; the backstay keys work in every mode. The pad backstay is the separate actions `backstay_pad_on` and `backstay_pad_off`. Pad look-around in helm mode is not provided.
 
 A pad unplugged while an input is held has its held actions released, so the keyboard keeps working and nothing sticks.

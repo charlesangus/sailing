@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/bay_terrain.tscn" id="2_terrain"]
@@ -6,12 +6,12 @@
 [ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="4_env"]
 [ext_resource type="Script" path="res://scripts/marks.gd" id="5_marks"]
 [ext_resource type="PackedScene" path="res://scenes/buoy.tscn" id="6_buoy"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="7_rig"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 boat_path = NodePath("Boat")
 terrain_path = NodePath("BayTerrain")
-camera_path = NodePath("Camera")
 
 [node name="BayTerrain" parent="." instance=ExtResource("2_terrain")]
 
@@ -21,6 +21,12 @@ camera_path = NodePath("Camera")
 
 [node name="Camera" type="Camera3D" parent="."]
 far = 6000.0
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("7_rig")
+boat_path = NodePath("../Boat")
+input_path = NodePath("../Boat/BoatInput")
+camera_path = NodePath("../Camera")
 
 [node name="Marks" type="Node3D" parent="."]
 script = ExtResource("5_marks")
