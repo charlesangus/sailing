@@ -47,7 +47,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - approach: Import `hull_visual.obj` and `appendages.obj`; simple procedural mast and boom from `rig.json`; boom and tiller rotate from sim state; main and jib as flat triangle-fan meshes from `sails.json` geometry, rotated to sheeted angle and tinted when luffing (replaced in M9). Simple materials.
   - verify: `game/tests/test_boat_visual.gd` headless checks boom rotation follows the sim boom angle; user UAT at the gate for looks.
   - size: M
-- [ ] M6.P2.T2 — Flat water, sky and atmosphere
+- [x] M6.P2.T2 — Flat water, sky and atmosphere
   - files: game/scenes/environment.tscn, game/shaders/flat_water.gdshader
   - approach: Large camera-following water plane at y = 0 with scrolling normal-map ripples, Fresnel sky reflection and depth tint near shore (from the terrain depth); Godot procedural sky with sun; distance fog to the horizon.
   - verify: Scene loads headless without errors (`test_scene_load.gd`); looks checked at UAT.
