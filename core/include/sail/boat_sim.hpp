@@ -1,12 +1,14 @@
 #pragma once
 
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "sail/appendages.hpp"
+#include "sail/crew.hpp"
 #include "sail/damping.hpp"
 #include "sail/equilibrium.hpp"
 #include "sail/foil.hpp"
@@ -17,6 +19,7 @@
 #include "sail/mass_model.hpp"
 #include "sail/rigid_body.hpp"
 #include "sail/simulation.hpp"
+#include "sail/wind.hpp"
 
 namespace sail {
 
@@ -71,6 +74,31 @@ public:
     BodyThrustModule& thrust() { return thrust_; }
     const BodyThrustModule& thrust() const { return thrust_; }
 
+    CrewController& crew() { return crew_; }
+    const CrewController& crew() const { return crew_; }
+
+    // Called after every crew move with the new CG and crew position (hull frame) and the posture,
+    // so modules BoatSim does not own (sails, sheets, windage) can follow with their own
+    // set_reference_point and set_crew.
+    using CrewListener =
+        std::function<void(const Vec3& cg, const Vec3& crew_position, CrewPosture posture)>;
+    void add_crew_listener(CrewListener listener) { crew_listeners_.push_back(std::move(listener)); }
+
+    // Moves the crew point mass to (y, z), hull frame: recomputes the mass properties, then moves
+    // the CG reference point of gravity, hydrostatics, hull and appendages and calls the listeners.
+    // In a running Simulation the body is replaced by Simulation::set_body with the CG shift: the
+    // hull's own motion is preserved (every hull point keeps its position and velocity), so
+    // velocity is carried across, not momentum, which changes with the new mass distribution. It
+    // does not move the CrewController.
+    void update_crew(double y, double z, CrewPosture posture = CrewPosture::sitting);
+
+    // Steps the crew controller by dt for the running Simulation's heel and the apparent wind at
+    // the CG in `wind`, then calls update_crew() if the crew moved at least
+    // CrewParams::update_min_move since the last update or changed posture. Call once per
+    // Simulation::step(), before it, with dt = Simulation::kFixedDt. Throws std::logic_error before
+    // start().
+    const CrewPosition& step_crew(double dt, const WindField& wind);
+
     // Flat-water equilibrium of the sailing mass, hydrostatics alone.
     Equilibrium equilibrium(const EquilibriumRequest& request = {}) const;
 
@@ -80,12 +108,16 @@ public:
     Wrench evaluate(const State& state, double t);
 
     // A new Simulation from `initial` with every module registered, replacing any earlier one.
+    // The crew goes back to the centreline and the controller is reset.
     // Extra modules may be added to the returned Simulation.
     Simulation& start(const State& initial);
     // Throws std::logic_error before start().
     Simulation& simulation();
 
 private:
+    // Everything update_crew() does except the Simulation; returns the CG shift.
+    Vec3 apply_crew(double y, double z, CrewPosture posture);
+
     MassModel model_;
     BodyProperties body_;
     BoatHydrostatics hydro_;
@@ -96,6 +128,10 @@ private:
     HullForceModule hull_;
     Appendages appendages_;
     BodyThrustModule thrust_;
+    CrewController crew_;
+    Vec3 pushed_crew_;
+    CrewPosture pushed_posture_ = CrewPosture::sitting;
+    std::vector<CrewListener> crew_listeners_;
     std::optional<Simulation> sim_;
 };
 

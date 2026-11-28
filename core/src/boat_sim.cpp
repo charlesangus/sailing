@@ -79,7 +79,9 @@ BoatSim::BoatSim(const std::filesystem::path& boat_dir, std::shared_ptr<const Fo
       damping_(load_damping(model_)),
       hull_(resistance_model(boat_dir, options.resistance),
             load_hull_force_params(model_)),
-      appendages_(section, section, boat_dir, model_.cg()) {}
+      appendages_(section, section, boat_dir, model_.cg()),
+      crew_(load_crew_params(boat_dir, model_)),
+      pushed_crew_(model_.crew_position()) {}
 
 std::unique_ptr<BoatSim> BoatSim::load(const std::filesystem::path& boat_dir,
                                        std::shared_ptr<const FoilSection> section,
@@ -103,8 +105,44 @@ Wrench BoatSim::evaluate(const State& state, double t) {
     return w;
 }
 
+Vec3 BoatSim::apply_crew(double y, double z, CrewPosture posture) {
+    const Vec3 old_cg = model_.cg();
+    model_.set_crew_position(y, z);
+    body_ = model_.body_properties();
+    const Vec3 shift = model_.cg() - old_cg;
+    const Vec3& cg = model_.cg();
+    params_.reference_point = cg;
+    gravity_.set_mass(body_.mass);
+    hydrostatics_.set_reference_point(cg);
+    hull_.set_reference_point(cg);
+    appendages_.set_reference_point(cg);
+    pushed_crew_ = model_.crew_position();
+    pushed_posture_ = posture;
+    for (const CrewListener& listener : crew_listeners_) listener(cg, pushed_crew_, posture);
+    return shift;
+}
+
+void BoatSim::update_crew(double y, double z, CrewPosture posture) {
+    const Vec3 shift = apply_crew(y, z, posture);
+    if (sim_) sim_->set_body(body_, shift);
+}
+
+const CrewPosition& BoatSim::step_crew(double dt, const WindField& wind) {
+    Simulation& sim = simulation();
+    const State& state = sim.state();
+    const ApparentWind apparent = apparent_wind(state, Vec3::Zero(), wind, sim.time());
+    const CrewPosition& pos = crew_.step(dt, heel_angle(state.rotation()), apparent);
+    const double moved = std::hypot(pos.y - pushed_crew_.y(), pos.z - pushed_crew_.z());
+    if (moved >= crew_.params().update_min_move || pos.posture != pushed_posture_) {
+        update_crew(pos.y, pos.z, pos.posture);
+    }
+    return pos;
+}
+
 Simulation& BoatSim::start(const State& initial) {
     sim_.reset();
+    crew_.reset();
+    apply_crew(crew_.position().y, crew_.position().z, crew_.position().posture);
     sim_.emplace(body_, initial);
     sim_->add_module(gravity_);
     sim_->add_module(hydrostatics_);

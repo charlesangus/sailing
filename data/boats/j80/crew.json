@@ -1,0 +1,94 @@
+{
+  "comments": "Auto-hiking crew controller for sail::CrewController. The crew is one point mass (mass.json) moved across the boat: toward the windward rail in proportion to heel above a threshold, to the centreline in light air and downwind, rate-limited so that crossing from rail to rail takes transit_time. Hull frame, y to port, z up, provisional frame of mass.json (hull_hydro.json transform maps it to the body frame). Rail y and z are built from the deck half-width at the crew station, the sheer height and the sitting height of mass.json; none of the numbers below measure how a J/80 crew actually moves.",
+  "deck_half_width_at_crew": {
+    "value": 1.2145,
+    "unit": "m",
+    "source": "data/boats/j80/hull_visual.obj, deck edge",
+    "confidence": "derived",
+    "method": "largest |y| of the hull_visual.obj vertices within 0.15 m of the crew station x (mass.json crew_cg_x = -5.5 m provisional, -1.7129 m body frame), which lie on the deck edge at the sheer. The hull is 1.244 m at the maximum beam station, half the certificate beam 2.488 m."
+  },
+  "rail_inset": {
+    "value": 0.20,
+    "unit": "m",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "the crew's centre of mass sits inboard of the deck edge by about half a hip width plus the lifeline stanchion line, when seated on the edge."
+  },
+  "hiking_outboard": {
+    "value": 0.30,
+    "unit": "m",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "extra outboard travel of the crew's centre of mass when hiking, torso leaning over the lifeline, relative to sitting on the deck edge."
+  },
+  "hiking_drop": {
+    "value": 0.10,
+    "unit": "m",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "lowering of the crew's centre of mass between sitting upright on the centreline (sheer plus mass.json crew_cg_above_sheer) and fully hiking, from leaning back and out."
+  },
+  "heel_threshold": {
+    "value": 3.0,
+    "unit": "deg",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "heel below which the crew stays on the centreline, so that normal motion does not move them."
+  },
+  "heel_full": {
+    "value": 15.0,
+    "unit": "deg",
+    "source": "task specification",
+    "confidence": "estimated",
+    "method": "heel at which the crew is fully hiking. Between the threshold and this the target position is linear in heel."
+  },
+  "light_air_aws": {
+    "value": 6.0,
+    "unit": "kn",
+    "source": "task specification",
+    "confidence": "estimated",
+    "method": "apparent wind speed below which the crew stays on the centreline. The target fades linearly across light_air_ramp centred on this speed."
+  },
+  "light_air_ramp": {
+    "value": 2.0,
+    "unit": "kn",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "width of the fade, so the target does not flip at a single wind speed."
+  },
+  "downwind_awa": {
+    "value": 120.0,
+    "unit": "deg",
+    "source": "task specification",
+    "confidence": "estimated",
+    "method": "absolute apparent wind angle above which the crew stays on the centreline. The target fades linearly across downwind_ramp centred on this angle."
+  },
+  "downwind_ramp": {
+    "value": 20.0,
+    "unit": "deg",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "width of the fade."
+  },
+  "transit_time": {
+    "value": 2.0,
+    "unit": "s",
+    "source": "task specification",
+    "confidence": "estimated",
+    "method": "time to cross from one hiking position to the other. The lateral speed limit is the distance between the two hiking positions divided by this."
+  },
+  "hiking_posture_fraction": {
+    "value": 0.5,
+    "unit": "-",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "fraction of the full hiking offset the crew's position must reach for windage to treat the crew as hiking rather than sitting."
+  },
+  "update_min_move": {
+    "value": 0.002,
+    "unit": "m",
+    "source": "none (judgement value)",
+    "confidence": "estimated",
+    "method": "BoatSim::step_crew pushes a new crew position into the mass model and the running simulation only after it moves this far (or the posture changes), so a still crew costs nothing."
+  }
+}

@@ -8,6 +8,7 @@ add_library(sailcore STATIC
     src/appendages.cpp
     src/boat_sim.cpp
     src/boat_data.cpp
+    src/crew.cpp
     src/damping.cpp
     src/equilibrium.cpp
     src/foil.cpp
@@ -51,6 +52,7 @@ if(SAIL_BUILD_TESTS)
     add_executable(sailcore_tests
         tests/test_appendages.cpp
         tests/test_bench_budget.cpp
+        tests/test_crew.cpp
         tests/test_damping.cpp
         tests/test_foil.cpp
         tests/test_hull_forces.cpp
