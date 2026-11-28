@@ -11,3 +11,7 @@
 ### 2026-11-28T02:30:00Z — change-request
 - refs: none
 - Follow-up from M4 - Hull Resistance and Foils (M4.P1.T3 kept added mass constant): `strip_added_mass` gives a constant diagonal in the body frame, so the large heave added mass (~15× sway) tilts with the hull. At 30° heel the sideways effective mass is ~47% too high (3361 kg vs 2288 kg) and leeway adds a spurious ~1.6 kN·m pitch moment (~0.4° trim). This matters for transients (leeway build-up after a tack). Fix sketched in the `strip_added_mass` header comment: define added mass in the heel-free frame from a heel table built from the mesh at load, carry momentum across updates, and add the ½νᵀ(∂M/∂q)ν force. Worth doing before or with M7 - Wind Field and Tacking, whose tack-timing targets depend on these transients.
+
+### 2026-11-28T04:00:00Z — change-request
+- refs: none
+- Follow-up from M4 - Hull Resistance and Foils: `sailsim turn --speed 7 --tiller 1` never reaches a steady circle (180 s run, 13 revolutions): diameter holds at ~11.7–12.0 m but speed, yaw rate and heel cycle persistently (heel swinging to ~33°), a roll–yaw limit cycle rather than slow settling. The harness is artificial at that point (constant thrust at the CG, no sails, 35° rudder), and the 5 kn acceptance turn is steady. Investigate the cause when sails exist — most usefully in M7 - Wind Field and Tacking, whose manoeuvres exercise high-speed, high-heel turns — and decide whether it is physical (broach-like) or a model artefact (e.g. rudder stall/ventilation absent, roll damping at speed, the quasi-steady foil model).
