@@ -93,10 +93,10 @@ def check_mass(rep, boat):
     for name, entry in included.items():
         print(f"    {name:30s} {v(entry):8.1f} kg  ({entry['confidence']})")
     total = sum(v(e) for e in included.values())
-    # hull_deck_fittings is the builder's weight minus the other items, so the
-    # sum is close to the builder's weight by construction.
+    # hull_deck_fittings is the displacement minus the other items, so this
+    # matches by construction.
     rep.compare("sum of in-displacement mass items vs certificate displacement (crew not subtracted; "
-                "informational, hull_deck_fittings is a residual from the builder's weight)",
+                "informational, hull_deck_fittings is the residual of the displacement)",
                 total, displacement, gating=False)
     sourced = sum(v(e) for e in included.values() if e["confidence"] != "estimated")
     print(f"    sourced (non-estimated) items alone: {sourced:.1f} kg")

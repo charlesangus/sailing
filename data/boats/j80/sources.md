@@ -135,8 +135,10 @@ All of the following are marked `"confidence": "estimated"` with a `method`:
 - Rudder:
   - stock axis position and root/tip z: root assumed at the waterplane at the transom
 - Mass:
-  - hull/deck/fittings, a residual from the builder's weight mid-range
-  - standing rigging and furler, from wire lengths
+  - hull/deck/fittings, the residual of the 1438 kg certificate displacement, with its x solved so the measurement-trim LCG equals the total LCB and its height solved so the VCG equals VCGM
+  - jib furler drum and foil; standing rigging is not a separate item, since IMS F8.1(a) weighs it with the mast (MWT)
+  - item CGs and shapes: mast CG at the heel plus MCG (IMS F8.2), keel lead at the ballast centroid, others as given in `mass.json`
+  - added-mass coefficients: surge 5% of the mass, the rest strip theory
   - battery
   - outboard, at the class minimum
   - running rigging
@@ -250,7 +252,7 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 
 - **Sailing condition.** The boat (1438 kg) plus crew, sails and running rigging, 1809 kg in total. Crew is 350 kg, the class maximum (Class Rules 2024 C.4.1); the certificate's default of 411 kg exceeds that maximum. Mainsail 8 kg, jib 5 kg and running rigging 8 kg come from `mass.json`. The boat floats 40.9 mm below the certificate flotation plane.
 - **Hull.** Python-VPP takes canoe-body Lwl, volume, Bwl, Tc, wetted area and maximum section area at the sailing displacement. These are measured on `hull_physics.obj` with `tools/hull/dsyhs_table.hydrostatics` at the waterline where hull plus appendages displace 1809 kg, level trim. The same method at 1438 kg reproduces `hull_hydro.json` to 0.005 m in Lwl and 0.1% in volume. With crew aboard, the flat run aft immerses, so Lwl is 7.146 m against 6.71 m at measurement trim; the certificate's IMS L is 7.237 m. The appendages' volumes are not in `Vol`, which is the canoe body only, as Python-VPP defines it.
-- **Righting arm.** Computed on the union of the hull and appendage meshes, heeled 0-60 deg at level trim and the sailing displacement. The boat's VCG, +0.067 m above the flotation plane, is set so the meshes give the certificate's measured RM of 27.0 kg m per degree at 1438 kg. The certificate prints VCGM as -0.076 m. The 0.143 m difference means the morphed hull has less transverse waterplane inertia than ORC's measured hull; using the measured RM keeps the initial stiffness right. Crew, sails and running rigging are placed on the centreline at the heights listed in the check file.
+- **Righting arm.** Computed on the union of the hull and appendage meshes, heeled 0-60 deg at level trim and the sailing displacement. The boat's VCG is the certificate's VCGM, -0.076 m. ORC measures VCGM up from the flotation plane, so it is 0.076 m below it. At that VCG the meshes give RM at 1 deg of 300.0 N m at 1438 kg, 13.3% above the certificate's measured 264.8 N m (27.0 kg m): the morphed hull is stiffer than ORC's measured hull. The VCGM is kept, by decision, and the hull is to be corrected later. Crew, sails and running rigging are placed on the centreline at the heights listed in the check file.
 - **Foils.** Python-VPP's keel and rudder are trapezoids. The root chord is taken as given. The tip chord is set so chord x span equals the `foils` planform area: keel 0.96 / 0.793 m over 1.263 m, rudder 0.34 / 0.295 m over 1.145 m. Keel t/c 0.126 is thickness integrated over depth divided by chord integrated over depth; the rudder's is 0.12.
 - **Sails.** Main P 9.144 m, E 3.81 m, BAD = BAS 1.30 m, with roach 0.2004 so the area is the measured 20.91 m^2. Jib I = IG 9.563 m, J 2.895 m, LPG = HLP 2.95 m. Python-VPP computes the jib area as 0.5 I LPG = 14.11 m^2, 0.9% above the measured 13.98 m^2. HBI, the height of the base of I, is the freeboard at the mast minus the sinkage.
 - **Sweep.** TWS 6, 8, 10, 12, 14, 16 and 20 kn; TWA 20-180 deg in 1 deg steps; heel at most 35 deg, Python-VPP's default. Python-VPP solves each point for maximum boat speed over speed, heel, leeway, flat and reef.
@@ -282,12 +284,12 @@ The vendored crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m, wit
 - Python-VPP keeps the jib drawing at every angle with no blanketing behind the main, so the best run angles come out at 176-179 deg. This polar is the downwind calibration target.
 - Its keel volume formula ignores thickness.
 - It doubles the rudder aspect ratio.
-- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low.
+- At the certificate's VCGM of -0.076 m the morphed meshes give RM at 1 deg of 300.0 N m, 13.3% above the certificate's 264.8 N m, so the morphed hull is too stiff. The VCGM is kept and the hull is to be corrected later.
 
 ### Estimated inputs
 
 - Crew CG: 0.25 m above the sheer at 5.5 m aft of the stem (`mass.json` `crew_cg_above_sheer`, `crew_cg_x`), which is 0.913 m above the flotation plane.
-- Running rigging at the mast CG height. Sails at the centroids of their tack, head and clew.
+- Running rigging at the mast CG height, 2.982 m above the flotation plane (`mass.json` running_rigging cg): MCG 3.21 m measured from the mast heel (IMS F8.2), with the keel-stepped heel at the canoe-body bottom, -0.228 m. Sails at the centroids of their tack, head and clew.
 - Level trim, both upright and heeled.
 - Rudder span held at 1.145 m, although sinkage immerses another 0.04 m of blade.
 

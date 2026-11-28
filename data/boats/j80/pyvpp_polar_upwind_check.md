@@ -6,13 +6,13 @@ Differences are Python-VPP minus ORC, relative to ORC. The Python-VPP beat angle
 
 | TWS kn | ORC beat deg | VPP beat deg | ORC VMG kn | VPP VMG kn | VMG diff | ORC beat bsp | VPP beat bsp | bsp diff | ORC 52 | VPP 52 | 52 diff | ORC 60 | VPP 60 | 60 diff |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 6 | 42.5 | 44 | 3.22 | 3.30 | +2.5% | 4.37 | 4.59 | +5.1% | 4.93 | 5.04 | +2.2% | 5.22 | 5.26 | +0.7% |
-| 8 | 41.2 | 38 | 3.91 | 4.12 | +5.2% | 5.20 | 5.22 | +0.5% | 5.81 | 5.76 | -0.8% | 6.02 | 5.88 | -2.3% |
-| 10 | 38.9 | 34 | 4.40 | 4.47 | +1.7% | 5.65 | 5.39 | -4.6% | 6.23 | 6.03 | -3.2% | 6.38 | 6.16 | -3.4% |
-| 12 | 37.8 | 33 | 4.58 | 4.67 | +1.8% | 5.80 | 5.56 | -4.1% | 6.39 | 6.17 | -3.4% | 6.59 | 6.30 | -4.5% |
-| 14 | 37.5 | 32 | 4.64 | 4.82 | +3.8% | 5.85 | 5.68 | -2.9% | 6.46 | 6.27 | -2.9% | 6.69 | 6.41 | -4.2% |
-| 16 | 37.2 | 31 | 4.68 | 4.89 | +4.5% | 5.88 | 5.71 | -2.9% | 6.49 | 6.35 | -2.1% | 6.75 | 6.50 | -3.7% |
-| 20 | 38.1 | 29 | 4.71 | 5.01 | +6.4% | 5.99 | 5.73 | -4.3% | 6.60 | 6.46 | -2.1% | 6.90 | 6.62 | -4.0% |
+| 6 | 42.5 | 44 | 3.22 | 3.30 | +2.5% | 4.37 | 4.59 | +5.0% | 4.93 | 5.04 | +2.2% | 5.22 | 5.26 | +0.7% |
+| 8 | 41.2 | 39 | 3.91 | 4.12 | +5.2% | 5.20 | 5.30 | +1.8% | 5.81 | 5.77 | -0.7% | 6.02 | 5.89 | -2.2% |
+| 10 | 38.9 | 34 | 4.40 | 4.52 | +2.9% | 5.65 | 5.46 | -3.4% | 6.23 | 6.10 | -2.1% | 6.38 | 6.20 | -2.8% |
+| 12 | 37.8 | 33 | 4.58 | 4.74 | +3.4% | 5.80 | 5.65 | -2.6% | 6.39 | 6.24 | -2.4% | 6.59 | 6.37 | -3.4% |
+| 14 | 37.5 | 31 | 4.64 | 4.89 | +5.3% | 5.85 | 5.70 | -2.6% | 6.46 | 6.35 | -1.7% | 6.69 | 6.50 | -2.9% |
+| 16 | 37.2 | 29 | 4.68 | 4.98 | +6.4% | 5.88 | 5.70 | -3.1% | 6.49 | 6.44 | -0.7% | 6.75 | 6.61 | -2.1% |
+| 20 | 38.1 | 30 | 4.71 | 5.08 | +7.8% | 5.99 | 5.87 | -2.0% | 6.60 | 6.57 | -0.4% | 6.90 | 6.77 | -1.9% |
 
 ## Inputs
 
@@ -36,11 +36,11 @@ Python-VPP 9b9fe8f (github.com/marinlauber/Python-VPP, MIT). Sailing displacemen
 | Main P, E, Roach, BAD | 9.144, 3.810 m, 0.2004, 1.300 m | rig.json; roach from the measured area; Python-VPP area 20.91 m^2 (dossier 20.91) |
 | Jib I, J, LPG, HBI | 9.563, 2.895, 2.950, 0.703 m | IG, J, HLP, freeboard at mast - sinkage; Python-VPP area 14.11 m^2 (dossier 13.98) |
 
-Righting arm: the hull and appendage meshes heeled at level trim, at the sailing displacement, with G at 0.281 m. The boat's own VCG, +0.067 m, is the one at which the meshes reproduce the certificate's measured RM of 27.0 kg m per degree at 1438 kg (the meshes give GZ(1 deg) = 0.0199 m with G on the flotation plane). Crew CG 0.913 m, mainsail 5.092 m, jib 3.974 m and running rigging 3.954 m above the flotation plane.
+Righting arm: the hull and appendage meshes heeled at level trim, at the sailing displacement, with G at 0.163 m. The boat's own VCG is the certificate's VCGM, -0.076 m, which ORC measures up from the flotation plane, so it is 0.076 m below it (the meshes give GZ(1 deg) = 0.0199 m with G on the flotation plane). Crew CG 0.913 m, mainsail 5.092 m, jib 3.974 m and running rigging 2.982 m above the flotation plane.
 
 | heel deg | 0 | 5 | 10 | 15 | 20 | 25 | 30 | 35 | 40 | 45 | 50 | 55 | 60 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| GZ m | 0.000 | 0.067 | 0.130 | 0.187 | 0.235 | 0.274 | 0.307 | 0.334 | 0.345 | 0.344 | 0.333 | 0.314 | 0.289 |
+| GZ m | 0.000 | 0.077 | 0.151 | 0.218 | 0.275 | 0.324 | 0.366 | 0.401 | 0.421 | 0.427 | 0.423 | 0.410 | 0.391 |
 
 ## Crew righting moment in Python-VPP
 
@@ -49,8 +49,8 @@ Python-VPP's own crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m,
 ## Known limitations
 
 - Crew moment: replaced with ORC eq. 4.30 in SI (see above). Half the maximum beam is used as the rail arm, which slightly overstates it, since the deck-edge half-beam at the crew station is a little less.
-- Beat angle, Python-VPP minus the certificate, in deg: +1.5 at 6 kn, -3.2 at 8 kn, -4.9 at 10 kn, -4.8 at 12 kn, -5.5 at 14 kn, -6.2 at 16 kn, -9.1 at 20 kn. The beat optimum is inside the 20-180 deg grid at every TWS, so none is grid-limited. The beat VMG differs from the certificate by +1.7% to +6.4% across the TWS range.
+- Beat angle, Python-VPP minus the certificate, in deg: +1.5 at 6 kn, -2.2 at 8 kn, -4.9 at 10 kn, -4.8 at 12 kn, -6.5 at 14 kn, -8.2 at 16 kn, -8.1 at 20 kn. The beat optimum is inside the 20-180 deg grid at every TWS, so none is grid-limited. The beat VMG differs from the certificate by +2.5% to +7.8% across the TWS range.
 - Python-VPP keeps the jib drawing at every TWA with no blanketing behind the main, so the best run angles come out at 176-179 deg. This polar is the downwind calibration target.
 - Its keel volume formula ignores thickness.
 - It doubles the rudder aspect ratio.
-- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is +0.067 m, against the certificate's VCGM of -0.076 m. This suggests the morphed hull's waterplane inertia is low.
+- At the certificate's VCGM of -0.076 m the morphed meshes give RM at 1 deg of 300.0 N m at 1438 kg, +13.3% against the certificate's measured 264.8 N m (27.0 kg m), so the morphed hull is stiffer than the real one. The VCGM is kept and the hull is to be corrected later.

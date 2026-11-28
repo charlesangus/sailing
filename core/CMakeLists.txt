@@ -5,7 +5,9 @@ configure_file(
 )
 
 add_library(sailcore STATIC
+    src/boat_data.cpp
     src/hydrostatics.cpp
+    src/mass_model.cpp
     src/mesh.cpp
     src/rigid_body.cpp
     src/simulation.cpp
@@ -16,7 +18,7 @@ target_include_directories(sailcore
     PUBLIC include
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
-target_link_libraries(sailcore PUBLIC Eigen3::Eigen)
+target_link_libraries(sailcore PUBLIC Eigen3::Eigen PRIVATE nlohmann_json::nlohmann_json)
 target_compile_features(sailcore PUBLIC cxx_std_20)
 set_target_properties(sailcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 sail_enable_warnings(sailcore)
@@ -36,6 +38,7 @@ if(SAIL_BUILD_TESTS)
     add_executable(sailcore_tests
         tests/test_hydrostatics.cpp
         tests/test_main.cpp
+        tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
         tests/test_version.cpp
     )

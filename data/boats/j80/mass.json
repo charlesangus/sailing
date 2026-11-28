@@ -33,14 +33,44 @@
     "confidence": "high",
     "note": "Builder's weight plus battery, outboard and mandatory equipment; correctors added if light."
   },
+  "items_basis": {
+    "value": "Each item has a cg (provisional frame) and, where its size is known, a shape: box (solid, uniform) or shell_box (thin uniform shell over all six faces), with dims [x, y, z] extents in metres, centred on the cg. Items without a shape are point masses. The item marked residual takes the certificate displacement minus the other in_displacement items, and its cg x is solved so the measurement-trim LCG equals the total LCB (hull_hydro.json result lcb_x_total) and its cg z so the measurement-trim VCG equals the certificate VCGM; sailcore's loader (core/src/boat_data.cpp) does both, and the values stored here record its result.",
+    "unit": "-",
+    "source": "IMS Rule 2020, B4 Measurement Trim; ORC J/80 OD certificate 2019, p.1",
+    "confidence": "high"
+  },
   "items": {
     "hull_deck_fittings": {
-      "value": 718.8,
+      "value": 708.8,
       "unit": "kg",
-      "source": "J/80 Class Rules 2024 (effective 2024-06-01), D.5.1",
-      "confidence": "estimated",
-      "method": "residual: builder's weight mid-range (1437.5 kg) minus keel, rudder, mast, boom, standing and running rigging below. Includes the GRP keel sump mass.",
-      "in_displacement": true
+      "source": "J/80 Class Rules 2024 D.5.1; ORC J/80 OD certificate 2019 (displacement, VCGM)",
+      "confidence": "derived",
+      "method": "residual of 1438 kg; x solved so total LCG = total LCB, height solved so total VCG = certificate VCGM",
+      "note": "1438 kg minus the other in_displacement items (729.2 kg). Includes the GRP keel sump mass.",
+      "in_displacement": true,
+      "residual": true,
+      "cg": {
+        "value": [-3.8645, 0.0, 0.7121],
+        "unit": "m",
+        "source": "DSYHS model 61, data/dsyhs/table.csv; ORC J/80 OD certificate 2019, p.1",
+        "confidence": "derived",
+        "method": "x and z both solved. x makes the total measurement-trim LCG equal the total LCB of the floating meshes (canoe, keel, fairing, rudder; hull_hydro.json result lcb_x_total, -0.3436 m in the body frame), so the boat floats level at the DWL; the loader rejects an x more than 0.5 m from the canoe-body LCB (result lcb_x_canoe). z makes the total measurement-trim VCG equal VCGM -0.076 m, i.e. 0.076 m below the flotation plane in ORC's z-up convention."
+      },
+      "cg_z_bounds": {
+        "value": [0.3, 1.1],
+        "unit": "m",
+        "source": "none (judgement value)",
+        "confidence": "estimated",
+        "method": "plausible band above the flotation plane for hull, deck and fittings, between the canoe-body bottom region and above the sheer; the loader rejects a solved height outside it."
+      },
+      "shape": {
+        "value": "shell_box",
+        "dims": [6.71, 2.488, 0.943],
+        "unit": "m",
+        "source": "J/Boats J/80 Tech Specs page (LWL); ORC J/80 OD certificate 2019, p.1 (beam)",
+        "confidence": "estimated",
+        "method": "LWL x maximum beam x depth; depth is the canoe-body draft 0.2417 m (hull_hydro.json result tc) plus the sheer at the LCB station, 0.701 m (hull_hydro.json sheer fit)."
+      }
     },
     "keel_ballast": {
       "value": 635.0,
@@ -48,7 +78,22 @@
       "source": "J/Boats J/80 Tech Specs page",
       "confidence": "medium",
       "note": "J/Boats: 1,400 lb lead-antimony keel. The H.1 offsets volume (0.0805 m^3) is the keel's displaced volume; its shape includes the GRP sump above the lead, so it is larger than the lead volume.",
-      "in_displacement": true
+      "in_displacement": true,
+      "cg": {
+        "value": [-4.342, 0.0, -1.167],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "estimated",
+        "method": "appendages.json keel ballast_centroid: centroid of the lead from the lead top depth to the tip; x inherits the root_leading_edge estimate."
+      },
+      "shape": {
+        "value": "box",
+        "dims": [0.91, 0.11, 0.86],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "estimated",
+        "method": "box with the same second moments as the lead: NACA 4-digit sections of the H.1 offsets from the lead top depth (0.363 m below Section 1) to the elliptical tip, integrated for the variance of x, y and z about the lead centroid; each extent is sqrt(12 variance)."
+      }
     },
     "rudder": {
       "value": 22.0,
@@ -56,15 +101,45 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), E.2.6",
       "confidence": "medium",
       "note": "class minimum, including gudgeons and tiller; actual may be higher",
-      "in_displacement": true
+      "in_displacement": true,
+      "cg": {
+        "value": [-8.13, 0.0, -0.36],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "estimated",
+        "method": "blade about 19 kg at its volume centroid (0.521 m below the root, 0.42 chord aft of the stock axis, appendages.json rudder stock_axis) and tiller and gudgeons about 3 kg near the transom at the sheer (x -7.6, z +0.65)."
+      },
+      "shape": {
+        "value": "box",
+        "dims": [0.32, 0.04, 1.145],
+        "unit": "m",
+        "source": "J/80 Class Rules 2024 (effective 2024-06-01), Appendix H.1 Appendage Plan",
+        "confidence": "estimated",
+        "method": "blade mean chord, thickness and span (Sections 1-5)."
+      }
     },
     "mast": {
       "value": 33.1,
       "unit": "kg",
       "source": "ORC J/80 OD certificate 2019, p.2; J/80 Class Rules 2024 (effective 2024-06-01), C.8.1",
       "confidence": "high",
-      "note": "MWT; class minimum",
-      "in_displacement": true
+      "note": "MWT; class minimum. IMS F8.1(a) weighs the mast with its standing rigging, so wire, terminals and turnbuckles are in this figure.",
+      "in_displacement": true,
+      "cg": {
+        "value": [-2.962, 0.0, 2.982],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2; IMS Rule 2020, F8.2",
+        "confidence": "estimated",
+        "method": "x on the mast axis at the sheer (rig.json mast_axis_at_sheer). z = mast heel + MCG 3.21 m, since IMS F8.2 measures MCG from the mast's lower point, not the sheer. The mast is keel-stepped (rig.json rig_type) and no source gives the step height, so the heel is taken at the canoe-body bottom on the centreline at the mast station, -0.228 m (hull_physics.obj section at body x 0.825 m)."
+      },
+      "shape": {
+        "value": "box",
+        "dims": [0.133, 0.082, 11.58],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "MDL1 x MDT1 x heel-to-top length (rig.json mast_top_above_water 11.35 m plus the 0.228 m heel depth), centred on the measured CG rather than on the mid-length. A uniform spar over the full length somewhat overstates its own pitch and roll inertia."
+      }
     },
     "boom": {
       "value": 9.6,
@@ -72,15 +147,37 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.8.2",
       "confidence": "medium",
       "note": "class minimum",
-      "in_displacement": true
+      "in_displacement": true,
+      "cg": {
+        "value": [-4.933, 0.0, 1.997],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "mid-length of E aft of the mast aft face (x = -(J + MDL1) - E/2), at the boom band height less half BD (rig.json boom_height_above_water 2.044 m - 0.047 m); boom on the centreline."
+      },
+      "shape": {
+        "value": "box",
+        "dims": [3.81, 0.06, 0.094],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "E x assumed width 0.06 m x BD."
+      }
     },
-    "standing_rigging_and_furler": {
-      "value": 11.0,
+    "jib_furler": {
+      "value": 4.0,
       "unit": "kg",
-      "source": "J/80 Standard Building Specifications (1-Dec-20), items 59-69",
+      "source": "J/80 Standard Building Specifications (1-Dec-20), items 59-69; IMS Rule 2020, F8.1(a)",
       "confidence": "estimated",
-      "method": "wire lengths from rig geometry times 1x19 stainless mass per metre (4.7 mm 0.113, 4.0 mm 0.080, 3.0 mm 0.045 kg/m), about 6 kg, plus turnbuckles and the furler, about 5 kg.",
-      "in_displacement": true
+      "method": "furler drum and foil only. IMS F8.1(a) weighs the mast with its standing rigging, so the wire (about 6 kg from rig geometry) and about 1 kg of turnbuckles and toggles are already in MWT and are not a separate item; the furler is about 4 kg.",
+      "in_displacement": true,
+      "cg": {
+        "value": [-1.086, 0.0, 4.435],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "foil about 3 kg at the forestay mid-point (rig.json forestay_deck_point to hounds_forestay_on_mast) and drum about 1 kg just above the forestay deck point."
+      }
     },
     "battery": {
       "value": 13.0,
@@ -88,7 +185,14 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.5.2(a)(iv)",
       "confidence": "estimated",
       "method": "midpoint of the class range, 2 to 25 kg",
-      "in_displacement": true
+      "in_displacement": true,
+      "cg": {
+        "value": [-5.0, 0.0, -0.1],
+        "unit": "m",
+        "source": "none (judgement value)",
+        "confidence": "estimated",
+        "method": "low in the hull under the forward cockpit, on the centreline; no source gives the battery location."
+      }
     },
     "outboard_engine": {
       "value": 12.5,
@@ -96,7 +200,14 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.5.3(a)(i)",
       "confidence": "estimated",
       "method": "class minimum (empty of fuel); the engine is carried while racing, so IMS B4.1(e) includes it.",
-      "in_displacement": true
+      "in_displacement": true,
+      "cg": {
+        "value": [-4.0, 0.0, 0.05],
+        "unit": "m",
+        "source": "none (judgement value)",
+        "confidence": "estimated",
+        "method": "stowed below on the cabin sole aft of the mast, on the centreline; no source gives the stowage."
+      }
     },
     "running_rigging": {
       "value": 8.0,
@@ -104,7 +215,14 @@
       "source": "J/80 Standard Building Specifications (1-Dec-20), items 70-78; IMS Rule 2020, B4 Measurement Trim",
       "confidence": "estimated",
       "method": "sheets, halyards and control lines; in builder's weight but excluded from measurement trim by IMS B4.2(d).",
-      "in_displacement": false
+      "in_displacement": false,
+      "cg": {
+        "value": [-2.962, 0.0, 2.982],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "spread over the rig, so placed at the mast CG (see mast cg); tools/vpp/run_pyvpp.py uses the same height."
+      }
     },
     "mainsail": {
       "value": 8.0,
@@ -112,7 +230,14 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.3.3",
       "confidence": "medium",
       "note": "class minimum, excluding battens",
-      "in_displacement": false
+      "in_displacement": false,
+      "cg": {
+        "value": [-4.298, 0.0, 5.092],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "centroid of the sails.json main tack, head and clew; sail on the centreline."
+      }
     },
     "jib": {
       "value": 5.0,
@@ -120,7 +245,14 @@
       "source": "J/80 Class Rules 2024 (effective 2024-06-01), G.4.2",
       "confidence": "medium",
       "note": "class minimum, including battens",
-      "in_displacement": false
+      "in_displacement": false,
+      "cg": {
+        "value": [-1.978, 0.0, 3.974],
+        "unit": "m",
+        "source": "ORC J/80 OD certificate 2019, p.2",
+        "confidence": "estimated",
+        "method": "centroid of the sails.json jib tack, head and clew; sail on the centreline."
+      }
     }
   },
   "keel_lead_volume": {
@@ -157,14 +289,28 @@
     "unit": "kg",
     "source": "J/80 Class Rules 2024 (effective 2024-06-01), C.4.1",
     "confidence": "high",
-    "note": "in swimming apparel, any number of crew. The 2006 rules (C.3.1) had 338.6 kg or three people of any weight."
+    "note": "in swimming apparel, any number of crew. The 2006 rules (C.3.1) had 338.6 kg or three people of any weight. The crew mass of the sailing configuration."
   },
   "crew_weight_default_orc": {
     "value": 411.0,
     "unit": "kg",
     "source": "ORC J/80 OD certificate 2019, p.1",
     "confidence": "high",
-    "note": "ORC default; exceeds the class maximum"
+    "note": "ORC default; exceeds the class maximum. The crew mass of the ORC stability configuration."
+  },
+  "orc_stability_gear": {
+    "value": 65.8,
+    "unit": "kg",
+    "source": "ORC VPP Documentation 2023",
+    "confidence": "medium",
+    "note": "gear ORC adds to the default crew for the stability (LPS) calculation; combined with crew_weight_default_orc into one point mass."
+  },
+  "orc_stability_crew_gear_z": {
+    "value": 0.708,
+    "unit": "m",
+    "source": "ORC VPP Documentation 2023",
+    "confidence": "medium",
+    "note": "height above the flotation plane of the combined crew and gear point mass, on the centreline. Its x is crew_cg_x."
   },
   "crew_count": {
     "value": 4,
@@ -179,13 +325,28 @@
     "source": "J/Boats J/80 deck plan drawing (J80-Plan-700.png)",
     "confidence": "estimated",
     "method": "mid-cockpit on the deck plan, where the crew sit hiking; no source gives a crew position. Provisional frame (stem origin).",
-    "note": "used by tools/vpp/run_pyvpp.py for the crew VCG only; the VPP takes the crew righting arm from ORC eq. 4.30"
+    "note": "the crew point mass's x in the sailing and ORC stability configurations; tools/vpp/run_pyvpp.py uses it for the crew VCG only, and the VPP takes the crew righting arm from ORC eq. 4.30"
   },
   "crew_cg_above_sheer": {
     "value": 0.25,
     "unit": "m",
     "source": "none (judgement value)",
     "confidence": "estimated",
-    "method": "seated hip-to-chest height above the sheer for crew sitting on the deck edge; no source gives a crew height."
+    "method": "seated hip-to-chest height above the sheer for crew sitting on the deck edge; no source gives a crew height.",
+    "note": "the default crew height in the sailing configuration, above the hull_hydro.json sheer fit at crew_cg_x."
+  },
+  "added_mass": {
+    "value": {
+      "surge_fraction": 0.05,
+      "sway_scale": 1.0,
+      "heave_scale": 1.0,
+      "roll_scale": 1.0,
+      "pitch_scale": 1.0,
+      "yaw_scale": 1.0
+    },
+    "unit": "-",
+    "source": "Fossen, Handbook of Marine Craft Hydrodynamics and Motion Control (2011); Newman, Marine Hydrodynamics (1977)",
+    "confidence": "estimated",
+    "method": "surge added mass is surge_fraction of the rigid-body mass. Sway, heave and the rotations come from strip theory in the high-frequency (rigid free surface) limit: every section is a half-ellipse of half-beam BWL/2 and draft Tc (hull_hydro.json result), whose added mass is half the double-body ellipse's: sway rho pi Tc^2 / 2, heave rho pi (BWL/2)^2 / 2, roll about the waterline centre rho pi ((BWL/2)^2 - Tc^2)^2 / 16, per metre. Sections are integrated over an equivalent prism of length Cp x LWL, the length over which a uniform section holds the hull's volume; pitch and yaw use that prism's (Cp LWL)^2 / 12. The keel and rudder are not included. Each scale multiplies its strip value; an optional length_factor replaces Cp."
   }
 }
