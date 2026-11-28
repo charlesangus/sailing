@@ -1,0 +1,37 @@
+{
+  "description": "Canoe-body hull resistance model parameters. The hull inputs (Lwl, Bwl, Tc, canoe volume, canoe wetted area, displacement) come from hull_hydro.json conditions.sailing.result, and any ORC quantities from conditions.sailing.orc; this file holds the model choice, the water properties and the model's data.",
+  "model": "orc",
+  "water": {
+    "density": {
+      "value": 1025.0,
+      "unit": "kg/m^3",
+      "source": "Python-VPP HydroMod default rho (commit 9b9fe8f3f63d902a1df207691109e42932d0a9bb), so the comparison with hull_resistance_reference.json is like for like. The ORC VPP Documentation 2023 gives no value."
+    },
+    "dynamic_viscosity": {
+      "value": 0.00119,
+      "unit": "Pa s",
+      "source": "Python-VPP HydroMod default mu (same commit); kinematic viscosity is mu / rho. The ORC VPP Documentation 2023 gives no value."
+    }
+  },
+  "orc": {
+    "drag_surfaces": {
+      "path": "../../hull/ORCi_Drag_Surfaces.csv",
+      "source": "ORC VPP Documentation 2023 section 6.3.1 canoe-body residuary resistance surfaces, the file as shipped by Python-VPP; see data/hull/README.md."
+    },
+    "immersed_rail": {
+      "threshold_deg": {"value": 30.0, "unit": "deg"},
+      "coefficient": {"value": 0.0004, "unit": "1/deg^2"},
+      "note": "Rr multiplied by 1 + coefficient (heel_deg - threshold_deg)^2 above threshold_deg, 1 otherwise. NOT in the ORC VPP Documentation 2023: it is Python-VPP's immersed-rail correction (HydroMod._get_Rr), kept because the Python-VPP downwind target is computed with it."
+    }
+  },
+  "dsyhs": {
+    "coefficients": {
+      "path": "../../hull/dsyhs1998_coefficients.csv",
+      "source": "Keuning & Sonnenberg 1998 DSYHS regressions as reproduced in Molland, Turnock & Hudson, Ship Resistance and Propulsion, 2nd ed., Tables 10.13, 10.14 and 10.26; see data/hull/README.md."
+    },
+    "form_factor": {
+      "value": 1.0,
+      "source": "The DSYHS uses no form factor on the ITTC-57 friction (Keuning & Sonnenberg 1998, as reported by Molland et al. section 10.3.6.2 and Kleijweg 2015 section 2.1.2); the hull-shape effect is inside the residuary regression."
+    }
+  }
+}

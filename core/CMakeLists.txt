@@ -5,10 +5,15 @@ configure_file(
 )
 
 add_library(sailcore STATIC
+    src/appendages.cpp
+    src/boat_sim.cpp
     src/boat_data.cpp
     src/damping.cpp
     src/equilibrium.cpp
+    src/foil.cpp
     src/gravity.cpp
+    src/hull_forces.cpp
+    src/hull_resistance.cpp
     src/hydrostatics.cpp
     src/mass_model.cpp
     src/mesh.cpp
@@ -40,10 +45,16 @@ if(SAIL_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
     add_executable(sailcore_tests
+        tests/test_appendages.cpp
         tests/test_bench_budget.cpp
         tests/test_damping.cpp
+        tests/test_foil.cpp
+        tests/test_hull_forces.cpp
+        tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp
         tests/test_j80_hydrostatics.cpp
+        tests/test_j80_tow.cpp
+        tests/test_j80_turn.cpp
         tests/test_main.cpp
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp

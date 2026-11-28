@@ -76,6 +76,33 @@ LoadedBoat load_boat(const Options& options, sail::MassConfiguration configurati
     return {std::move(model), std::move(hydro), std::move(params)};
 }
 
+std::optional<sail::HullResistanceKind> parse_resistance_model(const std::optional<std::string>& value) {
+    if (!value) return std::nullopt;
+    if (*value == "orc") return sail::HullResistanceKind::orc;
+    if (*value == "dsyhs") return sail::HullResistanceKind::dsyhs;
+    throw UsageError("--model must be orc or dsyhs, got '" + *value + "'");
+}
+
+const char* resistance_model_name(sail::HullResistanceKind kind) {
+    return kind == sail::HullResistanceKind::orc ? "orc" : "dsyhs";
+}
+
+std::unique_ptr<sail::BoatSim> load_boat_sim(const Options& options,
+                                             const sail::BoatSimOptions& sim_options) {
+    const auto dir = options.get("--boat");
+    if (!dir) throw UsageError("--boat is required");
+    if (!std::filesystem::is_directory(*dir)) {
+        throw UsageError("--boat '" + *dir + "' is not a directory");
+    }
+    const std::filesystem::path section_file = options.get("--section").value_or(
+        (std::filesystem::path(*dir) / ".." / ".." / "foils" / "naca0012.csv").string());
+    if (!std::filesystem::is_regular_file(section_file)) {
+        throw UsageError("section file '" + section_file.string() + "' not found; pass --section");
+    }
+    auto section = std::make_shared<const sail::FoilSection>(sail::FoilSection::load(section_file));
+    return sail::BoatSim::load(*dir, std::move(section), sim_options);
+}
+
 double deg(double rad) { return rad * 180.0 / std::numbers::pi; }
 double rad(double deg) { return deg * std::numbers::pi / 180.0; }
 

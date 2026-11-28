@@ -228,4 +228,101 @@ TEST_CASE("J/80 dropped into flat water oscillates at the heave period and decay
     }
 }
 
+sail::Quat attitude(double heading, double trim, double heel) {
+    return sail::Quat(Eigen::AngleAxisd(heading, Vec3::UnitZ()) *
+                      Eigen::AngleAxisd(trim, Vec3::UnitY()) *
+                      Eigen::AngleAxisd(heel, Vec3::UnitX()));
+}
+
+DampingCoefficients test_coefficients() {
+    DampingCoefficients c;
+    c.heave = {1000.0, 300.0};
+    c.roll = {2000.0, 500.0};
+    c.pitch = {3000.0, 700.0};
+    return c;
+}
+
+double law(const sail::DampingCoefficient& c, double q) {
+    return -(c.linear + c.quadratic * std::abs(q)) * q;
+}
+
+TEST_CASE("steady horizontal motion at a trim, heel or leeway angle is not damped") {
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    DampingModule module(test_coefficients());
+
+    struct Case {
+        const char* name;
+        double trim;
+        double heel;
+        double leeway;
+    };
+    for (const Case& c : {Case{"trim -0.8 deg", -0.8 * kDeg, 0.0, 0.0},
+                          Case{"15 deg heel, 4 deg leeway", -0.8 * kDeg, 15.0 * kDeg, 4.0 * kDeg}}) {
+        CAPTURE(c.name);
+        const double heading = 0.6;
+        State s;
+        s.orientation = attitude(heading, c.trim, c.heel);
+        for (const double knots : {3.0, 6.0}) {
+            const double speed = knots * 1852.0 / 3600.0;
+            const Vec3 v_world = speed * Vec3(std::cos(heading + c.leeway),
+                                              std::sin(heading + c.leeway), 0.0);
+            s.linear_velocity = s.orientation.conjugate() * v_world;
+            s.angular_velocity.setZero();
+            Wrench w;
+            module.accumulate(s, 0.0, w);
+            CHECK(w.force.norm() < 1e-9);
+            CHECK(w.moment.norm() < 1e-9);
+
+            s.angular_velocity = s.orientation.conjugate() * Vec3(0.0, 0.0, 0.5);
+            Wrench turning;
+            module.accumulate(s, 0.0, turning);
+            CHECK(turning.force.norm() < 1e-9);
+            CHECK(turning.moment.norm() < 1e-9);
+        }
+    }
+}
+
+TEST_CASE("heeled and trimmed, pure heave, roll and pitch are damped about the level axes") {
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    const DampingCoefficients c = test_coefficients();
+    DampingModule module(c);
+    const double heading = -1.1;
+    const sail::Quat q = attitude(heading, -0.8 * kDeg, 15.0 * kDeg);
+    const sail::Mat3 rot = q.toRotationMatrix();
+    const Vec3 x_h(std::cos(heading), std::sin(heading), 0.0);
+    const Vec3 y_h(-std::sin(heading), std::cos(heading), 0.0);
+
+    State heave;
+    heave.orientation = q;
+    heave.linear_velocity = rot.transpose() * Vec3(0.0, 0.0, -0.4);
+    Wrench wh;
+    module.accumulate(heave, 0.0, wh);
+    const Vec3 fh = rot * wh.force;
+    CHECK(fh.z() == doctest::Approx(law(c.heave, -0.4)));
+    CHECK(std::abs(std::hypot(fh.x(), fh.y())) < 1e-9);
+    CHECK(wh.moment.norm() == 0.0);
+
+    State roll;
+    roll.orientation = q;
+    roll.angular_velocity = rot.transpose() * (0.3 * x_h);
+    Wrench wr;
+    module.accumulate(roll, 0.0, wr);
+    const Vec3 mr = rot * wr.moment;
+    CHECK(mr.dot(x_h) == doctest::Approx(law(c.roll, 0.3)));
+    CHECK(std::abs(mr.dot(y_h)) < 1e-9);
+    CHECK(std::abs(mr.z()) < 1e-9);
+    CHECK(wr.force.norm() == 0.0);
+
+    State pitch;
+    pitch.orientation = q;
+    pitch.angular_velocity = rot.transpose() * (-0.2 * y_h);
+    Wrench wp;
+    module.accumulate(pitch, 0.0, wp);
+    const Vec3 mp = rot * wp.moment;
+    CHECK(mp.dot(y_h) == doctest::Approx(law(c.pitch, -0.2)));
+    CHECK(std::abs(mp.dot(x_h)) < 1e-9);
+    CHECK(std::abs(mp.z()) < 1e-9);
+}
+
 }  // namespace
+

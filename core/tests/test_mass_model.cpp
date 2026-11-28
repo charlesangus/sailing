@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <numbers>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -217,6 +218,33 @@ TEST_CASE("J/80 added mass is a positive diagonal with surge at its mass fractio
                                           model.total_mass());
     CHECK(b(2, 2) == doctest::Approx(2.0 * a(2, 2)));
     CHECK(b(1, 1) == doctest::Approx(a(1, 1)));
+}
+
+TEST_CASE("J/80 added mass is the constant upright strip estimate whatever the crew does") {
+    MassModel model = MassModel::load(kBoatDir, MassConfiguration::sailing);
+    const sail::HullDims& hull = model.data().hull;
+    const double rho = model.data().density;
+    const double pi = std::numbers::pi;
+    const double length = hull.cp * hull.lwl;
+    const double b2 = 0.25 * hull.bwl * hull.bwl;
+    const double t2 = hull.tc * hull.tc;
+    const double sway = rho * pi * t2 / 2.0 * length;
+    const double heave = rho * pi * b2 / 2.0 * length;
+    const double roll = rho * pi * (b2 - t2) * (b2 - t2) / 16.0 * length;
+
+    const Mat6 upright = model.added_mass();
+    CHECK(upright(1, 1) == doctest::Approx(sway).epsilon(1e-12));
+    CHECK(upright(2, 2) == doctest::Approx(heave).epsilon(1e-12));
+    CHECK(upright(3, 3) == doctest::Approx(roll).epsilon(1e-12));
+    CHECK(upright(4, 4) == doctest::Approx(heave * length * length / 12.0).epsilon(1e-12));
+    CHECK(upright(5, 5) == doctest::Approx(sway * length * length / 12.0).epsilon(1e-12));
+
+    // Hiking the crew to the rail heels the boat, but the strip estimate has no pose input, so
+    // only the surge term, a fraction of the rigid mass, could follow a mass change.
+    model.set_crew_position(-1.0, model.crew_position().z() + 0.3);
+    const Mat6 hiked = model.body_properties().added_mass;
+    CHECK((hiked.bottomRightCorner<5, 5>() - upright.bottomRightCorner<5, 5>()).norm() == 0.0);
+    CHECK(hiked(0, 0) == doctest::Approx(upright(0, 0)));
 }
 
 TEST_CASE("boat data errors name the file and the problem") {

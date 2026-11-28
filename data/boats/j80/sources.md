@@ -231,6 +231,7 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 
 - **Effective aspect ratio** is an assumption: 2x geometric for the keel, because a fin fixed to the hull with no gap treats the hull bottom as a reflection plane (an upper bound, lowered by heel and leeway), and 1x for the rudder, which hangs clear of the hull with no end plate. The physics may replace both with its own end-plate model.
 - **Rudder stock:** (-4.2949, 0, 0) m with a vertical axis. H.1 gives the leading edge as vertical, and no source gives the rake of the transom pintle line.
+  With the stock on the leading edge, the rudder hinge moment is restoring at every angle. In attached flow the centre of pressure is 0.25c aft of the stock, and it moves aft toward 0.5c at 90 deg. In reverse flow the normal force reverses, but the centre of pressure (0.75c) stays aft of the stock, so the moment's sign relative to the angle of attack flips while the arm keeps its sign.
 
 ### Volumes against the displacement accounting
 
@@ -251,7 +252,7 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 ### Inputs
 
 - **Sailing condition.** The boat (1438 kg) plus crew, sails and running rigging, 1809 kg in total. Crew is 350 kg, the class maximum (Class Rules 2024 C.4.1); the certificate's default of 411 kg exceeds that maximum. Mainsail 8 kg, jib 5 kg and running rigging 8 kg come from `mass.json`. The boat floats 40.9 mm below the certificate flotation plane.
-- **Hull.** Python-VPP takes canoe-body Lwl, volume, Bwl, Tc, wetted area and maximum section area at the sailing displacement. These are measured on `hull_physics.obj` with `tools/hull/dsyhs_table.hydrostatics` at the waterline where hull plus appendages displace 1809 kg, level trim. The same method at 1438 kg reproduces `hull_hydro.json` to 0.005 m in Lwl and 0.1% in volume. With crew aboard, the flat run aft immerses, so Lwl is 7.146 m against 6.71 m at measurement trim; the certificate's IMS L is 7.237 m. The appendages' volumes are not in `Vol`, which is the canoe body only, as Python-VPP defines it.
+- **Hull.** Python-VPP takes canoe-body Lwl, volume, Bwl, Tc, wetted area and maximum section area at the sailing displacement. They are read from `hull_hydro.json` `conditions.sailing`, which `tools/hull/condition_hydro.py` measures on `hull_physics.obj` with `tools/hull/dsyhs_table.hydrostatics` at the waterline where hull plus appendages displace 1809 kg, level trim (the sailing displacement is summed from `mass.json`). The block also holds LCB, LCF, Cp, Cm, Cw, waterplane area and total volume, for the resistance models; values are unrounded, so they equal the earlier inline measurement exactly. The same method at 1438 kg reproduces `hull_hydro.json` to 0.005 m in Lwl and 0.1% in volume. With crew aboard, the flat run aft immerses, so Lwl is 7.146 m against 6.71 m at measurement trim; the certificate's IMS L is 7.237 m. The appendages' volumes are not in `Vol`, which is the canoe body only, as Python-VPP defines it.
 - **Righting arm.** Computed on the union of the hull and appendage meshes, heeled 0-60 deg at level trim and the sailing displacement. The boat's VCG is the certificate's VCGM, -0.076 m. ORC measures VCGM up from the flotation plane, so it is 0.076 m below it. At that VCG the meshes give RM at 1 deg of 300.0 N m at 1438 kg, 13.3% above the certificate's measured 264.8 N m (27.0 kg m): the morphed hull is stiffer than ORC's measured hull. The VCGM is kept, by decision, and the hull is to be corrected later. Crew, sails and running rigging are placed on the centreline at the heights listed in the check file.
 - **Foils.** Python-VPP's keel and rudder are trapezoids. The root chord is taken as given. The tip chord is set so chord x span equals the `foils` planform area: keel 0.96 / 0.793 m over 1.263 m, rudder 0.34 / 0.295 m over 1.145 m. Keel t/c 0.126 is thickness integrated over depth divided by chord integrated over depth; the rudder's is 0.12.
 - **Sails.** Main P 9.144 m, E 3.81 m, BAD = BAS 1.30 m, with roach 0.2004 so the area is the measured 20.91 m^2. Jib I = IG 9.563 m, J 2.895 m, LPG = HLP 2.95 m. Python-VPP computes the jib area as 0.5 I LPG = 14.11 m^2, 0.9% above the measured 13.98 m^2. HBI, the height of the base of I, is the freeboard at the mast minus the sinkage.
@@ -296,3 +297,28 @@ The vendored crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m, wit
 ### Downwind
 
 Python-VPP keeps the jib drawing at every TWA and does not blanket it behind the main. The best run VMG falls at 176-179 deg.
+
+## Hull resistance
+
+`hull_resistance.json` selects the core's `orc` canoe-body resistance model: the drag-surface half of the ORC VPP Documentation 2023 residuary resistance (section 6.3.1, surfaces in `data/hull/ORCi_Drag_Surfaces.csv`) and the viscous resistance of eq. 6.2. Hull inputs are `hull_hydro.json` `conditions.sailing.result`: Fn and LVR on Lwl, LVR on the canoe volume, BTR = Bwl / Tc, Rr scaled by the 1809 kg sailing displacement, Rv on the canoe wetted area with Re on 0.85 Lwl. For this hull LVR is 6.023 and BTR 6.805, both inside the surfaces (LVR 3 to 9, BTR 2.5 to 9).
+
+- The inputs are at level trim on purpose. ORC and Python-VPP both evaluate the hull at the level DWL, and the canoe-body match with Python-VPP depends on it. The sailing `MassModel` CG lies aft of `lcb_x_total`, so the simulated boat floats about 0.8 deg stern-down (`sailsim tow --speeds 0` gives `trim_deg` -0.81). Lwl, Tc, wetted area, sinkage and the CLR (`hull_forces.json`) do not follow that trim.
+- Water density 1025 kg/m^3 and dynamic viscosity 1.19e-3 Pa s are Python-VPP's defaults; ORC 2023 gives no values.
+- The immersed-rail factor on Rr, 1 + 0.0004 (heel_deg - 30)^2 above 30 deg, is **not** in ORC 2023. It is Python-VPP's, kept because the Python-VPP downwind target uses it.
+- A `conditions.sailing.orc` block in `hull_hydro.json` (`lsm1`, `lsm4`, `lsm6`, `btr_effective`, `heeled` tables of `wetted_area`, `btr`, `lvr` over `heel_deg`) would replace the stand-ins. This dossier has none yet.
+
+`hull_resistance_reference.json` (from `tools/vpp/hull_reference.py`) is the Python-VPP canoe-only result the core is tested against, and lists every deviation from ORC 2023: Lwl for the dynamic length and LSM1, Bwl/Tc for the effective BTR, no neural-network half, the heel term, and clamping of LVR/BTR where Python-VPP extrapolates.
+
+### Alternative: DSYHS 1998
+
+`"model": "dsyhs"` (or `load_hull_resistance(dir, HullResistanceKind::dsyhs)`) selects the Keuning & Sonnenberg 1998 Delft Systematic Yacht Hull Series regressions instead; the `dsyhs` block of `hull_resistance.json` points at `data/hull/dsyhs1998_coefficients.csv` (provenance and conventions in `data/hull/README.md`) and sets the form factor, 1.0 as in the series. It reads the same `conditions.sailing.result` block, plus Aw, Cp, Cm, LCB and LCF: LCBfpp 3.835 m and LCFfpp 4.068 m aft of the forward end of the waterline (LCB -3.66 % and LCF -6.92 % of Lwl from Lwl/2). Rr scales with the canoe-body weight ∇c ρ g, not the 1809 kg displacement.
+
+The J/80 lies inside the series range on Lwl/Bwl 3.70, Bwl/Tc 6.80, Lwl/∇c^(1/3) 6.02, LCB, LCF, Cp 0.539 and Aw/∇c^(2/3) 6.73, but its Cm of 0.793 is above the 0.78 series maximum, so every result carries `hull_out_of_range`. Upright totals against the `orc` model (`data/hull/dsyhs1998_reference.json`, `tools/hull/dsyhs1998_reference.py`):
+
+| Fn | ORC total, N | DSYHS total, N | gap |
+| --- | --- | --- | --- |
+| 0.20 | 50.5 | 55.0 | +8.9 % |
+| 0.35 | 253.6 | 232.0 | -8.5 % |
+| 0.45 | 1010.2 | 793.7 | -21.4 % |
+
+The DSYHS friction (ITTC-57 on 0.7 Lwl, no form factor) is 11 % above ORC's Rv (Hughes 0.066 on 0.85 Lwl, times 1.05); the gap at Fn 0.45 is in the residuary, 584 N against ORC's 820 N.

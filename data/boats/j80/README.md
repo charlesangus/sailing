@@ -13,14 +13,17 @@ Geometry, mass, rig, sail and performance data for a generic (class-standard) J/
 | `rig.json` | Mast, forestay, spreaders, shroud chainplates | m, deg; provisional frame | transcribed by hand |
 | `sails.json` | Main and jib measurements, corner points, tracks, J/Boats 100% SA cross-check | m, m^2; provisional frame | transcribed by hand |
 | `appendages.json` | H.1 keel and rudder offsets, root and ballast positions, keel root fairing; plus a `foils` block | offsets and positions in the provisional frame; `foils` in the body frame | offsets by hand; `foils` block written by `tools/hull/appendages.py` |
-| `hull_hydro.json` | Hull targets, parent hull, scale factors, sheer, flare, hydrostatic results, frame transform | m, m^2, m^3; body frame | `tools/hull/morph.py` |
+| `hull_hydro.json` | Hull targets, parent hull, scale factors, sheer, flare, hydrostatic results at measurement trim, frame transform; plus a `conditions.sailing` block with the hull measured at the sailing displacement | m, m^2, m^3, kg; body frame | `tools/hull/morph.py`; `conditions.sailing` by `tools/hull/condition_hydro.py` |
 | `hull_visual.obj` | Render mesh of the morphed hull (normals split at creases, not watertight) | m; body frame | `tools/hull/morph.py` |
 | `hull_physics.obj` | Watertight, outward-wound decimated hull mesh for hydrostatics | m; body frame | `tools/hull/morph.py` |
 | `appendages.obj` | Keel and rudder solids (objects `keel`, `rudder`), each watertight | m; body frame | `tools/hull/appendages.py` |
 | `pyvpp_polar_nospi.csv` | Python-VPP main + jib polar, same columns as `orc_polar.csv` | kn, deg | `tools/vpp/run_pyvpp.py` |
 | `pyvpp_polar_upwind_check.md` | Upwind comparison with the certificate and the full VPP input list | prose | `tools/vpp/run_pyvpp.py` |
+| `controls.json` | Rudder hard-over angle, actuation rate and keel downwash factor, with the tiller and rudder sign convention | deg, deg/s | by hand (rudder stop calibrated to a 1.5 LOA turning circle at 5 kn; rate and downwash estimated) |
+| `hull_resistance.json` | Hull resistance model choice (`orc`), water density and viscosity, path to the shared ORC drag surfaces, Python-VPP immersed-rail factor (not ORC 2023) | SI, deg | by hand |
+| `hull_resistance_reference.json` | Python-VPP canoe-body Rr, Rv and total at Fn 0.20/0.35/0.45 and heel 0/20/35 deg, with the deviations from ORC 2023 | N, m/s, deg | `tools/vpp/hull_reference.py` |
 
-The DSYHS hull table the morph reads is `data/dsyhs/table.csv`; see `data/dsyhs/README.md`.
+The DSYHS hull table the morph reads is `data/dsyhs/table.csv`; see `data/dsyhs/README.md`. The ORC residuary resistance surfaces are `data/hull/ORCi_Drag_Surfaces.csv`; see `data/hull/README.md`.
 
 ## Frames
 
@@ -44,6 +47,14 @@ The reference is ORC's 2019 J/80 International One Design certificate (https://d
 - Overhangs are stretched beyond the waterline ends only, so the stem and transom land at LOA 8.032 m with the certificate LCF from stem (4.276 m). The sheer is a quadratic through the certificate freeboards (0.877 m forward, 0.744 m at the mast, 0.627 m aft); topsides are extended up to 0.2548 m forward and trimmed up to 5.7 mm aft; the deck is flat at the sheer.
 - Topside flare to the certificate beam 2.488 m (from 2.212 m), k0 = 1.12505, peaking 4.712 m from the stem, by straightening each section above its DWL vertex. The immersed body is untouched: canoe volume, BWL and LWL are unchanged, waterplane area changes by +2e-5 relative. No section gains an inflection and the DWL kink is 0 deg.
 - Keel root fairing preserving the 1.501 m draft: the keel keeps its H.1 root depth (-0.331 m) and span (1.170 m); the 0.089-0.103 m gap to the morphed canoe body is filled by extruding Section 1 vertically (0.00612 m^3 in the morph, 0.00603 m^3 in the mesh).
+
+## Constant added mass
+
+`sail::strip_added_mass` keeps the added mass constant in the body frame, so it does not follow heel. Sized from `hull_physics.obj` sections at constant displacement, with half-ellipses matched to each section's waterline beam and area:
+
+- Heave is about 15x sway, so at heel phi the world-horizontal term cos^2 * sway + sin^2 * heave is 3.2x the heeled section's value at 30 deg and 4.3x at 45 deg. The sideways effective mass of the sailing J/80 (1809 kg) is about 47% high at 30 deg.
+- The rotated heave term gives a spurious Munk pitch moment (Z_w - X_u) u w from leeway, about 1.6 kN*m at 3 m/s, 4 deg leeway and 30 deg heel.
+- At 30 deg the heeled section's horizontal term is +40%, its vertical -33% and its roll term about the waterline centre -62% of upright, so the roll inertia Ixx + A_roll is about 9% high.
 
 ## Downwind calibration target
 
@@ -69,7 +80,7 @@ Open issue: ORC measures VCGM up from the flotation plane, so -0.076 m is 0.076 
 
 ## Estimated and derived values
 
-Every entry marked `estimated` or `derived` in the JSON files, 94 in total, generated from the `confidence` fields. Methods are shortened to their first clause; the files carry the full text. `particulars.json` has none; the `beat` and `run` rows of `orc_polar.csv` are also derived (see above).
+Every entry marked `estimated` or `derived` in the JSON files, 95 in total, generated from the `confidence` fields. Methods are shortened to their first clause; the files carry the full text. `particulars.json` has none; the `beat` and `run` rows of `orc_polar.csv` are also derived (see above).
 
 `appendages.json`
 
@@ -116,6 +127,7 @@ Every entry marked `estimated` or `derived` in the JSON files, 94 in total, gene
 - `targets.rudder_volume` (estimated): NACA 4-digit section area 0.6851 c t integrated trapezoidally over Sections 1-5
 - `targets.canoe_volume` (derived): displacement volume - keel - keel fairing - rudder
 - `targets.waterplane_area` (derived): sink kg/mm x 1000 / rho
+- `conditions.sailing` (derived): sailing displacement (mass.json: certificate displacement + max class crew + mainsail, jib, running rigging) floated on hull_physics.obj united with appendages.obj by bisection on the union volume, at flotation_sg
 - `targets.lcb` (derived): canoe-body LCB of the morphed hull as a fraction of Lwl
 - `targets.cp` (derived): the parent's Cp from data/dsyhs/table.csv, which the affine scale leaves unchanged
 
@@ -199,7 +211,8 @@ From the repository root, with `.venv` set up (`tools/bootstrap.sh`):
 1. `tools/fetch_dsyhs.sh` installs the pinned `tools/hull/requirements.txt` into `.venv`, then downloads and checks the DSYHS geometries into `data/dsyhs/raw/`.
 2. `.venv/bin/python -I tools/hull/morph.py` writes `hull_visual.obj`, `hull_physics.obj` and `hull_hydro.json`.
 3. `.venv/bin/python -I tools/hull/appendages.py` writes `appendages.obj` and the `foils` block of `appendages.json`.
-4. `tools/vpp/fetch_pyvpp.sh`, then `.venv/bin/python -I tools/vpp/run_pyvpp.py` (about 3 minutes) writes `pyvpp_polar_nospi.csv` and `pyvpp_polar_upwind_check.md`.
-5. `.venv/bin/python -I tools/dossier_checks.py` checks the transcribed data for consistency. The mass-sum line is informational, since hull/deck/fittings is the residual of the certificate displacement.
+4. `.venv/bin/python -I tools/hull/condition_hydro.py` writes the `conditions.sailing` block of `hull_hydro.json` (about 5 s). It needs `appendages.obj`, and re-running `morph.py` deletes the block, so run it after steps 2 and 3.
+5. `tools/vpp/fetch_pyvpp.sh`, then `.venv/bin/python -I tools/vpp/run_pyvpp.py` (about 3 minutes) writes `pyvpp_polar_nospi.csv` and `pyvpp_polar_upwind_check.md`.
+6. `.venv/bin/python -I tools/dossier_checks.py` checks the transcribed data for consistency. The mass-sum line is informational, since hull/deck/fittings is the residual of the certificate displacement.
 
 Verification: `.venv/bin/python -I tools/hull/morph.py --check` and `.venv/bin/python -I tools/hull/appendages.py --check` recompute from the written meshes and fail on any miss. `data/dsyhs/table.csv` is rebuilt by `tools/hull/dsyhs_table.py`.
