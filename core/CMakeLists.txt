@@ -64,6 +64,7 @@ if(SAIL_BUILD_TESTS)
         tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp
         tests/test_j80_hydrostatics.cpp
+        tests/test_j80_polar.cpp
         tests/test_j80_tow.cpp
         tests/test_j80_turn.cpp
         tests/test_main.cpp
@@ -82,5 +83,11 @@ if(SAIL_BUILD_TESTS)
     )
     sail_enable_warnings(sailcore_tests)
     sail_optimise_debug(sailcore_tests)
-    doctest_discover_tests(sailcore_tests)
+    doctest_discover_tests(sailcore_tests TEST_SPEC "*;--test-case-exclude=j80_polar*")
+    # The reduced-polar regression simulates minutes of sailing per point, so it carries the
+    # `slow` label that `ctest -L slow` selects, and it is Release-only (see the test).
+    doctest_discover_tests(sailcore_tests
+        TEST_SPEC "j80_polar*"
+        TEST_PREFIX "slow."
+        PROPERTIES LABELS slow TIMEOUT 900)
 endif()
