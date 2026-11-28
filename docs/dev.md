@@ -72,3 +72,26 @@ Build output goes to `build/<preset>/`.
 ### Boat data
 
 Everything boat-specific lives in `data/boats/j80/` (JSON/CSV/OBJ, with a source and confidence for every number) and is loaded at runtime. Nothing J/80-specific is hard-coded in the core; the sail layer is data-driven and supports any number of sails.
+
+## Game input
+
+Actions are declared in `game/project.godot` and read by `game/scripts/boat_input.gd`, which sets the controls of the `SailBoat` at its `boat_path` each frame. Every action is bound on both devices. Held controls move at a fixed rate, scaled by the trigger or stick strength on a pad.
+
+| Action | Keyboard | Gamepad | Effect |
+| --- | --- | --- | --- |
+| steer left / right | A, D or Left, Right | left stick X | tiller; right turns the boat to starboard |
+| mainsheet in / out | W / S | right trigger / right bumper | 0.25 of travel per s |
+| jib sheet in / out | E / Q | left trigger / left bumper | leeward jib sheet, 0.25 of travel per s |
+| traveler windward / leeward | R / F | d-pad up / down | 0.5 per s over -1..1 |
+| backstay on / off | T / G | right stick up / down | 0.25 per s (an in/out pair, not a toggle) |
+| jib car forward / aft | Z / X | d-pad left / right | 0.25 per s |
+| reef toggle | B | A | shakes out or reefs |
+| camera switch | C | Y | `camera_switch_requested` signal |
+| drop mark | Space | X | `mark_drop_requested` signal |
+| settings panel | Esc | Start | `settings_toggled` signal |
+
+Helm: the stick sets the tiller directly (deadzone 0.15, rescaled). Keys ramp it to full in 0.5 s and it self-centres at 4 per s once they are released.
+
+Jib sheet: it acts on the sheet of the side the jib is on. `awa_deg >= 0` (wind over the starboard side) is starboard tack with the jib to port, so the port sheet is driven; otherwise the starboard sheet.
+
+A pad unplugged while an input is held has its held actions released, so the keyboard keeps working and nothing sticks.
