@@ -41,7 +41,7 @@ and trim and reproducing the certificate's righting-moment figures.
 
 ## Phase 3.2: Hydrostatics
 
-- [ ] M3.P2.T1 — Per-triangle hydrostatics on flat water
+- [x] M3.P2.T1 — Per-triangle hydrostatics on flat water
   - files: core/include/sail/mesh.hpp, core/src/mesh.cpp, core/include/sail/hydrostatics.hpp, core/src/hydrostatics.cpp, core/tests/test_hydrostatics.cpp
   - approach: OBJ loader into flat preallocated arrays (vertices in body frame). Each step transform vertices to world, compute heights above z = 0, classify triangles (all under / cut / all over), split cut triangles into submerged sub-triangles (Kerner part 1), and apply hydrostatic pressure ρ·g·depth at each sub-triangle's centroid along its inward normal — but integrate with the exact centre-of-pressure depth so the force is right for coarse triangles. Sum force and moment about CG as a `ForceModule`. Loads `hull_physics.obj` + `appendages.obj`. ρ = 1025.
   - verify: doctest: a unit box and an icosphere give analytic buoyant force and centre of buoyancy within 0.5% at 0°, 30°, 90° and 150° heel and part-submerged; force is zero when fully emerged.
