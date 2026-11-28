@@ -4,6 +4,21 @@ extends Node3D
 @export var boat_path: NodePath
 @export var terrain_path: NodePath
 
+## Sheet settings for the start (TWA 90, 10 kn, starboard tack): the settled TWS 10, TWA 90 row of
+## data/boats/j80/sim_polar.csv. The wind comes from the east in boat.tscn, so the start heading
+## north is a beam reach through the harbour mouth.
+const START_TRIM := {
+	"mainsheet": 0.7659,
+	"traveler": 0.0557,
+	"backstay": 0.0,
+	"jib_sheet_port": 0.618,
+	"jib_sheet_starboard": 0.618,
+	"jib_car": 0.4638,
+}
+
+## BSP of the same polar row, 6.30 kn, so the boat starts at its settled speed.
+const START_SPEED_MPS := 3.24
+
 var _boat: Node3D
 
 
@@ -15,5 +30,8 @@ func _ready() -> void:
 		return
 	var start: Dictionary = terrain.meta["start"]
 	var at := Vector3(float(start["x_m"]), 0.0, -float(start["y_m"]))
-	if not _boat.reset_boat(at, float(start["heading_deg"])):
+	if not _boat.reset_boat(at, float(start["heading_deg"]), START_SPEED_MPS):
 		push_error("Main: cannot place the boat: " + _boat.get_last_error())
+		return
+	for key in START_TRIM:
+		_boat.set(key, START_TRIM[key])

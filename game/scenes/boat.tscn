@@ -7,7 +7,7 @@
 boat_dir = "res://data/boats/j80"
 scene_dir = "res://data/scenes/bay"
 wind_speed_kn = 10.0
-wind_direction_deg = 0.0
+wind_direction_deg = 90.0
 
 [node name="BoatInput" type="Node" parent="."]
 script = ExtResource("1_input")

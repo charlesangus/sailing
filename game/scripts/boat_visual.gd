@@ -257,7 +257,10 @@ func _mesh_from_obj(object: Dictionary) -> ArrayMesh:
 	return _indexed_mesh(object["vertices"], object["indices"])
 
 
-# Smooth, area-weighted vertex normals.
+# Smooth, area-weighted vertex normals. The input triangles are counter-clockwise seen from outside,
+# as in the dossier OBJs; Godot's front faces are clockwise, so the emitted indices swap two
+# vertices. Left as they were, every face would be a back face and the renderer would light the
+# hull with its normals flipped inward.
 func _indexed_mesh(vertices: PackedVector3Array, indices: PackedInt32Array) -> ArrayMesh:
 	var normals := PackedVector3Array()
 	normals.resize(vertices.size())
@@ -275,7 +278,11 @@ func _indexed_mesh(vertices: PackedVector3Array, indices: PackedInt32Array) -> A
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
 	arrays[Mesh.ARRAY_NORMAL] = normals
-	arrays[Mesh.ARRAY_INDEX] = indices
+	var clockwise := indices.duplicate()
+	for t in range(0, clockwise.size(), 3):
+		clockwise[t + 1] = indices[t + 2]
+		clockwise[t + 2] = indices[t + 1]
+	arrays[Mesh.ARRAY_INDEX] = clockwise
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return mesh

@@ -63,11 +63,12 @@ func _run(main: Node) -> void:
 	hud.refresh()
 	var text_before := hud.readout.text
 	_check("BSP" in text_before and "camera chase" in text_before, "readout is missing fields: %s" % text_before)
-	boat.mainsheet = 0.5
 	var bsp_before: float = boat.get_state()["bsp_kn"]
 	boat.step_seconds(20.0)
 	var bsp_after: float = boat.get_state()["bsp_kn"]
-	_check(bsp_after > bsp_before + 0.5, "the boat did not accelerate: %f -> %f" % [bsp_before, bsp_after])
+	_check(bsp_before > 5.0, "the boat should start at speed: %f kn" % bsp_before)
+	_check(bsp_after > 5.0, "the boat did not keep sailing: %f -> %f" % [bsp_before, bsp_after])
+	_check(not boat.get_state()["main_luffing"] and not boat.get_state()["jib_luffing"], "the sails should be drawing at the start")
 	await create_timer(0.3).timeout
 	_check(hud.readout.text != text_before, "the readout did not update on its own")
 	_check(hud.readout.text.contains("BSP %5.2f" % bsp_after) or hud.readout.text.contains("BSP"), "no BSP line")
