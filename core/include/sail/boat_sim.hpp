@@ -14,6 +14,7 @@
 #include "sail/equilibrium.hpp"
 #include "sail/foil.hpp"
 #include "sail/gravity.hpp"
+#include "sail/grounding.hpp"
 #include "sail/hull_forces.hpp"
 #include "sail/hull_resistance.hpp"
 #include "sail/hydrostatics.hpp"
@@ -32,6 +33,8 @@ struct BoatSimOptions {
     std::optional<HullResistanceKind> resistance;
     // The directory of the orc_<type>.csv sail tables; boat_dir/../../sails when empty.
     std::optional<std::filesystem::path> sail_data_dir;
+    // The seabed the boat can run aground on; none when null.
+    std::shared_ptr<const Bathymetry> bathymetry;
 };
 
 // A constant force along the body x axis at the CG, N.
@@ -48,9 +51,9 @@ private:
 // A boat dossier assembled into the whole sailing boat: gravity, hydrostatics, damping,
 // canoe-body hull forces, keel, rudder, a body-x thrust (zero until set), the sheet controller,
 // the sail set and the windage, all about the sailing configuration's CG, in flat still water,
-// with the crew controller moving the crew mass. Only the sailing configuration is offered
-// because the hull forces take their displacement, CLR and sinkage from hull_hydro.json
-// conditions.sailing. The wind is a parameter, calm until set_wind(). The modules are registered
+// with the crew controller moving the crew mass, and with a bathymetry the seabed contact. Only
+// the sailing configuration is offered because the hull forces take their displacement, CLR and
+// sinkage from hull_hydro.json conditions.sailing. The wind is a parameter, calm until set_wind(). The modules are registered
 // with the Simulation by reference, so a BoatSim is neither copyable nor movable.
 //
 // With aero off (set_aero(false)) the sheet controller, sails and windage are left out of
@@ -84,6 +87,13 @@ public:
     const Appendages& appendages() const { return appendages_; }
     BodyThrustModule& thrust() { return thrust_; }
     const BodyThrustModule& thrust() const { return thrust_; }
+    GroundingModule& grounding() { return grounding_; }
+    const GroundingModule& grounding() const { return grounding_; }
+
+    const std::shared_ptr<const Bathymetry>& bathymetry() const { return grounding_.seabed(); }
+    // The seabed for evaluate() at once and for the Simulation from the next start(); null for
+    // none. reset() keeps it.
+    void set_bathymetry(std::shared_ptr<const Bathymetry> bathymetry);
 
     SailSet& sails() { return sails_; }
     const SailSet& sails() const { return sails_; }
@@ -136,7 +146,8 @@ public:
     // wind near the water, under the log profile, is far lighter than what drives the rig.
     Vec3 rig_point() const;
 
-    // Back to the state a fresh load leaves, apart from crew listeners: no Simulation, the crew
+    // Back to the state a fresh load leaves, apart from crew listeners and the bathymetry: no
+    // Simulation, the crew
     // controller and the crew mass on the centreline with the mass properties and every module's
     // CG reference following, default controls, the sheet controller reset with the reef out, the
     // sail set reset, the rudder centred with its time base cleared, zero thrust, aero on and a
@@ -161,10 +172,10 @@ public:
 
     // A new Simulation from `initial` with every module registered, replacing any earlier one:
     // the sheet controller first, so it trims the sails before they are evaluated, then gravity,
-    // hydrostatics, damping, hull, keel, rudder, thrust, and with aero on the sails and the
-    // windage. The crew goes back to the centreline, or to lateral position `crew_y` (clamped to
-    // the hiking range), the crew controller is reset there, and the sheet controller is reset
-    // with the reef at its control's value. Extra modules may be added to the returned
+    // hydrostatics, damping, hull, keel, rudder, thrust, the grounding when there is a bathymetry,
+    // and with aero on the sails and the windage. The crew goes back to the centreline, or to
+    // lateral position `crew_y` (clamped to the hiking range), the crew controller is reset there,
+    // and the sheet controller is reset with the reef at its control's value. Extra modules may be added to the returned
     // Simulation.
     Simulation& start(const State& initial);
     Simulation& start(const State& initial, double crew_y);
@@ -186,6 +197,7 @@ private:
     HullForceModule hull_;
     Appendages appendages_;
     BodyThrustModule thrust_;
+    GroundingModule grounding_;
     std::shared_ptr<const WindField> wind_;
     SailSet sails_;
     SheetController sheets_;

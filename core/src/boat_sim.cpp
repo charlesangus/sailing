@@ -30,6 +30,13 @@ TowComponent resolve(const Vec3& force_world, const Vec3& d, const Vec3& n) {
     return c;
 }
 
+GroundingParams grounding_params(const Vec3& cg, double mass) {
+    GroundingParams p;
+    p.reference_point = cg;
+    p.mass = mass;
+    return p;
+}
+
 bool finite(const State& s) {
     return s.position.allFinite() && s.orientation.coeffs().allFinite() &&
            s.linear_velocity.allFinite() && s.angular_velocity.allFinite();
@@ -86,6 +93,8 @@ BoatSim::BoatSim(const std::filesystem::path& boat_dir, std::shared_ptr<const Fo
       hull_(resistance_model(boat_dir, options.resistance),
             load_hull_force_params(model_)),
       appendages_(section, section, boat_dir, model_.cg()),
+      grounding_(load_contact_points(boat_dir), grounding_params(model_.cg(), body_.mass),
+                 options.bathymetry),
       wind_(std::make_shared<const UniformWind>(0.0, 0.0)),
       sails_(load_sail_set_params(boat_dir, sail_dir(boat_dir, options.sail_data_dir), model_.cg()),
              wind_),
@@ -112,6 +121,10 @@ void BoatSim::set_wind(std::shared_ptr<const WindField> wind) {
     wind_ = std::move(wind);
 }
 
+void BoatSim::set_bathymetry(std::shared_ptr<const Bathymetry> bathymetry) {
+    grounding_.set_seabed(std::move(bathymetry));
+}
+
 void BoatSim::set_controls(const Controls& controls) {
     appendages_.set_controls(controls);
     sheets_.set_controls(controls);
@@ -127,6 +140,7 @@ Wrench BoatSim::evaluate(const State& state, double t) {
     appendages_.keel().accumulate(state, t, w);
     appendages_.rudder().accumulate(state, t, w);
     thrust_.accumulate(state, t, w);
+    if (grounding_.seabed()) grounding_.accumulate(state, t, w);
     if (aero_) {
         sails_.accumulate(state, t, w);
         windage_.accumulate(state, t, w);
@@ -145,6 +159,7 @@ Vec3 BoatSim::apply_crew(double y, double z, CrewPosture posture) {
     hydrostatics_.set_reference_point(cg);
     hull_.set_reference_point(cg);
     appendages_.set_reference_point(cg);
+    grounding_.set_reference_point(cg);
     sails_.set_reference_point(cg);
     windage_.set_reference_point(cg);
     windage_.set_crew(windage_.params().crew.count, model_.crew_position(), posture);
@@ -228,6 +243,7 @@ Simulation& BoatSim::start_with_crew(const State& initial) {
     sim_->add_module(hull_);
     appendages_.add_to(*sim_);
     sim_->add_module(thrust_);
+    if (grounding_.seabed()) sim_->add_module(grounding_);
     if (aero_) {
         sim_->add_module(sails_);
         sim_->add_module(windage_);

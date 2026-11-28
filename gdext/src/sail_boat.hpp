@@ -18,7 +18,10 @@ namespace sailgd {
 //
 // Every bound method catches what the core throws: an exception must never unwind into Godot,
 // whose own code is built without exception support. A failure is reported with push_error and
-// get_last_error(), and leaves the node inert until boat_dir is set again.
+// get_last_error(), and leaves the node inert until boat_dir or scene_dir is set again.
+//
+// scene_dir names a scene directory (res://data/scenes/<name>) whose meta.json and heightmap give
+// the seabed the boat can run aground on; empty for none.
 class SailBoat : public godot::Node3D {
     GDCLASS(SailBoat, godot::Node3D)
 
@@ -30,6 +33,8 @@ public:
 
     void set_boat_dir(const godot::String& dir);
     godot::String get_boat_dir() const { return boat_dir_; }
+    void set_scene_dir(const godot::String& dir);
+    godot::String get_scene_dir() const { return scene_dir_; }
 
     void set_wind_speed_kn(double knots);
     double get_wind_speed_kn() const;
@@ -76,6 +81,8 @@ private:
     bool guarded(const char* what, F&& body);
 
     godot::String boat_dir_;
+    godot::String scene_dir_;
+    std::shared_ptr<const sail::Bathymetry> bathymetry_;
     std::unique_ptr<sail::BoatSim> boat_;
     std::shared_ptr<const sail::WindField> wind_;
     double wind_speed_mps_ = 0.0;

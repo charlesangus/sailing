@@ -42,6 +42,12 @@ std::filesystem::path to_path(const godot::String& s) {
     return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(utf8.get_data())));
 }
 
+godot::String globalize(const godot::String& dir) {
+    return dir.begins_with("res://") || dir.begins_with("user://")
+               ? godot::ProjectSettings::get_singleton()->globalize_path(dir)
+               : dir;
+}
+
 godot::String to_godot(const std::string& s) {
     return godot::String::utf8(s.data(), static_cast<int64_t>(s.size()));
 }
@@ -76,6 +82,19 @@ void SailBoat::set_boat_dir(const godot::String& dir) {
     load();
 }
 
+void SailBoat::set_scene_dir(const godot::String& dir) {
+    scene_dir_ = dir;
+    bathymetry_.reset();
+    if (!scene_dir_.is_empty()) {
+        const bool ok = guarded("load scene", [&] {
+            const std::filesystem::path meta = to_path(globalize(scene_dir_)) / "meta.json";
+            bathymetry_ = std::make_shared<const sail::Bathymetry>(sail::Bathymetry::load(meta));
+        });
+        if (!ok) return;
+    }
+    load();
+}
+
 void SailBoat::load() {
     boat_.reset();
     last_error_ = godot::String();
@@ -83,10 +102,7 @@ void SailBoat::load() {
     jib_index_.reset();
     if (boat_dir_.is_empty()) return;
 
-    const godot::String global =
-        boat_dir_.begins_with("res://") || boat_dir_.begins_with("user://")
-            ? godot::ProjectSettings::get_singleton()->globalize_path(boat_dir_)
-            : boat_dir_;
+    const godot::String global = globalize(boat_dir_);
     guarded("load", [&] {
         const std::filesystem::path dir = to_path(global);
         if (!std::filesystem::is_directory(dir)) {
@@ -96,7 +112,9 @@ void SailBoat::load() {
         const std::filesystem::path section_file = dir / ".." / ".." / "foils" / "naca0012.csv";
         auto section =
             std::make_shared<const sail::FoilSection>(sail::FoilSection::load(section_file));
-        boat_ = sail::BoatSim::load(dir, std::move(section));
+        sail::BoatSimOptions options;
+        options.bathymetry = bathymetry_;
+        boat_ = sail::BoatSim::load(dir, std::move(section), options);
         const auto& specs = boat_->sails().params().sails;
         for (std::size_t i = 0; i < specs.size(); ++i) {
             if (specs[i].name == "main") main_index_ = i;
@@ -336,6 +354,14 @@ godot::Dictionary SailBoat::get_state() const {
         d["crew_to_port_m"] = crew.y;
         d["crew_height_m"] = crew.z;
         d["crew_hiking"] = crew.posture == sail::CrewPosture::hiking;
+
+        const sail::GroundingResult& ground = boat.grounding().last_result();
+        d["has_seabed"] = boat.bathymetry() != nullptr;
+        d["seabed_contacts"] = static_cast<int64_t>(ground.contacts);
+        d["seabed_normal_force_n"] = ground.normal_force;
+        if (boat.bathymetry() && boat.bathymetry()->has_seabed()) {
+            d["seabed_z_m"] = boat.bathymetry()->height(s.position.x(), s.position.y());
+        }
     } catch (const std::exception& e) {
         godot::UtilityFunctions::push_error("SailBoat get_state: ", to_godot(e.what()));
         d["active"] = false;
@@ -354,6 +380,8 @@ void SailBoat::_bind_methods() {
 
     ClassDB::bind_method(D_METHOD("set_boat_dir", "dir"), &SailBoat::set_boat_dir);
     ClassDB::bind_method(D_METHOD("get_boat_dir"), &SailBoat::get_boat_dir);
+    ClassDB::bind_method(D_METHOD("set_scene_dir", "dir"), &SailBoat::set_scene_dir);
+    ClassDB::bind_method(D_METHOD("get_scene_dir"), &SailBoat::get_scene_dir);
     ClassDB::bind_method(D_METHOD("set_wind_speed_kn", "knots"), &SailBoat::set_wind_speed_kn);
     ClassDB::bind_method(D_METHOD("get_wind_speed_kn"), &SailBoat::get_wind_speed_kn);
     ClassDB::bind_method(D_METHOD("set_wind_direction_deg", "from_deg"),
@@ -390,6 +418,8 @@ void SailBoat::_bind_methods() {
 
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "boat_dir", godot::PROPERTY_HINT_DIR),
                  "set_boat_dir", "get_boat_dir");
+    ADD_PROPERTY(PropertyInfo(Variant::STRING, "scene_dir", godot::PROPERTY_HINT_DIR),
+                 "set_scene_dir", "get_scene_dir");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "wind_speed_kn"), "set_wind_speed_kn",
                  "get_wind_speed_kn");
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "wind_direction_deg"), "set_wind_direction_deg",
