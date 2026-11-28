@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -45,6 +46,9 @@ public:
     // Consumes `real_dt` seconds of wall time and returns the number of fixed steps run.
     // Non-positive or non-finite input runs nothing.
     int advance(double real_dt);
+    // The same, calling `before_step` ahead of each fixed step it runs, for work that has to
+    // happen between steps rather than inside one, such as moving the body's mass.
+    int advance(double real_dt, const std::function<void()>& before_step);
 
     // Runs exactly one fixed step, bypassing the accumulator.
     void step();

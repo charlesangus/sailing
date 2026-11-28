@@ -201,6 +201,11 @@ void BoatSim::step() {
     sim_->step();
 }
 
+int BoatSim::advance(double real_dt) {
+    Simulation& sim = simulation();
+    return sim.advance(real_dt, [this] { step_crew(Simulation::kFixedDt); });
+}
+
 Simulation& BoatSim::start(const State& initial) {
     crew_.reset();
     return start_with_crew(initial);

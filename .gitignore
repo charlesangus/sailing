@@ -7,6 +7,8 @@ build/
 dist/
 game/bin/
 game/.godot/
+/game/data/*
+!/game/data/.gdignore
 /data/dsyhs/raw/
 __pycache__/
 /tools/vpp/vendor/

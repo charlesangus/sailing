@@ -58,6 +58,10 @@ for test_path in "${tests[@]}"; do
         failed+=("$name (exit $status)")
     elif grep -qE 'SCRIPT ERROR|Parse Error' <<<"$output"; then
         failed+=("$name (script error in output)")
+    # push_error() from the extension never fails a script, so look for it in the output. Tests
+    # of the error paths are named *_errors.gd and expected to print errors.
+    elif [[ $name != *_errors.gd ]] && grep -qE '^ERROR:' <<<"$output"; then
+        failed+=("$name (error in output)")
     elif ! grep -qx 'PASS' <<<"$output"; then
         failed+=("$name (no PASS marker)")
     fi

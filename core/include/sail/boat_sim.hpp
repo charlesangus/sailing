@@ -146,6 +146,10 @@ public:
     // One fixed step: step_crew(Simulation::kFixedDt), then Simulation::step(). Throws
     // std::logic_error before start().
     void step();
+    // Simulation::advance(real_dt) with step_crew(Simulation::kFixedDt) before each fixed step it
+    // runs, so a real-time caller moves the crew exactly as step() does. Returns the number of
+    // steps. Throws std::logic_error before start().
+    int advance(double real_dt);
 
     // Flat-water equilibrium of the sailing mass, hydrostatics alone.
     Equilibrium equilibrium(const EquilibriumRequest& request = {}) const;
