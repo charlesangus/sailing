@@ -67,6 +67,8 @@ public:
     bool is_active() const { return boat_ != nullptr; }
     godot::String get_last_error() const { return last_error_; }
     godot::Dictionary get_state() const;
+    // Wall time per fixed step in microseconds, the mean over the last full second of stepping.
+    double get_step_time_us() const { return step_time_us_; }
 
 protected:
     static void _bind_methods();
@@ -76,6 +78,7 @@ private:
     void apply_wind();
     void apply_controls(const sail::Controls& controls);
     void update_transform();
+    int timed_advance(double seconds);
     void fail(const char* what, const char* detail);
     template <typename F>
     bool guarded(const char* what, F&& body);
@@ -91,6 +94,9 @@ private:
     std::optional<std::size_t> main_index_;
     std::optional<std::size_t> jib_index_;
     godot::String last_error_;
+    double step_time_us_ = 0.0;
+    double window_wall_us_ = 0.0;
+    long window_steps_ = 0;
 };
 
 }  // namespace sailgd

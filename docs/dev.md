@@ -103,7 +103,12 @@ Actions are declared in `game/project.godot` and read by `game/scripts/boat_inpu
 | orbit up / down | I / K, right mouse drag | right stick Y (orbit mode) | 1 rad per s, 5 to 85 degrees; orbit mode only |
 | zoom in / out | `=` / `-`, mouse wheel | left stick up / down | exponential, 6 to 80 m; orbit mode only |
 | drop mark | Space | X | `mark_drop_requested` signal |
-| settings panel | Esc | Start | `settings_toggled` signal |
+| settings panel | Esc | Start | `settings_toggled` signal; the panel sets `BoatInput.controls_enabled` false while open so the d-pad and keys act on the UI only |
+| debug HUD | H | Back (Select) | `toggle_hud` action, handled by `hud.gd` |
+
+Debug HUD: `game/scripts/hud.gd` shows BSP, TWS/TWD/TWA (and course TWA), AWS/AWA, heel, leeway, rudder, every control position, sail luff/stall/backed flags, crew, seabed contacts when aground, the camera mode and `SailBoat.get_step_time_us()` (wall time per fixed step, mean over the last simulated second). The text refreshes at 10 Hz. The dial shows the true wind (blue) and apparent wind (yellow) relative to the bow.
+
+Settings panel: `game/scripts/settings_panel.gd` is a stack of collapsible sections; `register_section(title, control)` adds one. Wind (TWS 0 to 30 kn, direction 0 to 359) is the first. The sim is not paused while it is open, so wind changes show immediately and `BoatInput` keeps polling the action that closes it. Vertical focus neighbours form a ring; sliders change with left/right (keys or d-pad).
 
 Helm: the stick sets the tiller directly (deadzone 0.15, rescaled). Keys ramp it to full in 0.5 s and it self-centres at 4 per s once they are released.
 

@@ -1,5 +1,6 @@
 #include "sail_boat.hpp"
 
+#include <chrono>
 #include <cmath>
 #include <exception>
 #include <filesystem>
@@ -256,7 +257,7 @@ bool SailBoat::reset_boat(const godot::Vector3& position, double heading_deg, do
 void SailBoat::_process(double delta) {
     if (!boat_ || godot::Engine::get_singleton()->is_editor_hint()) return;
     const bool ok = guarded("step", [&] {
-        boat_->advance(delta);
+        timed_advance(delta);
         if (!finite(boat_->simulation().state())) {
             throw std::runtime_error("the simulation state is not finite");
         }
@@ -273,7 +274,7 @@ int SailBoat::step_seconds(double seconds) {
         double left = seconds;
         while (left > 0.0) {
             const double dt = left < kChunk ? left : kChunk;
-            steps += boat_->advance(dt);
+            steps += timed_advance(dt);
             left -= dt;
             if (!finite(boat_->simulation().state())) {
                 throw std::runtime_error("the simulation state is not finite");
@@ -281,6 +282,24 @@ int SailBoat::step_seconds(double seconds) {
         }
     });
     if (boat_) update_transform();
+    return steps;
+}
+
+int SailBoat::timed_advance(double seconds) {
+    const auto start = std::chrono::steady_clock::now();
+    const int steps = boat_->advance(seconds);
+    const auto wall = std::chrono::steady_clock::now() - start;
+    if (steps <= 0) return steps;
+    window_wall_us_ += std::chrono::duration<double, std::micro>(wall).count();
+    window_steps_ += steps;
+    const double simulated_s = static_cast<double>(window_steps_) * sail::Simulation::kFixedDt;
+    if (simulated_s >= 1.0 || step_time_us_ == 0.0) {
+        step_time_us_ = window_wall_us_ / static_cast<double>(window_steps_);
+        if (simulated_s >= 1.0) {
+            window_wall_us_ = 0.0;
+            window_steps_ = 0;
+        }
+    }
     return steps;
 }
 
@@ -418,6 +437,7 @@ void SailBoat::_bind_methods() {
     ClassDB::bind_method(D_METHOD("is_active"), &SailBoat::is_active);
     ClassDB::bind_method(D_METHOD("get_last_error"), &SailBoat::get_last_error);
     ClassDB::bind_method(D_METHOD("get_state"), &SailBoat::get_state);
+    ClassDB::bind_method(D_METHOD("get_step_time_us"), &SailBoat::get_step_time_us);
 
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "boat_dir", godot::PROPERTY_HINT_DIR),
                  "set_boat_dir", "get_boat_dir");

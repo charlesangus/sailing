@@ -22,6 +22,9 @@ const PAD_ACTIONS: Array[StringName] = [
 ## Cleared by the camera rig while the right stick orbits the camera, so it does not also trim the
 ## backstay. The backstay keys always work.
 var pad_backstay_enabled := true
+## Cleared while a UI panel is open so the d-pad and keys act on the UI alone. The settings action
+## keeps working so the panel can be closed.
+var controls_enabled := true
 
 var _boat: Node
 
@@ -36,6 +39,11 @@ func _process(delta: float) -> void:
 		_boat = get_node_or_null(boat_path)
 		if _boat == null:
 			return
+
+	if Input.is_action_just_pressed(&"settings_toggle"):
+		settings_toggled.emit()
+	if not controls_enabled:
+		return
 
 	_boat.tiller = _next_helm(_boat.tiller, delta)
 	_boat.mainsheet = _held(_boat.mainsheet, &"mainsheet_in", &"mainsheet_out", SHEET_RATE * delta, 0.0, 1.0)
@@ -58,8 +66,6 @@ func _process(delta: float) -> void:
 		camera_switch_requested.emit()
 	if Input.is_action_just_pressed(&"drop_mark"):
 		mark_drop_requested.emit()
-	if Input.is_action_just_pressed(&"settings_toggle"):
-		settings_toggled.emit()
 
 
 func _held(value: float, increase: StringName, decrease: StringName, step: float, lo: float, hi: float) -> float:
