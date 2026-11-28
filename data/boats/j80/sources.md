@@ -296,3 +296,13 @@ The vendored crew moment is `0.8 bmax (cw + 0.7 bmax 89) cos(heel)` in kg m, wit
 ### Downwind
 
 Python-VPP keeps the jib drawing at every TWA and does not blanket it behind the main. The best run VMG falls at 176-179 deg.
+
+## Hull resistance
+
+`hull_resistance.json` selects the core's `orc` canoe-body resistance model: the drag-surface half of the ORC VPP Documentation 2023 residuary resistance (section 6.3.1, surfaces in `data/hull/ORCi_Drag_Surfaces.csv`) and the viscous resistance of eq. 6.2. Hull inputs are `hull_hydro.json` `conditions.sailing.result`: Fn and LVR on Lwl, LVR on the canoe volume, BTR = Bwl / Tc, Rr scaled by the 1809 kg sailing displacement, Rv on the canoe wetted area with Re on 0.85 Lwl. For this hull LVR is 6.023 and BTR 6.805, both inside the surfaces (LVR 3 to 9, BTR 2.5 to 9).
+
+- Water density 1025 kg/m^3 and dynamic viscosity 1.19e-3 Pa s are Python-VPP's defaults; ORC 2023 gives no values.
+- The immersed-rail factor on Rr, 1 + 0.0004 (heel_deg - 30)^2 above 30 deg, is **not** in ORC 2023. It is Python-VPP's, kept because the Python-VPP downwind target uses it.
+- A `conditions.sailing.orc` block in `hull_hydro.json` (`lsm1`, `lsm4`, `lsm6`, `btr_effective`, `heeled` tables of `wetted_area`, `btr`, `lvr` over `heel_deg`) would replace the stand-ins. This dossier has none yet.
+
+`hull_resistance_reference.json` (from `tools/vpp/hull_reference.py`) is the Python-VPP canoe-only result the core is tested against, and lists every deviation from ORC 2023: Lwl for the dynamic length and LSM1, Bwl/Tc for the effective BTR, no neural-network half, the heel term, and clamping of LVR/BTR where Python-VPP extrapolates.

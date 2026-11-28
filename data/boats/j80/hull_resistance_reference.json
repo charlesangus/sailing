@@ -1,0 +1,130 @@
+{
+  "description": "Canoe-body hull resistance from the vendored Python-VPP (HydroMod._get_Rr + HydroMod._get_Rv, Yacht built with App=[] so no keel, bulb or rudder terms), for the hull at the sailing displacement. Reference for the core ORC hull resistance model.",
+  "written_by": "tools/vpp/hull_reference.py",
+  "python_vpp": {
+    "repository": "https://github.com/marinlauber/Python-VPP",
+    "commit": "9b9fe8f3f63d902a1df207691109e42932d0a9bb",
+    "licence": "MIT"
+  },
+  "method": [
+    "Inputs from hull_hydro.json conditions.sailing.result: Lwl, canoe_volume, Bwl, Tc, wetted_area_canoe and displacement_kg (Python-VPP's Mass).",
+    "Python-VPP constants: rho 1025 kg/m^3, mu 1.19e-3 Pa s (nu = mu / rho), g 9.81 m/s^2, roughness 0.",
+    "Speed V = Fn sqrt(g Lwl), Python-VPP taking LSM = Lwl.",
+    "Rr = ORCi drag surface (Fn, LVR = Lwl / canoe_volume^(1/3), BTR = Bwl / Tc), linear in each axis with a zero row at Fn 0, times Mass g 1e-3; times 1 + 0.0004 (heel_deg - 30)^2 at heel of 30 deg or more.",
+    "Rv = 0.5 rho V^2 wetted_area_canoe Cf 1.05, Cf = 0.066 / (log10 Re - 2.03)^2, Re = 0.85 V Lwl / nu."
+  ],
+  "inputs": {
+    "lwl_m": 7.146459192416091,
+    "canoe_volume_m3": 1.6701069353027522,
+    "bwl_m": 1.9293358608988422,
+    "tc_m": 0.28353428391350716,
+    "wetted_area_canoe_m2": 10.454521619574138,
+    "displacement_kg": 1809.0,
+    "lvr": 6.023415538944878,
+    "btr": 6.804594612930092,
+    "rho": 1025.0,
+    "mu": 0.00119,
+    "g": 9.81
+  },
+  "deviations_from_orc_2023": [
+    {
+      "item": "length",
+      "orc_2023": "Fn on the dynamic length L, a Froude-number-dependent mix of RRLSM1, RRLSM4 and RRLSM6 (section 6.3.1, Composite Length Calculation); viscous Re on 0.85 LSM1 (eq. 6.2).",
+      "here": "Lwl at the sailing displacement stands in for every one of them, for Fn, LVR and the viscous Reynolds number, unless the dossier supplies conditions.sailing.orc lsm1/lsm4/lsm6."
+    },
+    {
+      "item": "BTR",
+      "orc_2023": "Effective beam over effective hull depth, depth-attenuated integrals (section 4, Beam Depth Ratio).",
+      "here": "Bwl / Tc of the canoe body at the sailing displacement, unless the dossier supplies conditions.sailing.orc btr_effective or a heeled BTR table."
+    },
+    {
+      "item": "neural-network half",
+      "orc_2023": "Canoe-body Rr is the 50:50 mean of the drag surfaces and a 14-input neural network (section 6.3).",
+      "here": "Drag surfaces only; the neural-network half is not implemented."
+    },
+    {
+      "item": "heel term",
+      "orc_2023": "No immersed-rail multiplier on Rr; heel enters through heeled hydrostatics.",
+      "here": "Python-VPP's immersed-rail factor 1 + 0.0004 (phi_deg - 30)^2 for heel above 30 deg, 1 otherwise. Not in the ORC 2023 documentation; kept because the Python-VPP downwind target uses it. Upright hydrostatics otherwise."
+    },
+    {
+      "item": "range",
+      "orc_2023": "LVR outside 3..9 and BTR outside 2.5..9 default to the closest point of the surface; Fn outside 0.125..0.7 is extrapolated.",
+      "here": "Same in the core model (LVR and BTR clamped and flagged, Fn extrapolated linearly, with a zero row at Fn 0). Python-VPP instead extrapolates linearly in all three axes; the two agree whenever LVR and BTR are inside the grid, as they are for this boat."
+    }
+  ],
+  "points": [
+    {
+      "fn": 0.2,
+      "heel_deg": 0.0,
+      "speed_mps": 1.6745956488370781,
+      "residuary_N": 7.379629655003712,
+      "viscous_N": 43.14484974123854,
+      "total_N": 50.52447939624225
+    },
+    {
+      "fn": 0.2,
+      "heel_deg": 20.0,
+      "speed_mps": 1.6745956488370781,
+      "residuary_N": 7.379629655003712,
+      "viscous_N": 43.14484974123854,
+      "total_N": 50.52447939624225
+    },
+    {
+      "fn": 0.2,
+      "heel_deg": 35.0,
+      "speed_mps": 1.6745956488370781,
+      "residuary_N": 7.45342595155375,
+      "viscous_N": 43.14484974123854,
+      "total_N": 50.598275692792285
+    },
+    {
+      "fn": 0.35,
+      "heel_deg": 0.0,
+      "speed_mps": 2.930542385464886,
+      "residuary_N": 133.58451794606157,
+      "viscous_N": 119.96733138148274,
+      "total_N": 253.5518493275443
+    },
+    {
+      "fn": 0.35,
+      "heel_deg": 20.0,
+      "speed_mps": 2.930542385464886,
+      "residuary_N": 133.58451794606157,
+      "viscous_N": 119.96733138148274,
+      "total_N": 253.5518493275443
+    },
+    {
+      "fn": 0.35,
+      "heel_deg": 35.0,
+      "speed_mps": 2.930542385464886,
+      "residuary_N": 134.9203631255222,
+      "viscous_N": 119.96733138148274,
+      "total_N": 254.88769450700494
+    },
+    {
+      "fn": 0.45,
+      "heel_deg": 0.0,
+      "speed_mps": 3.7678402098834254,
+      "residuary_N": 820.0405100133069,
+      "viscous_N": 190.17608140271142,
+      "total_N": 1010.2165914160182
+    },
+    {
+      "fn": 0.45,
+      "heel_deg": 20.0,
+      "speed_mps": 3.7678402098834254,
+      "residuary_N": 820.0405100133069,
+      "viscous_N": 190.17608140271142,
+      "total_N": 1010.2165914160182
+    },
+    {
+      "fn": 0.45,
+      "heel_deg": 35.0,
+      "speed_mps": 3.7678402098834254,
+      "residuary_N": 828.2409151134399,
+      "viscous_N": 190.17608140271142,
+      "total_N": 1018.4169965161514
+    }
+  ]
+}
