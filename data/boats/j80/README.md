@@ -23,6 +23,7 @@ Geometry, mass, rig, sail and performance data for a generic (class-standard) J/
 | `hull_resistance.json` | Hull resistance model choice (`orc`), water density and viscosity, path to the shared ORC drag surfaces, Python-VPP immersed-rail factor (not ORC 2023) | SI, deg | by hand |
 | `hull_resistance_reference.json` | Python-VPP canoe-body Rr, Rv and total at Fn 0.20/0.35/0.45 and heel 0/20/35 deg, with the deviations from ORC 2023 | N, m/s, deg | `tools/vpp/hull_reference.py` |
 | `sheets.json` | Main and jib sheet, traveler, backstay, jib car and reef mappings (max angle, flat at full backstay, flat with car aft, reefed area fraction, reef transition time), all low-confidence estimates | deg, m, s, dimensionless | by hand |
+| `windage.json` | Drag coefficients (ORC table 5.10 where given), wire diameters and crew areas for mast, boom, rigging, topsides and crew; dimensions come from rig.json, particulars.json, hull_hydro.json and mass.json | m, m^2, dimensionless | ORC VPP Documentation 2023, estimates |
 
 The DSYHS hull table the morph reads is `data/dsyhs/table.csv`; see `data/dsyhs/README.md`. The ORC residuary resistance surfaces are `data/hull/ORCi_Drag_Surfaces.csv`; see `data/hull/README.md`.
 
