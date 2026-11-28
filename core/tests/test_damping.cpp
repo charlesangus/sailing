@@ -6,14 +6,10 @@
 #include <memory>
 #include <stdexcept>
 #include <numbers>
-#include <string>
 #include <vector>
 
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-#include <Eigen/LU>
-
 #include "sail/damping.hpp"
+#include "sail/equilibrium.hpp"
 #include "sail/hydrostatics.hpp"
 #include "sail/mass_model.hpp"
 #include "sail/mesh.hpp"
@@ -45,62 +41,6 @@ public:
 private:
     double mass_;
 };
-
-sail::HydrostaticParams j80_params(const MassModel& model, const TriMesh& keel) {
-    // appendages.json foils.keel.root_overlap: the top 0.020 m of the keel mesh lies inside the
-    // hull, so its volume is counted twice.
-    constexpr double kRootOverlap = 0.00131;
-    constexpr double kRootDepth = 0.020;
-    double top = -1e9;
-    for (const auto& v : keel.vertices) top = std::max(top, v.z());
-    Vec3 sum = Vec3::Zero();
-    int count = 0;
-    for (const auto& v : keel.vertices) {
-        if (v.z() >= top - kRootDepth) {
-            sum += v;
-            ++count;
-        }
-    }
-    Vec3 centroid = sum / count;
-    centroid.z() = top - kRootDepth / 2.0;
-
-    sail::HydrostaticParams params;
-    params.density = model.data().density;
-    params.gravity = kG;
-    params.reference_point = model.cg();
-    params.corrections.push_back({centroid, kRootOverlap});
-    return params;
-}
-
-// Newton solve on heave and pitch for zero net vertical force and zero pitch moment, upright.
-State hydrostatic_equilibrium(const TriMesh& mesh, const sail::HydrostaticParams& params,
-                              double mass, State pose) {
-    const double weight = mass * params.gravity;
-    double z = pose.position.z();
-    double pitch = 0.0;
-    const auto residual = [&](double zz, double pp) {
-        State s = pose;
-        s.position.z() = zz;
-        s.orientation = sail::Quat(Eigen::AngleAxisd(pp, Vec3::UnitY()));
-        const sail::HydrostaticResult r = sail::compute_hydrostatics(mesh, s, 0.0, params);
-        return Eigen::Vector2d(r.force_world.z() - weight, r.moment_world.y());
-    };
-    constexpr double kDz = 1e-4;
-    constexpr double kDp = 1e-4;
-    for (int i = 0; i < 20; ++i) {
-        const Eigen::Vector2d f = residual(z, pitch);
-        if (std::abs(f.x()) < 1e-9 * weight && std::abs(f.y()) < 1e-6 * weight) break;
-        Eigen::Matrix2d jacobian;
-        jacobian.col(0) = (residual(z + kDz, pitch) - f) / kDz;
-        jacobian.col(1) = (residual(z, pitch + kDp) - f) / kDp;
-        const Eigen::Vector2d step = jacobian.partialPivLu().solve(f);
-        z -= step.x();
-        pitch -= step.y();
-    }
-    pose.position.z() = z;
-    pose.orientation = sail::Quat(Eigen::AngleAxisd(pitch, Vec3::UnitY()));
-    return pose;
-}
 
 TEST_CASE("damping force law is odd, linear plus quadratic, on heave roll and pitch only") {
     DampingCoefficients c;
@@ -215,17 +155,15 @@ TEST_CASE("J/80 dropped into flat water oscillates at the heave period and decay
     const MassModel model = MassModel::load(kBoatDir);
     const sail::BodyProperties body = model.body_properties();
 
-    TriMesh boat = sail::load_obj(kBoatDir / "hull_physics.obj");
-    sail::append_mesh(boat, sail::load_obj(kBoatDir / "appendages.obj"));
-    const std::vector<std::string> keel_name = {"keel"};
-    const TriMesh keel = sail::load_obj(kBoatDir / "appendages.obj", keel_name);
-    const sail::HydrostaticParams params = j80_params(model, keel);
+    const sail::BoatHydrostatics hydro = sail::load_boat_hydrostatics(kBoatDir);
+    const TriMesh& boat = hydro.mesh;
+    const sail::HydrostaticParams params = hydro.params(model, kG);
 
     const DampingCoefficients coefficients = sail::load_damping(model);
 
-    State rest;
-    rest.position = model.cg();
-    const State equilibrium = hydrostatic_equilibrium(boat, params, body.mass, rest);
+    const sail::Equilibrium solved = sail::solve_equilibrium(boat, params, body.mass);
+    REQUIRE(solved.converged);
+    const State equilibrium = solved.pose;
 
     const sail::HydrostaticResult at_equilibrium =
         sail::compute_hydrostatics(boat, equilibrium, 0.0, params);

@@ -3,11 +3,12 @@
 #include <string_view>
 #include <vector>
 
+#include "common.hpp"
 #include "sail/version.hpp"
 
 namespace {
 
-using Args = std::vector<std::string_view>;
+using sailcli::Args;
 
 struct Command {
     std::string_view name;
@@ -35,6 +36,8 @@ const std::vector<Command>& commands() {
     static const std::vector<Command> table = {
         {"--version", "print the version", print_version},
         {"--help", "show this help", print_help},
+        {"hydro", "upright flat-water equilibrium as JSON", sailcli::run_hydro},
+        {"gz", "righting-moment and GZ curve over 0-180 deg heel as JSON", sailcli::run_gz},
     };
     return table;
 }
