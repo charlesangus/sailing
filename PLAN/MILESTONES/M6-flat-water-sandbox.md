@@ -62,7 +62,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - approach: Load the bathymetry heightmap (stb_image via FetchContent) with bilinear sampling. A `ForceModule` checks physics-mesh and appendage vertices against seabed height: penetrating vertices get a stiff spring + damper normal force and Coulomb friction, capped to keep the 200 Hz step stable. Add it to `BoatSim`'s module set (with `set_reference_point` for crew-driven CG moves) so the game and harnesses get it.
   - verify: doctest: boat driven at 5 kn onto a 10° slope stops within a boat length without NaNs or bounce-explosion; with the sail drive reversed (or the boat heeled by crew), it moves off again.
   - size: M
-- [ ] M6.P2.T5 — Placeable marks
+- [x] M6.P2.T5 — Placeable marks
   - files: game/scenes/buoy.tscn, game/scripts/marks.gd
   - approach: "Drop mark" action places a windward mark 0.5 nm upwind and a leeward mark at the boat's position (relative to current wind), replacing any previous pair. Buoys bob slightly; no collision.
   - verify: `test_marks.gd` headless: after the action, two buoys exist at the expected positions relative to wind.
