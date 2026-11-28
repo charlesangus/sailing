@@ -27,7 +27,9 @@ void Simulation::add_module(std::unique_ptr<ForceModule> module) {
 
 void Simulation::add_module(ForceModule& module) { modules_.push_back(&module); }
 
-int Simulation::advance(double real_dt) {
+int Simulation::advance(double real_dt) { return advance(real_dt, {}); }
+
+int Simulation::advance(double real_dt, const std::function<void()>& before_step) {
     if (!std::isfinite(real_dt) || real_dt <= 0.0) return 0;
 
     // Clamping before conversion keeps an absurd input from overflowing the integer cast; the
@@ -38,6 +40,7 @@ int Simulation::advance(double real_dt) {
 
     int steps = 0;
     while (accumulator_ns_ >= kStepNs && steps < kMaxSubsteps) {
+        if (before_step) before_step();
         step();
         accumulator_ns_ -= kStepNs;
         ++steps;

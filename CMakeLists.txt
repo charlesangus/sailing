@@ -38,6 +38,19 @@ add_library(sail_nlohmann_json INTERFACE)
 target_include_directories(sail_nlohmann_json SYSTEM INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
 add_library(nlohmann_json::nlohmann_json ALIAS sail_nlohmann_json)
 
+# stb_image decodes the scenes' 16-bit heightmaps. Single-header, so only its directory is used.
+FetchContent_Declare(
+    stb
+    URL https://github.com/nothings/stb/archive/6b5799bae8a1fe3792691ef4b72ae26434c3e799.tar.gz
+    URL_HASH SHA256=87e9ecd2d2e0cb8fa35bf5a93ea6ca3999595ea4f0a4738ed1aac0a34cbd4da9
+    SOURCE_SUBDIR sail-headers-only
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(stb)
+add_library(sail_stb INTERFACE)
+target_include_directories(sail_stb SYSTEM INTERFACE ${stb_SOURCE_DIR})
+add_library(stb::image ALIAS sail_stb)
+
 # Applied per target so third-party code fetched above never sees -Werror.
 function(sail_enable_warnings target)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)

@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/boat_input.gd" id="1_input"]
+[ext_resource type="Script" path="res://scripts/boat_visual.gd" id="2_visual"]
+
+[node name="Boat" type="SailBoat"]
+boat_dir = "res://data/boats/j80"
+scene_dir = "res://data/scenes/bay"
+wind_speed_kn = 10.0
+wind_direction_deg = 90.0
+
+[node name="BoatInput" type="Node" parent="."]
+script = ExtResource("1_input")
+boat_path = NodePath("..")
+
+[node name="Visual" type="Node3D" parent="."]
+script = ExtResource("2_visual")

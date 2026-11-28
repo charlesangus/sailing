@@ -14,6 +14,7 @@ add_library(sailcore STATIC
     src/equilibrium.cpp
     src/foil.cpp
     src/gravity.cpp
+    src/grounding.cpp
     src/harness/autopilot.cpp
     src/harness/autotrim.cpp
     src/hull_forces.cpp
@@ -25,6 +26,7 @@ add_library(sailcore STATIC
     src/sails.cpp
     src/sheets.cpp
     src/simulation.cpp
+    src/stb_image_impl.cpp
     src/version.cpp
     src/wind.cpp
     src/windage.cpp
@@ -34,11 +36,13 @@ target_include_directories(sailcore
     PUBLIC include
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
-target_link_libraries(sailcore PUBLIC Eigen3::Eigen PRIVATE nlohmann_json::nlohmann_json)
+target_link_libraries(sailcore PUBLIC Eigen3::Eigen PRIVATE nlohmann_json::nlohmann_json stb::image)
 target_compile_features(sailcore PUBLIC cxx_std_20)
 set_target_properties(sailcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 sail_enable_warnings(sailcore)
 sail_optimise_debug(sailcore)
+# Third-party code compiled here, so -Werror must not reach it.
+set_source_files_properties(src/stb_image_impl.cpp PROPERTIES COMPILE_OPTIONS -w)
 
 if(SAIL_BUILD_TESTS)
     FetchContent_Declare(
@@ -59,6 +63,7 @@ if(SAIL_BUILD_TESTS)
         tests/test_crew.cpp
         tests/test_damping.cpp
         tests/test_foil.cpp
+        tests/test_grounding.cpp
         tests/test_harness.cpp
         tests/test_hull_forces.cpp
         tests/test_hull_resistance.cpp

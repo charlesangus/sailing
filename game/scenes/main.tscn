@@ -1,5 +1,42 @@
-[gd_scene format=3]
+[gd_scene load_steps=10 format=3]
 
-[node name="Main" type="Node"]
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/bay_terrain.tscn" id="2_terrain"]
+[ext_resource type="PackedScene" path="res://scenes/boat.tscn" id="3_boat"]
+[ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="4_env"]
+[ext_resource type="Script" path="res://scripts/marks.gd" id="5_marks"]
+[ext_resource type="PackedScene" path="res://scenes/buoy.tscn" id="6_buoy"]
+[ext_resource type="Script" path="res://scripts/camera_rig.gd" id="7_rig"]
+[ext_resource type="PackedScene" path="res://scenes/hud.tscn" id="8_hud"]
+[ext_resource type="PackedScene" path="res://scenes/settings_panel.tscn" id="9_settings"]
 
-[node name="SailSim" type="SailSim" parent="."]
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+boat_path = NodePath("Boat")
+terrain_path = NodePath("BayTerrain")
+
+[node name="BayTerrain" parent="." instance=ExtResource("2_terrain")]
+
+[node name="Environment" parent="." instance=ExtResource("4_env")]
+
+[node name="Boat" parent="." instance=ExtResource("3_boat")]
+
+[node name="Camera" type="Camera3D" parent="."]
+far = 6000.0
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("7_rig")
+boat_path = NodePath("../Boat")
+input_path = NodePath("../Boat/BoatInput")
+camera_path = NodePath("../Camera")
+
+[node name="Marks" type="Node3D" parent="."]
+script = ExtResource("5_marks")
+boat_path = NodePath("../Boat")
+terrain_path = NodePath("../BayTerrain")
+input_path = NodePath("../Boat/BoatInput")
+buoy_scene = ExtResource("6_buoy")
+
+[node name="Hud" parent="." instance=ExtResource("8_hud")]
+
+[node name="SettingsPanel" parent="." instance=ExtResource("9_settings")]

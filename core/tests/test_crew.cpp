@@ -240,3 +240,27 @@ TEST_CASE("reset puts the crew, the CG and the mass properties back as loaded") 
     CHECK(boat->equilibrium().pose.position == fresh->equilibrium().pose.position);
     CHECK_THROWS_AS(boat->simulation(), std::logic_error);
 }
+
+TEST_CASE("BoatSim::advance moves the crew as the same number of step() calls does") {
+    const auto stepped = BoatSim::load(kBoatDir, naca0012());
+    const auto advanced = BoatSim::load(kBoatDir, naca0012());
+    for (BoatSim* boat : {stepped.get(), advanced.get()}) {
+        boat->set_wind(std::make_shared<const LogProfileWind>(10.0 * kKnot, 180.0));
+        boat->set_controls(Controls{.mainsheet = 0.77, .jib_sheet_port = 0.62,
+                                    .jib_sheet_starboard = 0.62});
+        State initial = boat->equilibrium().pose;
+        initial.linear_velocity = Vec3(3.0, 0.0, 0.0);
+        boat->start(initial);
+    }
+    int steps = 0;
+    for (int i = 0; i < 300; ++i) steps += advanced->advance(1.0 / 60.0);
+    for (int i = 0; i < steps; ++i) stepped->step();
+
+    REQUIRE(steps > 0);
+    CHECK(advanced->crew().position().y < 0.0);
+    CHECK(advanced->crew().position().y == stepped->crew().position().y);
+    CHECK(advanced->mass_model().cg() == stepped->mass_model().cg());
+    CHECK(advanced->simulation().state().position == stepped->simulation().state().position);
+    CHECK(advanced->simulation().state().linear_velocity ==
+          stepped->simulation().state().linear_velocity);
+}

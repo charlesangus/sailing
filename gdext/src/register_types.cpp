@@ -3,6 +3,7 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
+#include "sail_boat.hpp"
 #include "sail_sim.hpp"
 
 namespace {
@@ -12,6 +13,7 @@ void initialize_sailgd(godot::ModuleInitializationLevel level) {
         return;
     }
     GDREGISTER_CLASS(sailgd::SailSim);
+    GDREGISTER_CLASS(sailgd::SailBoat);
 }
 
 void uninitialize_sailgd(godot::ModuleInitializationLevel) {}

@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 #include "sail/gravity.hpp"
 #include "sail/rigid_body.hpp"
@@ -228,6 +230,20 @@ TEST_CASE("a large frame hitch runs at most 20 substeps and drops the rest") {
     CHECK(sim.advance(0.0025) == 1);
     CHECK(sim.step_count() == 21);
     CHECK(sim.alpha() == doctest::Approx(0.0));
+}
+
+TEST_CASE("advance calls the before-step hook once ahead of each fixed step") {
+    BodyProperties body;
+    Simulation sim(body, State{});
+    sim.add_module(std::make_unique<sail::GravityModule>(body.mass));
+
+    std::vector<std::uint64_t> seen;
+    const auto hook = [&] { seen.push_back(sim.step_count()); };
+    CHECK(sim.advance(Simulation::kFixedDt * 3.5, hook) == 3);
+    CHECK(sim.advance(Simulation::kFixedDt * 0.25, hook) == 0);
+    CHECK(sim.advance(1.0, hook) == Simulation::kMaxSubsteps);
+    REQUIRE(seen.size() == 3 + Simulation::kMaxSubsteps);
+    for (std::size_t i = 0; i < seen.size(); ++i) CHECK(seen[i] == i);
 }
 
 TEST_CASE("previous and current states bracket the latest step") {
