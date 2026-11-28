@@ -319,6 +319,9 @@ godot::Dictionary SailBoat::get_state() const {
         d["bsp_kn"] = speed / kKnot;
         d["heading_deg"] = wrap_360(90.0 - to_deg(yaw));
         d["heel_deg"] = to_deg(sail::heel_angle(r));
+        // Where the hull-frame origin (DWL midship) sits relative to this node, in node-local axes:
+        // the node follows the CG, which moves with the crew.
+        d["hull_origin_local"] = frames::body_to_local(-boat.mass_model().cg());
         d["leeway_deg"] = speed > 1e-6 ? to_deg(std::atan2(across, along)) : 0.0;
         d["yaw_rate_dps"] = to_deg((r * s.angular_velocity).z());
         d["awa_deg"] = to_deg(aw.awa);
