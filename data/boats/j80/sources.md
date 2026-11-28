@@ -306,3 +306,17 @@ Python-VPP keeps the jib drawing at every TWA and does not blanket it behind the
 - A `conditions.sailing.orc` block in `hull_hydro.json` (`lsm1`, `lsm4`, `lsm6`, `btr_effective`, `heeled` tables of `wetted_area`, `btr`, `lvr` over `heel_deg`) would replace the stand-ins. This dossier has none yet.
 
 `hull_resistance_reference.json` (from `tools/vpp/hull_reference.py`) is the Python-VPP canoe-only result the core is tested against, and lists every deviation from ORC 2023: Lwl for the dynamic length and LSM1, Bwl/Tc for the effective BTR, no neural-network half, the heel term, and clamping of LVR/BTR where Python-VPP extrapolates.
+
+### Alternative: DSYHS 1998
+
+`"model": "dsyhs"` (or `load_hull_resistance(dir, HullResistanceKind::dsyhs)`) selects the Keuning & Sonnenberg 1998 Delft Systematic Yacht Hull Series regressions instead; the `dsyhs` block of `hull_resistance.json` points at `data/hull/dsyhs1998_coefficients.csv` (provenance and conventions in `data/hull/README.md`) and sets the form factor, 1.0 as in the series. It reads the same `conditions.sailing.result` block, plus Aw, Cp, Cm, LCB and LCF: LCBfpp 3.835 m and LCFfpp 4.068 m aft of the forward end of the waterline (LCB -3.66 % and LCF -6.92 % of Lwl from Lwl/2). Rr scales with the canoe-body weight ∇c ρ g, not the 1809 kg displacement.
+
+The J/80 lies inside the series range on Lwl/Bwl 3.70, Bwl/Tc 6.80, Lwl/∇c^(1/3) 6.02, LCB, LCF, Cp 0.539 and Aw/∇c^(2/3) 6.73, but its Cm of 0.793 is above the 0.78 series maximum, so every result carries `hull_out_of_range`. Upright totals against the `orc` model (`data/hull/dsyhs1998_reference.json`, `tools/hull/dsyhs1998_reference.py`):
+
+| Fn | ORC total, N | DSYHS total, N | gap |
+| --- | --- | --- | --- |
+| 0.20 | 50.5 | 55.0 | +8.9 % |
+| 0.35 | 253.6 | 232.0 | -8.5 % |
+| 0.45 | 1010.2 | 793.7 | -21.4 % |
+
+The DSYHS friction (ITTC-57 on 0.7 Lwl, no form factor) is 11 % above ORC's Rv (Hughes 0.066 on 0.85 Lwl, times 1.05); the gap at Fn 0.45 is in the residuary, 584 N against ORC's 820 N.

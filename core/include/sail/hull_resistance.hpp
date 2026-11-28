@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -30,6 +31,13 @@ struct HullResistance {
     bool btr_clamped = false;
     // Fn was above the residuary data and the value was extrapolated.
     bool fn_extrapolated = false;
+    // dsyhs only. A hull parameter lies outside the series' range (DsyhsRangeCheck).
+    bool hull_out_of_range = false;
+    // dsyhs only. |heel| was above the heeled wetted-area table, which was held at its last row.
+    bool heel_clamped = false;
+    // dsyhs only. The boat was heeled and Fn was above the heeled-residuary table, which was held
+    // at its last row.
+    bool heel_fn_clamped = false;
 };
 
 class HullResistanceModel {
@@ -147,6 +155,125 @@ private:
     OrcDragSurfaces surfaces_;
 };
 
+// Keuning & Sonnenberg 1998 regression coefficients, as data/hull/dsyhs1998_coefficients.csv
+// holds them.
+class DsyhsCoefficients {
+public:
+    struct Table {
+        // Ascending and positive; Fn, or heel in degrees for the wetted-area table.
+        std::vector<double> x;
+        std::vector<std::array<double, 9>> c;
+    };
+
+    // Parses a header line, then rows `table,x,c0..c8` with tables `upright` (a0..a8 over Fn),
+    // `heel20_x1000` (u0..u5 over Fn, as printed: 1000 times the coefficient) and `wetted_heel`
+    // (s0..s3 over heel_deg). Unused trailing columns are empty. Throws BoatDataError on a missing
+    // or malformed file, an unknown or missing table, a row with the wrong number of coefficients
+    // or an axis that is not strictly ascending and positive.
+    static DsyhsCoefficients load(const std::filesystem::path& file);
+
+    const Table& upright() const { return upright_; }
+    // Already divided by 1000.
+    const Table& heel20() const { return heel20_; }
+    const Table& wetted_heel() const { return wetted_heel_; }
+
+private:
+    Table upright_;
+    Table heel20_;
+    Table wetted_heel_;
+};
+
+struct DsyhsHullParameters {
+    // Upright sailing-condition canoe body, from hull_hydro.json `conditions.sailing.result`.
+    // m and m^3.
+    double lwl = 0.0;
+    double bwl = 0.0;
+    double tc = 0.0;
+    double canoe_volume = 0.0;
+    // m^2
+    double waterplane_area = 0.0;
+    double wetted_area = 0.0;
+    double cp = 0.0;
+    double cm = 0.0;
+    // m aft of the forward end of the waterline.
+    double lcb_fpp = 0.0;
+    double lcf_fpp = 0.0;
+    // kg/m^3 and m^2/s, from hull_resistance.json `water`.
+    double density = 0.0;
+    double kinematic_viscosity = 0.0;
+    // 1 + k on the ITTC-57 friction; the series itself uses none.
+    double form_factor = 1.0;
+    // hull_resistance.json `dsyhs.coefficients.path`, resolved against the boat dir.
+    std::filesystem::path coefficients_file;
+};
+
+// The hull parameters against the range of the series hulls the regressions were fitted to.
+struct DsyhsRangeCheck {
+    double lwl_bwl = 0.0;
+    double bwl_tc = 0.0;
+    double lwl_vol13 = 0.0;
+    // Percent of Lwl from Lwl/2, positive forward.
+    double lcb_pct = 0.0;
+    double lcf_pct = 0.0;
+    double cp = 0.0;
+    double cm = 0.0;
+    double aw_vol23 = 0.0;
+    bool lwl_bwl_ok = true;
+    bool bwl_tc_ok = true;
+    bool lwl_vol13_ok = true;
+    bool lcb_ok = true;
+    bool lcf_ok = true;
+    bool cp_ok = true;
+    bool cm_ok = true;
+    bool aw_vol23_ok = true;
+    bool ok() const {
+        return lwl_bwl_ok && bwl_tc_ok && lwl_vol13_ok && lcb_ok && lcf_ok && cp_ok && cm_ok &&
+               aw_vol23_ok;
+    }
+};
+
+// Keuning & Sonnenberg 1998 bare-hull resistance from the Delft Systematic Yacht Hull Series:
+// the upright residuary regression (Fn 0.10 to 0.60), the change in residuary resistance with
+// heel (20 degree regression over Fn 0.25 to 0.55, scaled by 6.0 phi^1.7 with phi in radians),
+// the heeled wetted area (5 to 35 degrees) and ITTC-57 friction with Re on 0.7 Lwl. Fn is on
+// Lwl; every hull parameter is the upright one.
+class DsyhsHullResistance final : public HullResistanceModel {
+public:
+    DsyhsHullResistance(DsyhsHullParameters params, DsyhsCoefficients coefficients);
+
+    HullResistance resistance(double speed_mps, double heel_rad) const override;
+    HullResistanceKind kind() const override { return HullResistanceKind::dsyhs; }
+
+    const DsyhsHullParameters& params() const { return params_; }
+    const DsyhsRangeCheck& range_check() const { return range_; }
+
+    // Upright Rr / (canoe_volume rho g). Linear in Fn between the table rows, zero at Fn 0 and
+    // extrapolated linearly above the last row.
+    double upright_residuary_ratio(double fn) const;
+    // Change in Rr with heel over (canoe_volume rho g), at 20 degrees. Linear in Fn, zero at Fn 0
+    // and held above the last row.
+    double heel20_residuary_ratio(double fn) const;
+    // Canoe-body wetted area at |heel_deg|: the upright area at 0, linear between the table rows
+    // and held above the last row.
+    double wetted_area(double heel_deg) const;
+    // ITTC-57 line with Re on 0.7 Lwl, at |speed_mps|.
+    double friction_coefficient(double speed_mps) const;
+
+private:
+    DsyhsHullParameters params_;
+    DsyhsCoefficients coefficients_;
+    DsyhsRangeCheck range_;
+    std::array<double, 9> upright_terms_{};
+    std::array<double, 9> heel20_terms_{};
+};
+
+// Reads the upright hull from hull_hydro.json `conditions.sailing.result` (lwl, bwl, tc,
+// canoe_volume, waterplane_area, wetted_area_canoe, cp, cm, lcb_x_canoe, lcb_frac_lwl_aft_fp,
+// lcf_x) and hull_resistance.json `water` and `dsyhs` (coefficients.path, optional
+// form_factor.value). Throws BoatDataError on a missing or malformed file or field or a
+// non-positive quantity.
+DsyhsHullParameters load_dsyhs_hull_parameters(const std::filesystem::path& boat_dir);
+
 // Reads hull_hydro.json `conditions.sailing` (result and the optional orc block) and
 // hull_resistance.json `water` and `orc` from a boat dossier directory. Throws BoatDataError on a
 // missing or malformed file or field, a non-positive quantity, LSM4 or LSM6 without the other
@@ -157,8 +284,7 @@ OrcHullParameters load_orc_hull_parameters(const std::filesystem::path& boat_dir
 // The model hull_resistance.json `model` names ("orc" when absent), built from the boat dir.
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir);
 
-// The given model, ignoring hull_resistance.json `model`. Throws BoatDataError for a model that
-// is not implemented.
+// The given model, ignoring hull_resistance.json `model`.
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir,
                                                           HullResistanceKind kind);
 

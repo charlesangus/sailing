@@ -327,6 +327,235 @@ OrcHullParameters load_orc_hull_parameters(const std::filesystem::path& boat_dir
     return p;
 }
 
+DsyhsCoefficients DsyhsCoefficients::load(const std::filesystem::path& file) {
+    std::ifstream in(file);
+    if (!in) throw BoatDataError(file, "cannot open file");
+    const auto fail = [&](std::size_t line, const std::string& message) {
+        throw BoatDataError(file, "line " + std::to_string(line) + ": " + message);
+    };
+
+    DsyhsCoefficients out;
+    std::string text;
+    std::size_t line = 0;
+    while (std::getline(in, text)) {
+        ++line;
+        if (line == 1) continue;
+        const std::vector<std::string> f = split_csv(text);
+        if (std::all_of(f.begin(), f.end(), [](const std::string& x) { return x.empty(); })) {
+            continue;
+        }
+        Table* table = nullptr;
+        std::size_t count = 0;
+        double scale = 1.0;
+        if (f[0] == "upright") {
+            table = &out.upright_;
+            count = 9;
+        } else if (f[0] == "heel20_x1000") {
+            table = &out.heel20_;
+            count = 6;
+            scale = 1e-3;
+        } else if (f[0] == "wetted_heel") {
+            table = &out.wetted_heel_;
+            count = 4;
+        } else {
+            fail(line, "unknown table '" + f[0] + "'");
+        }
+        if (f.size() < count + 2) fail(line, "expected " + std::to_string(count) + " coefficients");
+        const auto x = parse_number(f[1]);
+        if (!x || !(*x > 0.0)) fail(line, "expected a positive table abscissa");
+        std::array<double, 9> c{};
+        for (std::size_t j = 0; j < count; ++j) {
+            const auto v = parse_number(f[j + 2]);
+            if (!v) fail(line, "malformed coefficient");
+            c[j] = *v * scale;
+        }
+        for (std::size_t j = count + 2; j < f.size(); ++j) {
+            if (!f[j].empty()) fail(line, "expected " + std::to_string(count) + " coefficients");
+        }
+        table->x.push_back(*x);
+        table->c.push_back(c);
+    }
+    for (const Table* t : {&out.upright_, &out.heel20_, &out.wetted_heel_}) {
+        if (t->x.size() < 2) throw BoatDataError(file, "each table needs two rows at least");
+        if (!strictly_ascending(t->x)) {
+            throw BoatDataError(file, "table abscissae must be strictly ascending");
+        }
+    }
+    return out;
+}
+
+namespace {
+
+// Series ranges of the DSYHS hulls behind the regressions, as tabulated (attributed to
+// Keuning & Sonnenberg 1998) in Teixeira 2024, Table 1; see data/hull/README.md.
+constexpr double kLwlBwl[2] = {2.73, 5.00};
+constexpr double kBwlTc[2] = {2.46, 19.38};
+constexpr double kLwlVol13[2] = {4.34, 8.50};
+constexpr double kLcbPct[2] = {-8.2, 0.0};
+constexpr double kLcfPct[2] = {-9.5, -1.8};
+constexpr double kCp[2] = {0.52, 0.60};
+constexpr double kCm[2] = {0.65, 0.78};
+constexpr double kAwVol23[2] = {3.78, 12.67};
+
+bool within(double v, const double (&range)[2]) { return v >= range[0] && v <= range[1]; }
+
+// Row coefficients at x, linear between rows. Below the first row they scale linearly to zero
+// at x = 0 when zero_below, else are held; above the last row they are extrapolated from the last
+// two rows when extrapolate_above, else held.
+std::array<double, 9> row_at(const DsyhsCoefficients::Table& t, double x, bool zero_below,
+                             bool extrapolate_above) {
+    std::array<double, 9> out{};
+    if (x <= t.x.front()) {
+        const double s = zero_below ? std::max(x, 0.0) / t.x.front() : 1.0;
+        for (std::size_t j = 0; j < out.size(); ++j) out[j] = s * t.c.front()[j];
+        return out;
+    }
+    if (x >= t.x.back() && !extrapolate_above) return t.c.back();
+    const Cell cell = locate(t.x, x);
+    for (std::size_t j = 0; j < out.size(); ++j) {
+        out[j] = t.c[cell.i][j] + cell.t * (t.c[cell.i + 1][j] - t.c[cell.i][j]);
+    }
+    return out;
+}
+
+double dot(const std::array<double, 9>& a, const std::array<double, 9>& b) {
+    double s = 0.0;
+    for (std::size_t j = 0; j < a.size(); ++j) s += a[j] * b[j];
+    return s;
+}
+
+}  // namespace
+
+DsyhsHullResistance::DsyhsHullResistance(DsyhsHullParameters params,
+                                         DsyhsCoefficients coefficients)
+    : params_(std::move(params)), coefficients_(std::move(coefficients)) {
+    const DsyhsHullParameters& p = params_;
+    const double v13 = std::cbrt(p.canoe_volume);
+    const double v23 = v13 * v13;
+    const double lcb_l = p.lcb_fpp / p.lwl;
+    const double s = v13 / p.lwl;
+    upright_terms_ = {1.0,
+                      s * lcb_l,
+                      s * p.cp,
+                      s * v23 / p.waterplane_area,
+                      s * p.bwl / p.lwl,
+                      s * v23 / p.wetted_area,
+                      s * p.lcb_fpp / p.lcf_fpp,
+                      s * lcb_l * lcb_l,
+                      s * p.cp * p.cp};
+
+    DsyhsRangeCheck& r = range_;
+    r.lwl_bwl = p.lwl / p.bwl;
+    r.bwl_tc = p.bwl / p.tc;
+    r.lwl_vol13 = p.lwl / v13;
+    r.lcb_pct = 100.0 * (0.5 - lcb_l);
+    r.lcf_pct = 100.0 * (0.5 - p.lcf_fpp / p.lwl);
+    r.cp = p.cp;
+    r.cm = p.cm;
+    r.aw_vol23 = p.waterplane_area / v23;
+    r.lwl_bwl_ok = within(r.lwl_bwl, kLwlBwl);
+    r.bwl_tc_ok = within(r.bwl_tc, kBwlTc);
+    r.lwl_vol13_ok = within(r.lwl_vol13, kLwlVol13);
+    r.lcb_ok = within(r.lcb_pct, kLcbPct);
+    r.lcf_ok = within(r.lcf_pct, kLcfPct);
+    r.cp_ok = within(r.cp, kCp);
+    r.cm_ok = within(r.cm, kCm);
+    r.aw_vol23_ok = within(r.aw_vol23, kAwVol23);
+
+    heel20_terms_ = {1.0,     r.lwl_bwl, r.bwl_tc, r.bwl_tc * r.bwl_tc, r.lcb_pct,
+                     r.lcb_pct * r.lcb_pct, 0.0, 0.0, 0.0};
+}
+
+double DsyhsHullResistance::upright_residuary_ratio(double fn) const {
+    return dot(row_at(coefficients_.upright(), fn, true, true), upright_terms_);
+}
+
+double DsyhsHullResistance::heel20_residuary_ratio(double fn) const {
+    return dot(row_at(coefficients_.heel20(), fn, true, false), heel20_terms_);
+}
+
+double DsyhsHullResistance::wetted_area(double heel_deg) const {
+    const std::array<double, 9> s = row_at(coefficients_.wetted_heel(), std::abs(heel_deg), true,
+                                           false);
+    const double btr = range_.bwl_tc;
+    const double percent = s[0] + s[1] * btr + s[2] * btr * btr + s[3] * params_.cm;
+    return params_.wetted_area * (1.0 + percent / 100.0);
+}
+
+double DsyhsHullResistance::friction_coefficient(double speed_mps) const {
+    // The ITTC-57 line is singular at Re = 100; the floor only ever applies at speeds where
+    // the force is negligible.
+    const double re =
+        std::max(1e4, 0.7 * std::abs(speed_mps) * params_.lwl / params_.kinematic_viscosity);
+    const double d = std::log10(re) - 2.0;
+    return 0.075 / (d * d);
+}
+
+HullResistance DsyhsHullResistance::resistance(double speed_mps, double heel_rad) const {
+    const DsyhsHullParameters& p = params_;
+    const double v = std::abs(speed_mps);
+    const double phi = std::abs(heel_rad);
+    const double heel_deg = phi * 180.0 / std::numbers::pi;
+
+    HullResistance r;
+    r.fn = v / std::sqrt(kGravity * p.lwl);
+    r.lvr = range_.lwl_vol13;
+    r.btr = range_.bwl_tc;
+    r.fn_extrapolated = r.fn > coefficients_.upright().x.back();
+    r.hull_out_of_range = !range_.ok();
+    r.heel_clamped = heel_deg > coefficients_.wetted_heel().x.back();
+    r.heel_fn_clamped = phi > 0.0 && r.fn > coefficients_.heel20().x.back();
+    r.in_range = !(r.fn_extrapolated || r.hull_out_of_range || r.heel_clamped || r.heel_fn_clamped);
+    if (v == 0.0) return r;
+
+    const double weight = p.canoe_volume * p.density * kGravity;
+    const double heel_scale = 6.0 * std::pow(phi, 1.7);
+    // The regression's constant term makes Rr slightly negative around Fn 0.10 for every series
+    // hull; a negative residuary resistance would push the boat, so it is floored at zero.
+    r.residuary_N = weight * std::max(0.0, upright_residuary_ratio(r.fn) +
+                                               heel_scale * heel20_residuary_ratio(r.fn));
+    r.viscous_N =
+        0.5 * p.density * v * v * wetted_area(heel_deg) * friction_coefficient(v) * p.form_factor;
+    r.total_N = r.residuary_N + r.viscous_N;
+    return r;
+}
+
+DsyhsHullParameters load_dsyhs_hull_parameters(const std::filesystem::path& boat_dir) {
+    const Document hull_doc = read_document(boat_dir / "hull_hydro.json");
+    const Document res_doc = read_document(boat_dir / "hull_resistance.json");
+    const auto positive = [](const Node& node) {
+        const double v = node.number();
+        if (!(v > 0.0)) node.fail("expected a positive number");
+        return v;
+    };
+
+    DsyhsHullParameters p;
+    const Node result = hull_doc.root().at("conditions").at("sailing").at("result");
+    p.lwl = positive(result.at("lwl"));
+    p.bwl = positive(result.at("bwl"));
+    p.tc = positive(result.at("tc"));
+    p.canoe_volume = positive(result.at("canoe_volume"));
+    p.waterplane_area = positive(result.at("waterplane_area"));
+    p.wetted_area = positive(result.at("wetted_area_canoe"));
+    p.cp = positive(result.at("cp"));
+    p.cm = positive(result.at("cm"));
+    p.lcb_fpp = positive(result.at("lcb_frac_lwl_aft_fp")) * p.lwl;
+    const double x_fp = result.at("lcb_x_canoe").number() + p.lcb_fpp;
+    const Node lcf = result.at("lcf_x");
+    p.lcf_fpp = x_fp - lcf.number();
+    if (!(p.lcf_fpp > 0.0)) lcf.fail("expected the LCF aft of the forward end of the waterline");
+
+    const Node res = res_doc.root();
+    const Node water = res.at("water");
+    p.density = water.at("density").positive_value();
+    p.kinematic_viscosity = water.at("dynamic_viscosity").positive_value() / p.density;
+    const Node dsyhs = res.at("dsyhs");
+    if (dsyhs.has("form_factor")) p.form_factor = dsyhs.at("form_factor").positive_value();
+    const std::filesystem::path coefficients = dsyhs.at("coefficients").at("path").string();
+    p.coefficients_file = coefficients.is_absolute() ? coefficients : boat_dir / coefficients;
+    return p;
+}
+
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir,
                                                           HullResistanceKind kind) {
     switch (kind) {
@@ -335,11 +564,14 @@ std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem:
             OrcDragSurfaces surfaces = OrcDragSurfaces::load(params.drag_surfaces_file);
             return std::make_unique<OrcHullResistance>(std::move(params), std::move(surfaces));
         }
-        case HullResistanceKind::dsyhs:
-            break;
+        case HullResistanceKind::dsyhs: {
+            DsyhsHullParameters params = load_dsyhs_hull_parameters(boat_dir);
+            DsyhsCoefficients coefficients = DsyhsCoefficients::load(params.coefficients_file);
+            return std::make_unique<DsyhsHullResistance>(std::move(params),
+                                                         std::move(coefficients));
+        }
     }
-    throw BoatDataError(boat_dir / "hull_resistance.json",
-                        "hull resistance model 'dsyhs' is not implemented");
+    throw BoatDataError(boat_dir / "hull_resistance.json", "unknown hull resistance model");
 }
 
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir) {
