@@ -1,7 +1,9 @@
 #include "sail/wind.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <numbers>
+#include <stdexcept>
 
 namespace sail {
 
@@ -22,6 +24,25 @@ double origin_angle(double toward_forward, double toward_port) {
 UniformWind::UniformWind(double speed_mps, double from_direction_deg) {
     const double from = from_direction_deg * std::numbers::pi / 180.0;
     velocity_ = Vec3(-speed_mps * std::sin(from), -speed_mps * std::cos(from), 0.0);
+}
+
+LogProfileWind::LogProfileWind(double speed_at_reference_mps, double from_direction_deg,
+                               double reference_height, double roughness)
+    : reference_velocity_(UniformWind(speed_at_reference_mps, from_direction_deg).sample(
+          Vec3::Zero(), 0.0)),
+      roughness_(roughness) {
+    if (!(roughness > 0.0) || !(reference_height > 10.0 * roughness) ||
+        !std::isfinite(reference_height)) {
+        throw std::invalid_argument(
+            "LogProfileWind: roughness must be positive and reference_height above 10 "
+            "roughness lengths");
+    }
+    inverse_log_reference_ = 1.0 / std::log(reference_height / roughness);
+}
+
+Vec3 LogProfileWind::sample(const Vec3& world_point, double) const {
+    const double z = std::max(world_point.z(), 10.0 * roughness_);
+    return reference_velocity_ * (std::log(z / roughness_) * inverse_log_reference_);
 }
 
 ApparentWind apparent_wind(const State& state, const Vec3& r, const WindField& field, double t) {

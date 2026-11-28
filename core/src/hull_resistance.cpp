@@ -5,11 +5,13 @@
 #include <cstdlib>
 #include <fstream>
 #include <numbers>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
 #include "dossier_json.hpp"
 #include "sail/boat_data.hpp"
+#include "sail/calibration.hpp"
 #include "sail/gravity.hpp"
 
 namespace sail {
@@ -556,22 +558,47 @@ DsyhsHullParameters load_dsyhs_hull_parameters(const std::filesystem::path& boat
     return p;
 }
 
+ScaledHullResistance::ScaledHullResistance(std::unique_ptr<HullResistanceModel> model,
+                                           double factor)
+    : model_(std::move(model)), factor_(factor) {
+    if (!model_) throw std::invalid_argument("ScaledHullResistance: null model");
+    if (!(factor_ > 0.0) || !std::isfinite(factor_)) {
+        throw std::invalid_argument("ScaledHullResistance: factor must be positive");
+    }
+}
+
+HullResistance ScaledHullResistance::resistance(double speed_mps, double heel_rad) const {
+    HullResistance r = model_->resistance(speed_mps, heel_rad);
+    r.residuary_N *= factor_;
+    r.viscous_N *= factor_;
+    r.total_N *= factor_;
+    return r;
+}
+
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir,
                                                           HullResistanceKind kind) {
+    std::unique_ptr<HullResistanceModel> model;
     switch (kind) {
         case HullResistanceKind::orc: {
             OrcHullParameters params = load_orc_hull_parameters(boat_dir);
             OrcDragSurfaces surfaces = OrcDragSurfaces::load(params.drag_surfaces_file);
-            return std::make_unique<OrcHullResistance>(std::move(params), std::move(surfaces));
+            model = std::make_unique<OrcHullResistance>(std::move(params), std::move(surfaces));
+            break;
         }
         case HullResistanceKind::dsyhs: {
             DsyhsHullParameters params = load_dsyhs_hull_parameters(boat_dir);
             DsyhsCoefficients coefficients = DsyhsCoefficients::load(params.coefficients_file);
-            return std::make_unique<DsyhsHullResistance>(std::move(params),
-                                                         std::move(coefficients));
+            model = std::make_unique<DsyhsHullResistance>(std::move(params),
+                                                          std::move(coefficients));
+            break;
         }
     }
-    throw BoatDataError(boat_dir / "hull_resistance.json", "unknown hull resistance model");
+    if (!model) {
+        throw BoatDataError(boat_dir / "hull_resistance.json", "unknown hull resistance model");
+    }
+    const double factor = load_calibration(boat_dir).hull_resistance;
+    if (factor == 1.0) return model;
+    return std::make_unique<ScaledHullResistance>(std::move(model), factor);
 }
 
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir) {

@@ -28,6 +28,14 @@ struct GoldenResult {
 GoldenResult golden_section_max(const std::function<double(double)>& f, double lo, double hi,
                                 double tolerance, int max_evaluations);
 
+// golden_section_max on all but one of `max_evaluations`, then one evaluation at the vertex of the
+// parabola through the best point and its neighbours in x, skipped when that vertex is within
+// `min_step` of an evaluated point or the three points are not concave. A flat-topped objective
+// leaves the golden bracket wide; the vertex resolves the peak inside it. Returns the best point
+// evaluated. Deterministic for a deterministic `f`.
+GoldenResult parabolic_peak_max(const std::function<double(double)>& f, double lo, double hi,
+                                double tolerance, int max_evaluations, double min_step);
+
 // Settle tolerances of one channel, each `absolute + relative * |mean|` of the latest window.
 // An infinite tolerance does not check.
 struct SettleChannel {
@@ -97,7 +105,7 @@ struct SailingState {
     double autopilot_integral = 0.0;
 };
 
-// Steady sailing in flat water: a uniform true wind of `tws` laid out so that a heading along
+// Steady sailing in flat water: a LogProfileWind of `tws` at 10 m laid out so that a heading along
 // world +x has true wind angle `twa`, the autopilot holding `twa`, the sails at `trim` (its
 // tiller is ignored) and the crew controller hiking.
 struct SteadyRequest {
@@ -220,6 +228,7 @@ struct PolarPointRequest {
     double twa_lo = 0.0;
     double twa_hi = 0.0;
     double twa_tolerance = 0.035;
+    // Includes the final evaluation at the fitted parabola's vertex.
     int max_twa_evaluations = 7;
     // The trim from which the search starts, default_trim() of the first TWA tried when empty;
     // the tiller is ignored.

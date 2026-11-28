@@ -8,6 +8,7 @@
 #include <numbers>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace sail::harness {
 
@@ -104,6 +105,45 @@ GoldenResult golden_section_max(const std::function<double(double)>& f, double l
     return out;
 }
 
+GoldenResult parabolic_peak_max(const std::function<double(double)>& f, double lo, double hi,
+                                double tol, int max_evaluations, double min_step) {
+    std::vector<std::pair<double, double>> pts;
+    auto record = [&](double x) {
+        const double v = f(x);
+        pts.emplace_back(x, v);
+        return v;
+    };
+    GoldenResult out = golden_section_max(record, lo, hi, tol, std::max(1, max_evaluations - 1));
+    if (out.evaluations < max_evaluations && pts.size() >= 3) {
+        std::sort(pts.begin(), pts.end());
+        std::size_t i = 0;
+        for (std::size_t k = 1; k < pts.size(); ++k) {
+            if (pts[k].second > pts[i].second) i = k;
+        }
+        const std::size_t m = std::min(std::max<std::size_t>(i, 1), pts.size() - 2);
+        const auto [x0, f0] = pts[m - 1];
+        const auto [x1, f1] = pts[m];
+        const auto [x2, f2] = pts[m + 1];
+        const double den = (x1 - x0) * (f1 - f2) - (x1 - x2) * (f1 - f0);
+        if (den > 0.0) {
+            const double num = (x1 - x0) * (x1 - x0) * (f1 - f2) - (x1 - x2) * (x1 - x2) * (f1 - f0);
+            const double x = std::clamp(x1 - 0.5 * num / den, lo, hi);
+            const bool near = std::any_of(pts.begin(), pts.end(), [&](const auto& p) {
+                return std::abs(p.first - x) < min_step;
+            });
+            if (!near) {
+                const double v = f(x);
+                ++out.evaluations;
+                if (v > out.f) {
+                    out.x = x;
+                    out.f = v;
+                }
+            }
+        }
+    }
+    return out;
+}
+
 SettleDetector::SettleDetector(std::vector<SettleChannel> channels, std::size_t window)
     : channels_(std::move(channels)), window_(window) {
     if (channels_.empty()) throw std::invalid_argument("SettleDetector: no channels");
@@ -183,7 +223,7 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
     const auto max_steps = std::llround(sp.max_time / dt);
 
     const double twa_deg = request.twa * 180.0 / std::numbers::pi;
-    const auto wind = std::make_shared<const UniformWind>(request.tws, 90.0 + twa_deg);
+    const auto wind = std::make_shared<const LogProfileWind>(request.tws, 90.0 + twa_deg);
     boat.set_wind(wind);
     boat.set_aero(true);
     boat.thrust().set_thrust(0.0);
@@ -436,7 +476,7 @@ PolarPointResult solve_polar_point(BoatSim& boat, const PolarPointRequest& reque
         std::optional<Controls> start_trim = request.initial_trim;
         double best_twa = request.twa_lo;
         int trims = 0;
-        golden_section_max(
+        parabolic_peak_max(
             [&](double twa) {
                 const bool first_trim = !best;
                 const double prior = best ? best->objective : -kInf;
@@ -455,7 +495,7 @@ PolarPointResult solve_polar_point(BoatSim& boat, const PolarPointRequest& reque
                 return v;
             },
             request.twa_lo, request.twa_hi, request.twa_tolerance,
-            std::max(1, request.max_twa_evaluations));
+            std::max(1, request.max_twa_evaluations), 0.1 * request.twa_tolerance);
         out.best = std::move(*best);
         out.twa = best_twa;
     }

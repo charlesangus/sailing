@@ -6,6 +6,7 @@
 #include <utility>
 
 #include "dossier_json.hpp"
+#include "sail/calibration.hpp"
 #include "sail/sails.hpp"
 
 namespace sail {
@@ -130,6 +131,7 @@ WindageParams load_windage_params(const std::filesystem::path& boat_dir,
 
     WindageParams p;
     p.air_density = SailSetParams{}.air_density;
+    p.drag_scale = load_calibration(boat_dir).windage;
     p.reference_point = reference_point;
 
     const Vec3 mast_axis = rig.at("mast_axis_at_sheer").at("value").vec3();
@@ -302,7 +304,7 @@ void WindageModule::accumulate(const State& state, double t, Wrench& wrench) {
     const Mat3 rotation = state.rotation();
     const Eigen::RowVector3d up_row = rotation.row(2);
     const Vec3& ref = params_.reference_point;
-    const double half_rho = 0.5 * params_.air_density;
+    const double half_rho = 0.5 * params_.air_density * params_.drag_scale;
 
     const auto apply = [&](WindageGroup group, const Vec3& r, double drag_area, const Vec3& v) {
         const Vec3 force = half_rho * drag_area * v.norm() * v;

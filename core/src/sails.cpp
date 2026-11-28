@@ -14,6 +14,7 @@
 #include <Eigen/LU>
 
 #include "dossier_json.hpp"
+#include "sail/calibration.hpp"
 
 namespace sail {
 
@@ -36,6 +37,7 @@ constexpr std::array<double, 19> kKheffAwaDeg = {0,  5,  10, 15, 20, 25, 30, 35,
 constexpr std::array<double, 19> kKheff = {1.003, 1.191, 1.350, 1.435, 1.450, 1.370, 1.250,
                                            1.136, 1.030, 0.948, 0.900, 0.869, 0.844, 0.825,
                                            0.810, 0.801, 0.799, 0.800, 0.800};
+constexpr double kKheffReach = 0.800;
 
 // ORC VPP Documentation 2023, 5.4.3, the fcdmult table against flat.
 constexpr std::array<double, 15> kFcdFlat = {0.10, 0.20, 0.30, 0.40, 0.50, 0.55, 0.60, 0.65,
@@ -59,10 +61,10 @@ double fcdmult(double flat) { return interpolate(kFcdFlat, kFcdMult, flat); }
 
 // ORC VPP Documentation 2023, 5.6.2: only the part of the headsail beyond the foretriangle, the
 // overlap behind the mast, is blanketed, from 135 degrees to fully at 180.
-double headsail_blanketing(double beta, double area, double foretriangle_area) {
+double headsail_blanketing(double beta, double area, double foretriangle_area, double scale) {
     if (beta <= 135.0 * kDeg || !(area > 0.0)) return 1.0;
     const double f = (area - std::min(area, foretriangle_area)) / area;
-    return 1.0 - f * (beta - 135.0 * kDeg) / (45.0 * kDeg);
+    return std::max(0.0, 1.0 - scale * f * (beta - 135.0 * kDeg) / (45.0 * kDeg));
 }
 
 std::string trim_text(const std::string& text) {
@@ -301,8 +303,12 @@ SailSetParams load_sail_set_params(const std::filesystem::path& boat_dir,
     const double flotation_z = transform.at("flotation_z_in_body").number();
     const Vec3 offset(transform.at("stem_x_in_body").number(), 0.0, flotation_z);
 
+    const Calibration calibration = load_calibration(boat_dir);
     SailSetParams p;
     p.reference_point = reference_point;
+    p.effective_height_scale = calibration.effective_height;
+    p.kheff_rise_scale = calibration.kheff_upwind_rise;
+    p.blanketing_scale = calibration.headsail_blanketing;
     p.rig.waterplane_z =
         hull_doc.root().at("conditions").at("sailing").at("result").at("sinkage_m").number();
     const Node rig = rig_doc.root();
@@ -327,6 +333,10 @@ SailSetParams load_sail_set_params(const std::filesystem::path& boat_dir,
                 SailCoefficients::load(sail_data_dir / ("orc_" + s.type + ".csv")));
         }
         s.coefficients = table;
+        const bool main = table->params().role == SailRole::main;
+        s.lift_scale = main ? calibration.main_lift : calibration.jib_lift;
+        s.parasitic_drag_scale =
+            main ? calibration.main_parasitic_drag : calibration.jib_parasitic_drag;
         s.area = entry.at("area").positive_value();
         s.tack = entry.at("tack").at("value").vec3() + offset;
         s.head = entry.at("head").at("value").vec3() + offset;
@@ -457,23 +467,25 @@ SailPlanCoefficients SailSet::combine(const RigState& rig, std::vector<SailState
                                     ? c.section(awa, *trim.angle_of_attack, s.high_coefficients)
                                     : c.optimal(awa, s.high_coefficients);
         const double bk = c.params().role == SailRole::headsail
-                              ? headsail_blanketing(beta, st.area, rig.foretriangle_area)
+                              ? headsail_blanketing(beta, st.area, rig.foretriangle_area,
+                                                    params_.blanketing_scale)
                               : 1.0;
         const double weight = bk * st.area;
-        const double cl = trim.flat * sec.cl;
+        const double cl = trim.flat * s.lift_scale * sec.cl;
+        const double cd0 = s.parasitic_drag_scale * sec.cd;
         st.blanketing = bk;
         st.aoa = sec.aoa;
         st.luffing = sec.luffing;
         st.stalled = sec.stalled;
         st.backed = sec.backed;
         st.cl = cl;
-        st.cd_parasitic = sec.cd;
+        st.cd_parasitic = cd0;
 
         area += st.area;
         weight_sum += weight;
         beta_sum += beta * weight;
         cl_sum += cl * weight;
-        cd0_sum += sec.cd * weight;
+        cd0_sum += cd0 * weight;
         quadratic += c.params().kp * cl * cl * weight;
     }
 
@@ -491,8 +503,10 @@ SailPlanCoefficients SailSet::combine(const RigState& rig, std::vector<SailState
     plan.cd_parasitic = cd0_sum / area;
     plan.kpp = std::abs(cl_sum) > kTiny ? quadratic * area / (cl_sum * cl_sum) : 0.0;
     const double mean_beta = weight_sum > kTiny ? beta_sum / weight_sum : 0.0;
-    plan.kheff = kheff(std::min(mean_beta, 0.5 * kPi));
-    plan.effective_height = plan.effective_span * plan.kheff * rig.top_above_water;
+    plan.kheff = kKheffReach +
+                 params_.kheff_rise_scale * (kheff(std::min(mean_beta, 0.5 * kPi)) - kKheffReach);
+    plan.effective_height =
+        params_.effective_height_scale * plan.effective_span * plan.kheff * rig.top_above_water;
     const double induced =
         plan.effective_height > kTiny
             ? area / (kPi * plan.effective_height * plan.effective_height)

@@ -1,0 +1,9 @@
+[
+  {
+    "tws": 6,
+    "point": "run",
+    "metric": "bsp",
+    "max_error_pct": 6.0,
+    "reason": "owner accepted: 6 kn run +5.1% against Python-VPP, marginal"
+  }
+]

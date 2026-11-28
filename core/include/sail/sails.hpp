@@ -141,6 +141,9 @@ struct SailSpec {
     Vec3 centre_of_effort = Vec3::Zero();
     // Weight of ORC's high coefficient set against the low one, 1 = high as Python-VPP uses.
     double high_coefficients = 1.0;
+    // Calibration factors on the section Cl and on Cd0 (Calibration::main_lift and so on).
+    double lift_scale = 1.0;
+    double parasitic_drag_scale = 1.0;
 };
 
 // Rig dimensions the combined-rig method needs beyond the sails. Heights are hull-frame z.
@@ -163,9 +166,15 @@ struct SailSetParams {
     double air_density = 1.225;
     // Hull-frame location of the body's reference point (the CG).
     Vec3 reference_point = Vec3::Zero();
+    // Calibration factors on heff, on the rise of kheff above 0.8 and on the headsail's
+    // blanketing loss 1 - bk.
+    double effective_height_scale = 1.0;
+    double kheff_rise_scale = 1.0;
+    double blanketing_scale = 1.0;
 };
 
-// Reads sails.json, rig.json and hull_hydro.json from a boat dossier directory and each sail's
+// Reads sails.json, rig.json, hull_hydro.json and the optional calibration.json (see
+// load_calibration) from a boat dossier directory and each sail's
 // coefficients from `sail_data_dir` / orc_<type>.csv. Every top-level object of sails.json with
 // tack, head, clew and area entries is a sail, of the type its optional "type" entry names, else
 // its key. Positions move from the provisional stem frame to the hull frame with hull_hydro.json's

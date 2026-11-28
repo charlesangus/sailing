@@ -56,6 +56,24 @@ TEST_CASE("golden-section search finds the maximum of a known 1-D function") {
     CHECK(capped.evaluations == 5);
 }
 
+TEST_CASE("parabolic peak search resolves a flat-topped maximum within 0.3 degrees") {
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    const double peak = 38.3 * kDeg;
+    int calls = 0;
+    const auto f = [&](double twa) {
+        ++calls;
+        const double d = (twa - peak) / kDeg;
+        return 5.0 - 0.002 * d * d - 0.00002 * d * d * d * d;
+    };
+    const GoldenResult plain = golden_section_max(f, 30.0 * kDeg, 60.0 * kDeg, 0.035, 7);
+    calls = 0;
+    const GoldenResult g = parabolic_peak_max(f, 30.0 * kDeg, 60.0 * kDeg, 0.035, 7, 0.0035);
+    CHECK(g.evaluations == calls);
+    CHECK(g.evaluations <= 7);
+    CHECK(std::abs(g.x - peak) < 0.3 * kDeg);
+    CHECK(g.f >= plain.f);
+}
+
 TEST_CASE("settle detection flags an oscillation as not settled and a convergence as settled") {
     constexpr double dt = 0.05;
     constexpr std::size_t kWindow = 120;

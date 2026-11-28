@@ -32,6 +32,18 @@ SailSetParams j80_params() {
     return sail::load_sail_set_params(kBoatDir, kSailDir, mass.cg());
 }
 
+SailSetParams j80_uncalibrated_params() {
+    SailSetParams p = j80_params();
+    p.effective_height_scale = 1.0;
+    p.kheff_rise_scale = 1.0;
+    p.blanketing_scale = 1.0;
+    for (sail::SailSpec& s : p.sails) {
+        s.lift_scale = 1.0;
+        s.parasitic_drag_scale = 1.0;
+    }
+    return p;
+}
+
 // True wind angle `twa_deg` off the bow of a boat in sailing(), positive from starboard.
 std::shared_ptr<const sail::WindField> wind(double knots, double twa_deg) {
     return std::make_shared<sail::UniformWind>(knots * kKnot, 90.0 + twa_deg);
@@ -70,7 +82,7 @@ TEST_CASE("sail spline reproduces the ORC table nodes") {
 // CD by eq. 5.47 with fcdmult(1) = 1.06 and fcdj, and the headsail blanketing of 5.6.2. J/80
 // dimensions from data/boats/j80. Computed independently of this code.
 TEST_CASE("J/80 combined sail coefficients match the ORC method") {
-    const SailSet sails(j80_params(), wind(10.0, 0.0));
+    const SailSet sails(j80_uncalibrated_params(), wind(10.0, 0.0));
     struct Row {
         double awa_deg, cl, cd;
     };

@@ -80,6 +80,8 @@ struct WindageCrew {
 struct WindageParams {
     // kg/m^3, the SailSet default.
     double air_density = 1.225;
+    // Calibration factor on every element's drag (Calibration::windage).
+    double drag_scale = 1.0;
     // Hull-frame location of the body's reference point (the CG).
     Vec3 reference_point = Vec3::Zero();
     std::vector<WindageBox> boxes;
@@ -88,8 +90,9 @@ struct WindageParams {
     WindageCrew crew;
 };
 
-// Reads windage.json, rig.json, particulars.json, hull_hydro.json and mass.json of a boat
-// dossier directory; windage.json describes how the elements are built. No crew is aboard.
+// Reads windage.json, rig.json, particulars.json, hull_hydro.json, mass.json and the optional
+// calibration.json of a boat dossier directory; windage.json describes how the elements are
+// built. No crew is aboard.
 // Throws BoatDataError on a missing or malformed file or field.
 WindageParams load_windage_params(const std::filesystem::path& boat_dir,
                                   const Vec3& reference_point);

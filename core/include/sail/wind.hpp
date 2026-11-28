@@ -22,6 +22,25 @@ private:
     Vec3 velocity_;
 };
 
+// Steady, horizontal wind over flat water at world z = 0 whose speed grows with height by the
+// logarithmic profile of ORC VPP Documentation 2023, 7.1, which Python-VPP also uses:
+// speed(z) = speed_ref ln(z / z0) / ln(z_ref / z0), z held at 10 z0 or more. Both reference
+// polars give the true wind speed at z_ref = 10 m with z0 = 0.005 m, so the sails and windage
+// see less than it. Direction as UniformWind.
+class LogProfileWind final : public WindField {
+public:
+    // Throws std::invalid_argument unless roughness is positive and reference_height is more
+    // than 10 roughness lengths.
+    LogProfileWind(double speed_at_reference_mps, double from_direction_deg,
+                   double reference_height = 10.0, double roughness = 0.005);
+    Vec3 sample(const Vec3& world_point, double) const override;
+
+private:
+    Vec3 reference_velocity_;
+    double roughness_;
+    double inverse_log_reference_;
+};
+
 enum class Tack {
     // Apparent wind over the starboard side (AWA >= 0).
     Starboard,
