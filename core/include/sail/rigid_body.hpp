@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -32,6 +34,10 @@ struct State {
     // CG velocity in the world frame.
     Vec3 world_linear_velocity() const { return orientation * linear_velocity; }
 };
+
+// rad, positive starboard down: the Euler roll atan2(R21, R22) of a body-to-world rotation, the
+// heel that heel_trim_orientation (equilibrium.hpp) was given, whatever the trim.
+inline double heel_angle(const Mat3& rotation) { return std::atan2(rotation(2, 1), rotation(2, 2)); }
 
 // Force and moment acting on the body, both in the body frame, moment taken about the CG.
 struct Wrench {
@@ -77,5 +83,9 @@ struct BodyProperties {
 //
 // The added-mass Coriolis and Munk terms are applied here: force modules must not add them.
 void integrate_step(const BodyProperties& body, const Wrench& wrench, double dt, State& state);
+
+// C(nu) nu above for the generalised mass `m`: the Coriolis, centripetal and Munk terms the
+// integrator subtracts from the applied wrench.
+Vec6 gyroscopic(const Mat6& m, const Vec6& nu);
 
 }  // namespace sail

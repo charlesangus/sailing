@@ -48,6 +48,14 @@ The reference is ORC's 2019 J/80 International One Design certificate (https://d
 - Topside flare to the certificate beam 2.488 m (from 2.212 m), k0 = 1.12505, peaking 4.712 m from the stem, by straightening each section above its DWL vertex. The immersed body is untouched: canoe volume, BWL and LWL are unchanged, waterplane area changes by +2e-5 relative. No section gains an inflection and the DWL kink is 0 deg.
 - Keel root fairing preserving the 1.501 m draft: the keel keeps its H.1 root depth (-0.331 m) and span (1.170 m); the 0.089-0.103 m gap to the morphed canoe body is filled by extruding Section 1 vertically (0.00612 m^3 in the morph, 0.00603 m^3 in the mesh).
 
+## Constant added mass
+
+`sail::strip_added_mass` keeps the added mass constant in the body frame, so it does not follow heel. Sized from `hull_physics.obj` sections at constant displacement, with half-ellipses matched to each section's waterline beam and area:
+
+- Heave is about 15x sway, so at heel phi the world-horizontal term cos^2 * sway + sin^2 * heave is 3.2x the heeled section's value at 30 deg and 4.3x at 45 deg. The sideways effective mass of the sailing J/80 (1809 kg) is about 47% high at 30 deg.
+- The rotated heave term gives a spurious Munk pitch moment (Z_w - X_u) u w from leeway, about 1.6 kN*m at 3 m/s, 4 deg leeway and 30 deg heel.
+- At 30 deg the heeled section's horizontal term is +40%, its vertical -33% and its roll term about the waterline centre -62% of upright, so the roll inertia Ixx + A_roll is about 9% high.
+
 ## Downwind calibration target
 
 The certificate has no non-spinnaker velocity table (only non-spinnaker time allowances), so the downwind main + jib target is the Python-VPP polar `pyvpp_polar_nospi.csv` (Python-VPP commit 9b9fe8f, 1809 kg sailing condition with 350 kg crew, TWS 6-20 kn, TWA 20-180 deg). Known limitations:

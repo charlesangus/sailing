@@ -52,8 +52,13 @@ struct LoadedBoat {
 // Throws UsageError when --boat is missing or not a directory.
 LoadedBoat load_boat(const Options& options, sail::MassConfiguration configuration);
 
+// m/s per knot.
+inline constexpr double kKnot = 0.514444;
+
 // "orc" or "dsyhs"; absent means the dossier's choice.
 std::optional<sail::HullResistanceKind> parse_resistance_model(const std::optional<std::string>& value);
+// The name parse_resistance_model() reads for `kind`.
+const char* resistance_model_name(sail::HullResistanceKind kind);
 
 // The full force model of --boat with the keel and rudder section from --section, by default
 // foils/naca0012.csv two directories above the boat dossier. Throws UsageError when --boat is

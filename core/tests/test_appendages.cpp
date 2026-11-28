@@ -46,7 +46,7 @@ std::shared_ptr<const FoilSection> naca0012() {
 }
 
 struct Foils {
-    MassModel model = MassModel::load(kBoatDir);
+    MassModel model = MassModel::load(kBoatDir, sail::MassConfiguration::sailing);
     Appendages app{naca0012(), naca0012(), kBoatDir, model.cg()};
 
     Wrench apply(const State& state, double t = 0.0) {
@@ -87,7 +87,7 @@ double heel_of(const State& state) {
 // Roll decay from 5 degrees at forward speed `speed`, as a damping ratio from the log decrement
 // of the first two heel extremes.
 double roll_decay_zeta(double speed, bool with_foils) {
-    const MassModel model = MassModel::load(kBoatDir);
+    const MassModel model = MassModel::load(kBoatDir, sail::MassConfiguration::sailing);
     const sail::BodyProperties body = model.body_properties();
     const sail::BoatHydrostatics hydro = sail::load_boat_hydrostatics(kBoatDir);
     const sail::HydrostaticParams params = hydro.params(model, sail::kGravity);
@@ -361,7 +361,7 @@ TEST_CASE("J/80 roll decay stays plausible at rest and at 3 m/s") {
     CHECK(rest - rest_lumped >= 0.0);
     CHECK(rest - rest_lumped < 0.01);
     CHECK(fast > rest + 0.02);
-    CHECK(fast <= 0.16);
+    CHECK(fast <= 0.19);
 }
 
 TEST_CASE("rudder hinge moment about the leading-edge stock") {

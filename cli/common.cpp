@@ -83,6 +83,10 @@ std::optional<sail::HullResistanceKind> parse_resistance_model(const std::option
     throw UsageError("--model must be orc or dsyhs, got '" + *value + "'");
 }
 
+const char* resistance_model_name(sail::HullResistanceKind kind) {
+    return kind == sail::HullResistanceKind::orc ? "orc" : "dsyhs";
+}
+
 std::unique_ptr<sail::BoatSim> load_boat_sim(const Options& options,
                                              const sail::BoatSimOptions& sim_options) {
     const auto dir = options.get("--boat");

@@ -47,8 +47,6 @@ constexpr const char* kUsage =
     "state by source, the integrator's rigid-body and added-mass terms included. finite is\n"
     "false, with the exit status 1, if any state or rudder value was not finite at any step.\n";
 
-constexpr double kKnot = 0.514444;
-
 Json nullable(const std::optional<double>& v) { return v ? Json(*v) : Json(nullptr); }
 
 // particulars.json `loa.value`, empty when absent.
@@ -122,16 +120,17 @@ int turn(const Options& options) {
     Json budget = nullptr;
     if (all_finite) {
         const sail::State& s = sim.state();
-        const sail::Wrench all = boat->evaluate(s, sim.time());
+        // At the time of the last step's accumulate(), which the rudder has already seen, so its
+        // actuator does not step again and the angle is the one that step used.
+        const double last_step_time =
+            static_cast<double>(sim.step_count() - 1) * sail::Simulation::kFixedDt;
+        const sail::Wrench all = boat->evaluate(s, last_step_time);
         const sail::HullForceResult& hull = boat->hull().last_result();
         const Vec3 arm = boat->hull().params().clr_point - boat->hull().params().reference_point;
         const double sway = arm.cross(hull.damping_force).z();
         sail::Vec6 nu;
         nu << s.linear_velocity, s.angular_velocity;
-        const sail::Vec6 p = boat->body().generalised_mass() * nu;
-        const Vec3 p_lin = p.head<3>();
-        const Vec3 p_ang = p.tail<3>();
-        const Vec3 omega = s.angular_velocity;
+        const double gyroscopic = -sail::gyroscopic(boat->body().generalised_mass(), nu)(5);
         budget = Json::object();
         budget["rudder"] = boat->appendages().rudder().last_wrench().moment.z();
         budget["keel"] = boat->appendages().keel().last_wrench().moment.z();
@@ -140,15 +139,14 @@ int turn(const Options& options) {
         budget["hull_sway_damping"] = sway;
         budget["hull_munk_correction"] = hull.munk_correction;
         budget["hull_yaw_damping"] = hull.damping_moment.z();
-        budget["coriolis_and_munk"] = -(omega.cross(p_ang) + s.linear_velocity.cross(p_lin)).z();
-        budget["sum"] = all.moment.z() + budget["coriolis_and_munk"].get<double>();
+        budget["coriolis_and_munk"] = gyroscopic;
+        budget["sum"] = all.moment.z() + gyroscopic;
     }
 
     Json out;
     out["config"] = "sailing";
     out["total_mass_kg"] = boat->body().mass;
-    out["resistance_model"] =
-        boat->hull().resistance_model().kind() == sail::HullResistanceKind::orc ? "orc" : "dsyhs";
+    out["resistance_model"] = resistance_model_name(boat->hull().resistance_model().kind());
     out["speed_kn"] = speed_kn;
     out["tiller"] = tiller;
     out["rudder_command_deg"] = deg(boat->appendages().rudder().actuator().command());

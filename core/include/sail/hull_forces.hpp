@@ -37,7 +37,7 @@ struct HullForceParams {
     double induced_drag_factor = 0.5;
     // m/s. Side force and induced drag fade in as smoothstep(U / blend_speed).
     double blend_speed = 0.1;
-    // Body-frame sway velocity at the CLR (N*s/m, N*s^2/m^2) and body-frame yaw rate
+    // Horizontal lateral velocity u_lat at the CLR (N*s/m, N*s^2/m^2) and body-frame yaw rate
     // (N*m*s/rad, N*m*s^2/rad^2).
     DampingCoefficient sway;
     DampingCoefficient yaw;
@@ -56,7 +56,9 @@ struct HullForceParams {
 HullForceParams load_hull_force_params(const std::filesystem::path& boat_dir,
                                        const Vec3& reference_point, const BodyProperties& body);
 
-// The same for the model's boat directory, CG and body properties.
+// The same for the model's boat directory, CG and body properties. Throws std::invalid_argument
+// unless the model is in the sailing configuration, the one whose displacement conditions.sailing
+// describes.
 HullForceParams load_hull_force_params(const MassModel& model);
 
 // What the latest accumulate() computed.
@@ -75,7 +77,8 @@ struct HullForceResult {
     Vec3 resistance_world = Vec3::Zero();
     Vec3 side_force_world = Vec3::Zero();
     Vec3 induced_drag_world = Vec3::Zero();
-    // Body frame: sway damping force at the CLR, and the yaw damping moment.
+    // Body frame: sway damping force at the CLR, along the horizontal 90 degrees to port of the
+    // heading, and the yaw damping moment.
     Vec3 damping_force = Vec3::Zero();
     Vec3 damping_moment = Vec3::Zero();
     // Body-frame yaw moment of the Munk correction, N*m.
@@ -95,8 +98,9 @@ struct HullForceResult {
 // atan2, and below blend_speed the leeway terms fade to zero.
 //
 // Force modules add no Munk terms, yet this one adds the yaw moment
-// +f (A_sway - A_surge) u v, with u and v the body-frame water-relative velocity at the CLR, also
-// faded in by smoothstep(U / blend_speed). It is not a second Munk term but a lift correction to
+// +f (A_sway - A_surge) u v, with u and v the body-frame CG velocity the integrator uses (no
+// current, no yaw-rate arm), so it is exactly -f times the integrator's term before the fade-in by
+// smoothstep(U / blend_speed). It is not a second Munk term but a lift correction to
 // the integrator's: the integrator applies the full ideal-fluid moment -(A_sway - A_surge) u v from
 // the constant added mass, which assumes attached potential flow over the whole body. A lifting
 // canoe body sheds its cross-flow from about the maximum section aft, and slender-body theory with

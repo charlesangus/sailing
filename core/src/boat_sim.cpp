@@ -29,15 +29,6 @@ bool finite(const State& s) {
            s.linear_velocity.allFinite() && s.angular_velocity.allFinite();
 }
 
-class BodyThrust final : public ForceModule {
-public:
-    explicit BodyThrust(double thrust) : thrust_(thrust) {}
-    void accumulate(const State&, double, Wrench& wrench) override { wrench.force.x() += thrust_; }
-
-private:
-    double thrust_;
-};
-
 // Algebraic (Kasa) fit about the centroid, then the RMS of the geometric residuals.
 std::optional<TurnCircle> fit_circle(const std::vector<TurnSample>& samples, std::size_t begin,
                                      std::size_t end) {
@@ -79,7 +70,7 @@ std::optional<TurnCircle> fit_circle(const std::vector<TurnSample>& samples, std
 
 BoatSim::BoatSim(const std::filesystem::path& boat_dir, std::shared_ptr<const FoilSection> section,
                  const BoatSimOptions& options)
-    : model_(MassModel::load(boat_dir, options.configuration)),
+    : model_(MassModel::load(boat_dir, MassConfiguration::sailing)),
       body_(model_.body_properties()),
       hydro_(load_boat_hydrostatics(boat_dir)),
       params_(hydro_.params(model_)),
@@ -108,6 +99,7 @@ Wrench BoatSim::evaluate(const State& state, double t) {
     hull_.accumulate(state, t, w);
     appendages_.keel().accumulate(state, t, w);
     appendages_.rudder().accumulate(state, t, w);
+    thrust_.accumulate(state, t, w);
     return w;
 }
 
@@ -119,6 +111,7 @@ Simulation& BoatSim::start(const State& initial) {
     sim_->add_module(damping_);
     sim_->add_module(hull_);
     appendages_.add_to(*sim_);
+    sim_->add_module(thrust_);
     return *sim_;
 }
 
@@ -129,6 +122,8 @@ Simulation& BoatSim::simulation() {
 
 TowResult solve_tow(BoatSim& boat, const TowRequest& request) {
     TowResult out;
+    boat.thrust().set_thrust(0.0);
+    boat.appendages().rudder().reset();
     EquilibriumRequest still_request;
     still_request.heel = request.heel;
     still_request.free_trim = true;
@@ -211,9 +206,8 @@ TurnResult run_turn(BoatSim& boat, const TurnRequest& request) {
     out.tow_converged = true;
     out.thrust = straight.tow_force_world.x();
 
-    BodyThrust thrust_module(out.thrust);
+    boat.thrust().set_thrust(out.thrust);
     Simulation& sim = boat.start(straight.state);
-    sim.add_module(thrust_module);
     boat.appendages().set_controls(Controls{request.tiller});
 
     const auto steps = static_cast<std::size_t>(std::llround(request.duration / Simulation::kFixedDt));
@@ -241,7 +235,7 @@ TurnResult run_turn(BoatSim& boat, const TurnRequest& request) {
         p.heading = heading_unwrapped;
         p.yaw_rate = (r * s.angular_velocity).z();
         p.speed = std::hypot(v.x(), v.y());
-        p.heel = std::asin(std::clamp(r.col(1).z(), -1.0, 1.0));
+        p.heel = heel_angle(r);
         p.drift = p.speed > 1e-6 ? std::atan2(across, along) : 0.0;
         p.rudder = boat.appendages().rudder_angle();
         out.samples.push_back(p);
@@ -249,6 +243,7 @@ TurnResult run_turn(BoatSim& boat, const TurnRequest& request) {
 
     record(sim.state(), 0.0, true);
     for (std::size_t i = 0; i < steps; ++i) {
+        const double step_time = sim.time();
         sim.step();
         const State& s = sim.state();
         const double hinge = boat.appendages().rudder_hinge_moment_Nm();
@@ -259,7 +254,7 @@ TurnResult run_turn(BoatSim& boat, const TurnRequest& request) {
         }
         if (std::abs(hinge) > std::abs(out.max_rudder_hinge_moment)) {
             out.max_rudder_hinge_moment = hinge;
-            out.max_rudder_hinge_moment_time = sim.time();
+            out.max_rudder_hinge_moment_time = step_time;
         }
         record(s, sim.time(), false);
     }

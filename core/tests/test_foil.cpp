@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <memory>
@@ -93,23 +94,42 @@ TEST_CASE("Low-angle lift slope matches Helmbold for AR 2 and AR 5") {
     }
 }
 
-TEST_CASE("Stall stays at the table's angle") {
+TEST_CASE("Finite-wing stall moves to the section stall over a / a0, keeping its Cl maximum") {
+    const double section_max = naca0012()->cl(naca0012()->stall_angle());
     for (const double ar : {2.0, 5.0}) {
         CAPTURE(ar);
         const Foil foil(naca0012(), wing(ar));
+        const double k = foil.lift_slope() / naca0012()->lift_slope();
+        CHECK(foil.stall_angle() == doctest::Approx(naca0012()->stall_angle() / k));
         double best = 0.0;
         double best_alpha = 0.0;
-        for (double a = 0.0; a <= 30.0; a += 0.25) {
+        for (double a = 0.0; a <= 60.0; a += 0.05) {
             const double cl = foil.lift_coefficient(a * kDeg);
             if (cl > best) {
                 best = cl;
                 best_alpha = a;
             }
         }
-        CHECK(best_alpha == doctest::Approx(13.0));
-        CHECK(foil.lift_coefficient(14.0 * kDeg) < best);
-        CHECK(foil.lift_coefficient(16.0 * kDeg) < foil.lift_coefficient(14.0 * kDeg));
-        CHECK(foil.lift_coefficient(-13.0 * kDeg) == doctest::Approx(-best));
+        const double stall_deg = foil.stall_angle() / kDeg;
+        CHECK(std::abs(best_alpha - stall_deg) < 0.1);
+        CHECK(std::abs(best / section_max - 1.0) < 0.1);
+        CHECK(foil.lift_coefficient((stall_deg + 3.0) * kDeg) < best);
+        CHECK(foil.lift_coefficient((stall_deg + 6.0) * kDeg) <
+              foil.lift_coefficient((stall_deg + 3.0) * kDeg));
+        CHECK(foil.lift_coefficient(-foil.stall_angle()) ==
+              doctest::Approx(-foil.lift_coefficient(foil.stall_angle())));
+        CHECK(foil.lift_coefficient(90.0 * kDeg) == doctest::Approx(naca0012()->cl(90.0 * kDeg)));
+    }
+
+    const std::filesystem::path boat = kDataDir / "boats" / "j80";
+    for (const char* name : {"keel", "rudder"}) {
+        CAPTURE(name);
+        const Foil foil(naca0012(), sail::load_foil_force_params(boat, name).foil);
+        double best = 0.0;
+        for (double a = 0.0; a <= 60.0; a += 0.05) best = std::max(best, foil.lift_coefficient(a * kDeg));
+        CHECK(std::abs(best / section_max - 1.0) < 0.1);
+        MESSAGE(name << ": finite-wing stall " << foil.stall_angle() / kDeg << " deg, CL max "
+                     << best);
     }
 }
 
@@ -169,8 +189,9 @@ TEST_CASE("Induced drag is CL^2 / (pi AR_eff e)") {
     const double alpha = 5.0 * kDeg;
     const double cl = foil.lift_coefficient(alpha);
     const double expected = cl * cl / (kPi * 4.0 * 0.8);
+    const double k = foil.lift_slope() / naca0012()->lift_slope();
     CHECK(foil.induced_drag_coefficient(alpha) == doctest::Approx(expected));
-    CHECK(foil.drag_coefficient(alpha) - naca0012()->cd(alpha) == doctest::Approx(expected));
+    CHECK(foil.drag_coefficient(alpha) - naca0012()->cd(k * alpha) == doctest::Approx(expected));
     const FoilForces f = foil.evaluate(inflow_at(alpha, 2.0), kRho);
     CHECK(f.cd_induced == doctest::Approx(expected));
     CHECK(f.drag.norm() == doctest::Approx(0.5 * kRho * 4.0 * 2.0 * f.cd));
@@ -181,19 +202,19 @@ TEST_CASE("Centre of pressure moves aft past stall") {
     p.geometry.quarter_chord_centre = Vec3(0.25, 1.0, 0.0);
     const Foil foil(naca0012(), p);
     CHECK(foil.cp_chord_fraction(5.0 * kDeg) == doctest::Approx(0.25));
-    CHECK(foil.cp_chord_fraction(13.0 * kDeg) == doctest::Approx(0.25));
+    CHECK(foil.cp_chord_fraction(foil.stall_angle()) == doctest::Approx(0.25));
     CHECK(foil.cp_chord_fraction(90.0 * kDeg) == doctest::Approx(0.5));
     CHECK(foil.cp_chord_fraction(178.0 * kDeg) == doctest::Approx(0.75));
     double previous = 0.25;
-    for (double a = 14.0; a <= 90.0; a += 2.0) {
+    for (double a = std::ceil(foil.stall_angle() / kDeg); a <= 90.0; a += 2.0) {
         const double x = foil.cp_chord_fraction(a * kDeg);
         CHECK(x > previous);
         previous = x;
     }
     CHECK(foil.centre_of_pressure(5.0 * kDeg).x() == doctest::Approx(0.25));
-    CHECK(foil.centre_of_pressure(40.0 * kDeg).x() > 0.3);
-    CHECK(foil.evaluate(inflow_at(40.0 * kDeg, 2.0), kRho).centre_of_pressure.x() ==
-          doctest::Approx(foil.centre_of_pressure(40.0 * kDeg).x()));
+    CHECK(foil.centre_of_pressure(60.0 * kDeg).x() > 0.3);
+    CHECK(foil.evaluate(inflow_at(60.0 * kDeg, 2.0), kRho).centre_of_pressure.x() ==
+          doctest::Approx(foil.centre_of_pressure(60.0 * kDeg).x()));
 }
 
 TEST_CASE("J/80 keel module resists leeway and takes moments about the CG") {

@@ -231,6 +231,7 @@ Body-frame values in `appendages.json` `foils`, recomputed from the OBJ by `--ch
 
 - **Effective aspect ratio** is an assumption: 2x geometric for the keel, because a fin fixed to the hull with no gap treats the hull bottom as a reflection plane (an upper bound, lowered by heel and leeway), and 1x for the rudder, which hangs clear of the hull with no end plate. The physics may replace both with its own end-plate model.
 - **Rudder stock:** (-4.2949, 0, 0) m with a vertical axis. H.1 gives the leading edge as vertical, and no source gives the rake of the transom pintle line.
+  With the stock on the leading edge, the rudder hinge moment is restoring at every angle. In attached flow the centre of pressure is 0.25c aft of the stock, and it moves aft toward 0.5c at 90 deg. In reverse flow the normal force reverses, but the centre of pressure (0.75c) stays aft of the stock, so the moment's sign relative to the angle of attack flips while the arm keeps its sign.
 
 ### Volumes against the displacement accounting
 
@@ -301,6 +302,7 @@ Python-VPP keeps the jib drawing at every TWA and does not blanket it behind the
 
 `hull_resistance.json` selects the core's `orc` canoe-body resistance model: the drag-surface half of the ORC VPP Documentation 2023 residuary resistance (section 6.3.1, surfaces in `data/hull/ORCi_Drag_Surfaces.csv`) and the viscous resistance of eq. 6.2. Hull inputs are `hull_hydro.json` `conditions.sailing.result`: Fn and LVR on Lwl, LVR on the canoe volume, BTR = Bwl / Tc, Rr scaled by the 1809 kg sailing displacement, Rv on the canoe wetted area with Re on 0.85 Lwl. For this hull LVR is 6.023 and BTR 6.805, both inside the surfaces (LVR 3 to 9, BTR 2.5 to 9).
 
+- The inputs are at level trim on purpose. ORC and Python-VPP both evaluate the hull at the level DWL, and the canoe-body match with Python-VPP depends on it. The sailing `MassModel` CG lies aft of `lcb_x_total`, so the simulated boat floats about 0.8 deg stern-down (`sailsim tow --speeds 0` gives `trim_deg` -0.81). Lwl, Tc, wetted area, sinkage and the CLR (`hull_forces.json`) do not follow that trim.
 - Water density 1025 kg/m^3 and dynamic viscosity 1.19e-3 Pa s are Python-VPP's defaults; ORC 2023 gives no values.
 - The immersed-rail factor on Rr, 1 + 0.0004 (heel_deg - 30)^2 above 30 deg, is **not** in ORC 2023. It is Python-VPP's, kept because the Python-VPP downwind target uses it.
 - A `conditions.sailing.orc` block in `hull_hydro.json` (`lsm1`, `lsm4`, `lsm6`, `btr_effective`, `heeled` tables of `wetted_area`, `btr`, `lvr` over `heel_deg`) would replace the stand-ins. This dossier has none yet.

@@ -14,17 +14,6 @@ Mat3 skew(const Vec3& a) {
     return s;
 }
 
-// Kirchhoff Coriolis/centripetal term for momentum p = M nu, Munk moment included.
-Vec6 gyroscopic(const Mat6& m, const Vec6& nu) {
-    const Vec6 p = m * nu;
-    const Vec3 v = nu.head<3>();
-    const Vec3 w = nu.tail<3>();
-    Vec6 c;
-    c.head<3>() = w.cross(p.head<3>());
-    c.tail<3>() = w.cross(p.tail<3>()) + v.cross(p.head<3>());
-    return c;
-}
-
 Mat6 gyroscopic_jacobian(const Mat6& m, const Vec6& nu) {
     const Vec6 p = m * nu;
     const Mat3 pl = skew(p.head<3>());
@@ -43,6 +32,16 @@ constexpr int kMaxNewtonIterations = 8;
 constexpr double kNewtonTolerance = 1e-13;
 
 }  // namespace
+
+Vec6 gyroscopic(const Mat6& m, const Vec6& nu) {
+    const Vec6 p = m * nu;
+    const Vec3 v = nu.head<3>();
+    const Vec3 w = nu.tail<3>();
+    Vec6 c;
+    c.head<3>() = w.cross(p.head<3>());
+    c.tail<3>() = w.cross(p.tail<3>()) + v.cross(p.head<3>());
+    return c;
+}
 
 Mat6 BodyProperties::rigid_mass() const {
     Mat6 m = Mat6::Zero();

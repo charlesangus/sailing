@@ -6,7 +6,7 @@
       "unit": "deg",
       "source": "calibrated: rudder stop set so the J/80 turns in 1.5 LOA at 5 kn with full tiller (user-supplied target)",
       "confidence": "calibrated",
-      "method": "the steady turning diameter is set by rudder geometry, D ≈ 2·|x_rudder|/tan(δ_max); 35° gives 12.1 m = 1.51 LOA in `sailsim turn --speed 5 --tiller 1`"
+      "method": "the steady turning diameter is set by rudder geometry, D ≈ 2·|x_rudder|/tan(δ_max); 35° gives 12.16 m = 1.51 LOA in `sailsim turn --speed 5 --tiller 1`"
     },
     "max_rate": {
       "value": 60.0,

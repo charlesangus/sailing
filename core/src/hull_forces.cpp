@@ -88,6 +88,10 @@ HullForceParams load_hull_force_params(const std::filesystem::path& boat_dir,
 }
 
 HullForceParams load_hull_force_params(const MassModel& model) {
+    if (model.configuration() != MassConfiguration::sailing) {
+        throw std::invalid_argument(
+            "load_hull_force_params: the hull forces are measured at the sailing configuration");
+    }
     return load_hull_force_params(model.data().directory, model.cg(), model.body_properties());
 }
 
@@ -124,7 +128,7 @@ void HullForceModule::accumulate(const State& state, double t, Wrench& wrench) {
     r.u_lat = y_h.dot(relative_world);
     r.speed = std::hypot(r.u_ax, r.u_lat);
     r.leeway = std::atan2(r.u_lat, r.u_ax);
-    r.heel = std::atan2(rot(2, 1), rot(2, 2));
+    r.heel = heel_angle(rot);
 
     const double cb = std::cos(r.leeway);
     const double sb = std::sin(r.leeway);
@@ -145,12 +149,15 @@ void HullForceModule::accumulate(const State& state, double t, Wrench& wrench) {
     const Vec3 hydro_body =
         rot.transpose() * (r.resistance_world + r.side_force_world + r.induced_drag_world);
 
-    r.damping_force = Vec3(0.0, damping_force(params_.sway, relative_body.y()), 0.0);
+    // Horizontal, like the side force: the body-y velocity of a heeled hull carries part of the
+    // heave velocity, which DampingModule already damps.
+    r.damping_force = rot.transpose() * (damping_force(params_.sway, r.u_lat) * y_h);
     r.damping_moment = Vec3(0.0, 0.0, damping_force(params_.yaw, state.angular_velocity.z()));
 
+    // The integrator's velocities, so that this is exactly -f times its Munk yaw moment.
     r.munk_correction = blend * params_.munk_correction_fraction *
                         (params_.added_mass_sway - params_.added_mass_surge) *
-                        relative_body.x() * relative_body.y();
+                        state.linear_velocity.x() * state.linear_velocity.y();
 
     const Vec3 force = hydro_body + r.damping_force;
     r.wrench.force = force;

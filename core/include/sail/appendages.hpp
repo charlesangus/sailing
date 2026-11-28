@@ -43,8 +43,8 @@ RudderParams load_rudder_params(const std::filesystem::path& boat_dir,
 // Downwash: the keel's angle of attack alpha_k is computed here from the same state, so module
 // order does not matter. The rudder's inflow (water relative to the blade's quarter-chord centre)
 // is rotated about the blade's span direction by eps = k * alpha_k, which lowers the rudder's
-// angle of attack by exactly eps. Beyond the keel section's stall angle alpha_k is held at the
-// stall angle and fades to 0 at 90 degrees as the keel's circulation collapses, and with flow
+// angle of attack by exactly eps. Beyond the keel's finite-wing stall angle alpha_k is held at
+// that angle and fades to 0 at 90 degrees as the keel's circulation collapses, and with flow
 // from the keel's trailing edge there is no downwash, since the rudder is then upstream.
 class RudderForceModule final : public ForceModule {
 public:
@@ -57,6 +57,9 @@ public:
     void accumulate(const State& state, double t, Wrench& wrench) override;
 
     void set_controls(const Controls& controls) { actuator_.set_command(controls); }
+    // Puts the rudder at `angle` (rad) holding there, and forgets the previous accumulate()'s
+    // time, so the next accumulate() steps nothing whatever its time.
+    void reset(double angle = 0.0);
     const RudderActuator& actuator() const { return actuator_; }
     RudderActuator& actuator() { return actuator_; }
     // rad, the angle the latest accumulate() used.
@@ -67,13 +70,7 @@ public:
     const Wrench& last_wrench() const { return last_wrench_; }
     // N*m, the hydrodynamic moment on the blade about the stock axis at the latest accumulate():
     // ((r_cp - r_stock) x F) . stock_axis, with F and the centre of pressure from last_result().
-    // Positive tends to increase the rudder angle (+delta, right-handed about the stock axis);
-    // negative tends to return it toward zero when delta is positive. The stock is on the
-    // leading edge, so in attached flow the centre of pressure is 0.25c aft of it and the moment
-    // is restoring. It stays restoring as the centre of pressure moves aft toward 0.5c at 90
-    // degrees, and in reverse flow the normal force reverses while the centre of pressure stays
-    // aft of the stock (0.75c), so the sign relative to alpha flips but the arm never changes
-    // sign. It is a value from the latest accumulate(), not a derivative of the angle.
+    // Positive tends to increase the rudder angle (+delta, right-handed about the stock axis).
     double rudder_hinge_moment_Nm() const { return hinge_moment_; }
     // rad: the keel's angle of attack and the downwash angle eps at the latest accumulate().
     double keel_alpha() const { return keel_alpha_; }

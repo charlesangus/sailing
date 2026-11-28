@@ -43,8 +43,6 @@ constexpr const char* kUsage =
     "the trim (positive bow down) and trim_change_deg its change; roll_moment_Nm and\n"
     "yaw_moment_Nm are what holding the heel and heading takes, about world x and z.\n";
 
-constexpr double kKnot = 0.514444;
-
 double parse_number(std::string_view text, const char* what) {
     double v = 0.0;
     const char* end = text.data() + text.size();
@@ -103,8 +101,7 @@ int tow(const Options& options) {
     sail::BoatSimOptions sim_options;
     sim_options.resistance = parse_resistance_model(options.get("--model"));
     const auto boat = load_boat_sim(options, sim_options);
-    const char* model_name =
-        boat->hull().resistance_model().kind() == sail::HullResistanceKind::orc ? "orc" : "dsyhs";
+    const char* model_name = resistance_model_name(boat->hull().resistance_model().kind());
 
     bool converged = true;
     Json points = Json::array();

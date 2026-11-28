@@ -5,6 +5,7 @@
 #include <limits>
 #include <memory>
 #include <numbers>
+#include <stdexcept>
 #include <vector>
 
 #include "sail/damping.hpp"
@@ -33,7 +34,7 @@ const std::filesystem::path kBoatDir = std::filesystem::path(SAIL_TEST_DATA_DIR)
 constexpr double kDeg = std::numbers::pi / 180.0;
 
 struct Hull {
-    MassModel model = MassModel::load(kBoatDir);
+    MassModel model = MassModel::load(kBoatDir, sail::MassConfiguration::sailing);
     std::shared_ptr<const sail::HullResistanceModel> resistance =
         sail::load_hull_resistance(kBoatDir);
     HullForceParams params = sail::load_hull_force_params(model);
@@ -187,7 +188,7 @@ TEST_CASE("hull forces are finite and vanish smoothly at and near zero speed") {
 }
 
 TEST_CASE("water moving with the hull gives no force") {
-    MassModel model = MassModel::load(kBoatDir);
+    MassModel model = MassModel::load(kBoatDir, sail::MassConfiguration::sailing);
     const Vec3 v_world(1.2, -0.4, 0.0);
     HullForceModule module(sail::load_hull_resistance(kBoatDir),
                            sail::load_hull_force_params(model),
@@ -224,7 +225,7 @@ TEST_CASE("sway and yaw damping oppose their velocities; moving the CG moves the
 }
 
 TEST_CASE("J/80 drifting sideways at 1 m/s decelerates monotonically") {
-    const MassModel model = MassModel::load(kBoatDir);
+    const MassModel model = MassModel::load(kBoatDir, sail::MassConfiguration::sailing);
     const sail::BodyProperties body = model.body_properties();
     const sail::BoatHydrostatics hydro = sail::load_boat_hydrostatics(kBoatDir);
     const sail::HydrostaticParams hparams = hydro.params(model);
@@ -276,21 +277,48 @@ TEST_CASE("the Munk correction cancels the fraction f of the integrator's Munk y
     without.munk_correction_fraction = 0.0;
     HullForceModule uncorrected(hull.resistance, without);
 
-    for (const Vec3& v : {Vec3(2.5, 0.2, 0.0), Vec3(3.0, -0.25, 0.1), Vec3(-1.0, 0.3, 0.0)}) {
-        CAPTURE(v.transpose());
-        const State s = moving(v);
-        Vec6 nu;
-        nu << s.linear_velocity, s.angular_velocity;
-        const Vec6 p = body.generalised_mass() * nu;
-        const double integrator_munk = -v.cross(p.head<3>()).z();
+    for (const double r : {0.0, -0.3}) {
+        for (const Vec3& v : {Vec3(2.5, 0.2, 0.0), Vec3(3.0, -0.25, 0.1), Vec3(-1.0, 0.3, 0.0)}) {
+            CAPTURE(r);
+            CAPTURE(v.transpose());
+            State s = moving(v);
+            s.angular_velocity = Vec3(0.0, 0.0, r);
+            Vec6 nu;
+            nu << s.linear_velocity, s.angular_velocity;
+            const Vec6 p = body.generalised_mass() * nu;
+            const double integrator_munk = -v.cross(p.head<3>()).z();
 
-        const Wrench w = hull.apply(s);
-        const double correction = hull.module.last_result().munk_correction;
-        CHECK(correction == doctest::Approx(-0.5 * integrator_munk));
-        Wrench base;
-        uncorrected.accumulate(s, 0.0, base);
-        CHECK(w.moment.z() - base.moment.z() == doctest::Approx(correction));
-        CHECK((w.force - base.force).norm() == 0.0);
+            const Wrench w = hull.apply(s);
+            const double correction = hull.module.last_result().munk_correction;
+            CHECK(correction == doctest::Approx(-0.5 * integrator_munk));
+            Wrench base;
+            uncorrected.accumulate(s, 0.0, base);
+            CHECK(w.moment.z() - base.moment.z() == doctest::Approx(correction));
+            CHECK((w.force - base.force).norm() == 0.0);
+        }
+    }
+}
+
+TEST_CASE("hull force parameters need the sailing configuration") {
+    const MassModel measurement = MassModel::load(kBoatDir);
+    CHECK_THROWS_AS(sail::load_hull_force_params(measurement), std::invalid_argument);
+}
+
+TEST_CASE("sway damping ignores the heave velocity of a heeled hull") {
+    Hull hull;
+    for (const double heel : {20.0, 45.0}) {
+        CAPTURE(heel);
+        State s = moving(Vec3::Zero(), Quat(Eigen::AngleAxisd(heel * kDeg, Vec3::UnitX())));
+        s.linear_velocity = s.orientation.conjugate() * Vec3(0.0, 0.0, -0.4);
+        hull.apply(s);
+        CHECK(hull.module.last_result().damping_force.norm() < 1e-12);
+
+        s.linear_velocity = s.orientation.conjugate() * Vec3(0.0, 0.5, -0.4);
+        hull.apply(s);
+        const Vec3 world = s.orientation * hull.module.last_result().damping_force;
+        CHECK(world.y() ==
+              doctest::Approx(-(hull.params.sway.linear + hull.params.sway.quadratic * 0.5) * 0.5));
+        CHECK(std::abs(world.z()) < 1e-12);
     }
 }
 

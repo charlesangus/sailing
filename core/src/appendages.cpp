@@ -81,7 +81,7 @@ RudderForceModule::RudderForceModule(std::shared_ptr<const FoilSection> section,
     : foil_(std::move(section), checked(params).foil.foil),
       params_(std::move(params)),
       keel_(keel.params().geometry),
-      keel_stall_(keel.section().stall_angle()),
+      keel_stall_(keel.stall_angle()),
       current_(current ? std::move(current) : std::make_shared<StillWater>()),
       actuator_(params_.max_angle, params_.rate) {
     params_.stock_axis.normalize();
@@ -93,6 +93,13 @@ void RudderForceModule::set_downwash_factor(double k) {
         throw std::invalid_argument("RudderForceModule: downwash factor must be non-negative");
     }
     params_.downwash_factor = k;
+}
+
+void RudderForceModule::reset(double angle) {
+    actuator_.reset(angle);
+    has_time_ = false;
+    last_time_ = 0.0;
+    pose(actuator_.angle());
 }
 
 void RudderForceModule::pose(double angle) {

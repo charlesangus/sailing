@@ -21,15 +21,27 @@
 namespace sail {
 
 struct BoatSimOptions {
-    MassConfiguration configuration = MassConfiguration::sailing;
     // The model hull_resistance.json names when empty.
     std::optional<HullResistanceKind> resistance;
 };
 
+// A constant force along the body x axis at the CG, N.
+class BodyThrustModule final : public ForceModule {
+public:
+    void accumulate(const State&, double, Wrench& wrench) override { wrench.force.x() += thrust_; }
+    void set_thrust(double thrust) { thrust_ = thrust; }
+    double thrust() const { return thrust_; }
+
+private:
+    double thrust_ = 0.0;
+};
+
 // A boat dossier assembled into its force modules: gravity, hydrostatics, damping, canoe-body
-// hull forces, keel and rudder, all about the configuration's CG, in still flat water. The
-// modules are registered with the Simulation by reference, so a BoatSim is neither copyable nor
-// movable.
+// hull forces, keel, rudder and a body-x thrust (zero until set), all about the sailing
+// configuration's CG, in still flat water. Only the sailing configuration is offered because the
+// hull forces take their displacement, CLR and sinkage from hull_hydro.json conditions.sailing.
+// The modules are registered with the Simulation by reference, so a BoatSim is neither copyable
+// nor movable.
 class BoatSim {
 public:
     // `section` is the keel and rudder section table. Throws as the loaders it calls do.
@@ -56,8 +68,10 @@ public:
     const HullForceModule& hull() const { return hull_; }
     Appendages& appendages() { return appendages_; }
     const Appendages& appendages() const { return appendages_; }
+    BodyThrustModule& thrust() { return thrust_; }
+    const BodyThrustModule& thrust() const { return thrust_; }
 
-    // Flat-water equilibrium of the configuration's mass, hydrostatics alone.
+    // Flat-water equilibrium of the sailing mass, hydrostatics alone.
     Equilibrium equilibrium(const EquilibriumRequest& request = {}) const;
 
     // Sum of every module's wrench at `state` and time `t`, body frame about the CG, leaving
@@ -81,6 +95,7 @@ private:
     DampingModule damping_;
     HullForceModule hull_;
     Appendages appendages_;
+    BodyThrustModule thrust_;
     std::optional<Simulation> sim_;
 };
 
@@ -93,7 +108,7 @@ struct TowRequest {
     double leeway = 0.0;
 };
 
-// Body-frame force on one component, resolved along and across the track.
+// World-frame force on one component, resolved along and across the track.
 struct TowComponent {
     // N, positive opposing the motion: -F . d with d the unit horizontal velocity.
     double resistance = 0.0;
@@ -129,8 +144,9 @@ struct TowResult {
 // Finds the heave and trim at which the vertical force and the pitch moment about world y vanish
 // with every module acting at the towed velocity, by Newton iteration from the static
 // equilibrium, the heel and heading held. The tow force is then the direct horizontal balance at
-// that state, applied at the CG, so the boat would not accelerate. The modules are left
-// evaluated at the balance, rudder at whatever angle it holds.
+// that state, applied at the CG, so the boat would not accelerate. The thrust is set to zero and
+// the rudder centred, its actuator time base cleared, first. The modules are left evaluated at
+// the balance.
 TowResult solve_tow(BoatSim& boat, const TowRequest& request);
 
 // A turning manoeuvre in flat water from the tow balance at `speed` (m/s, negative for sternway)
@@ -156,7 +172,7 @@ struct TurnSample {
     double yaw_rate = 0.0;
     // m/s, horizontal.
     double speed = 0.0;
-    // rad, positive starboard down.
+    // rad, heel_angle() of the attitude.
     double heel = 0.0;
     // rad, the CG velocity's angle off the heading, positive to port.
     double drift = 0.0;
@@ -203,14 +219,13 @@ struct TurnResult {
     // run when the heading has turned at least 90 degrees in all. Empty when neither, or when not
     // finite.
     std::optional<TurnSteady> steady;
-    // N*m, signed, and the time it peaked.
+    // N*m, signed, and the time of the step whose accumulate() computed it.
     double max_rudder_hinge_moment = 0.0;
     double max_rudder_hinge_moment_time = 0.0;
 };
 
-// Runs the turn on `boat`, replacing its Simulation. The boat's modules are left evaluated at the
-// last state. The Simulation must not be stepped afterwards: it still refers to the thrust
-// module, which does not outlive this call.
+// Runs the turn on `boat`, replacing its Simulation; boat.thrust() keeps the turn's thrust, so the
+// Simulation may be stepped on. The boat's modules are left evaluated at the last state.
 TurnResult run_turn(BoatSim& boat, const TurnRequest& request);
 
 }  // namespace sail

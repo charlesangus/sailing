@@ -187,6 +187,11 @@ Foil::Foil(std::shared_ptr<const FoilSection> section, FoilParams params)
     const double t = std::tan(g.half_chord_sweep());
     lift_slope_ = 2.0 * kPi * ar / (2.0 + std::sqrt(ar * ar * (1.0 + t * t) + 4.0));
     attached_scale_ = lift_slope_ / section_->lift_slope();
+    // Capped halfway to 90 degrees so that a very low aspect ratio still leaves a separated range.
+    stall_ = std::min(section_->stall_angle() / attached_scale_,
+                      0.5 * (section_->stall_angle() + kHalfPi));
+    reverse_stall_ = std::min(section_->reverse_stall_angle() / attached_scale_,
+                              0.5 * (section_->reverse_stall_angle() + kHalfPi));
     induced_factor_ = 1.0 / (kPi * ar * params_.oswald_efficiency);
     mac_ = g.mean_aerodynamic_chord();
 }
@@ -201,32 +206,34 @@ void Foil::set_pose(const Vec3& quarter_chord_centre, const Vec3& span_direction
     params_.geometry.chord_direction = c;
 }
 
-double Foil::separation(double alpha) const {
-    const double a = std::min(std::abs(std::remainder(alpha, 2.0 * kPi)), kPi);
-    const double fwd = section_->stall_angle();
-    const double rev = section_->reverse_stall_angle();
-    if (a <= kHalfPi) return smoothstep((a - fwd) / (kHalfPi - fwd));
-    return smoothstep((kPi - rev - a) / (kHalfPi - rev));
+Foil::Coefficients Foil::coefficients(double alpha) const {
+    const double wrapped = std::remainder(alpha, 2.0 * kPi);
+    const double a = std::min(std::abs(wrapped), kPi);
+    const bool ahead = a <= kHalfPi;
+    const double from_flow = ahead ? a : kPi - a;
+    const double stall = ahead ? stall_ : reverse_stall_;
+    const double sep = smoothstep((from_flow - stall) / (kHalfPi - stall));
+    const double scaled = from_flow * (attached_scale_ + (1.0 - attached_scale_) * sep);
+    const double section_alpha = std::copysign(ahead ? scaled : kPi - scaled, wrapped);
+
+    Coefficients c;
+    c.cl = section_->cl(section_alpha);
+    c.cd_induced = (1.0 - sep) * c.cl * c.cl * induced_factor_;
+    c.cd = section_->cd(section_alpha) + c.cd_induced;
+    c.cp_chord_fraction = ahead ? 0.25 + 0.25 * sep : 0.75 - 0.25 * sep;
+    return c;
 }
 
-double Foil::lift_coefficient(double alpha) const {
-    const double s = separation(alpha);
-    return section_->cl(alpha) * (attached_scale_ + (1.0 - attached_scale_) * s);
-}
+double Foil::lift_coefficient(double alpha) const { return coefficients(alpha).cl; }
 
 double Foil::induced_drag_coefficient(double alpha) const {
-    const double cl = lift_coefficient(alpha);
-    return (1.0 - separation(alpha)) * cl * cl * induced_factor_;
+    return coefficients(alpha).cd_induced;
 }
 
-double Foil::drag_coefficient(double alpha) const {
-    return section_->cd(alpha) + induced_drag_coefficient(alpha);
-}
+double Foil::drag_coefficient(double alpha) const { return coefficients(alpha).cd; }
 
 double Foil::cp_chord_fraction(double alpha) const {
-    const double s = separation(alpha);
-    const double a = std::abs(std::remainder(alpha, 2.0 * kPi));
-    return a <= kHalfPi ? 0.25 + 0.25 * s : 0.75 - 0.25 * s;
+    return coefficients(alpha).cp_chord_fraction;
 }
 
 Vec3 Foil::centre_of_pressure(double alpha) const {
@@ -246,11 +253,11 @@ FoilForces Foil::evaluate(const Vec3& inflow, double density) const {
     r.speed = r.inflow.norm();
     r.alpha = std::atan2(r.inflow.dot(n), r.inflow.dot(c));
 
-    const double sep = separation(r.alpha);
-    r.cl = section_->cl(r.alpha) * (attached_scale_ + (1.0 - attached_scale_) * sep);
-    r.cd_induced = (1.0 - sep) * r.cl * r.cl * induced_factor_;
-    r.cd = section_->cd(r.alpha) + r.cd_induced;
-    r.cp_chord_fraction = std::abs(r.alpha) <= kHalfPi ? 0.25 + 0.25 * sep : 0.75 - 0.25 * sep;
+    const Coefficients k = coefficients(r.alpha);
+    r.cl = k.cl;
+    r.cd_induced = k.cd_induced;
+    r.cd = k.cd;
+    r.cp_chord_fraction = k.cp_chord_fraction;
     r.centre_of_pressure =
         g.quarter_chord_centre + (r.cp_chord_fraction - 0.25) * mac_ * c;
 

@@ -114,11 +114,14 @@ struct FoilForces {
 // written as 0.5 rho S |u| (CL u x s + CD u), so nothing divides by the speed.
 //
 // Finite span: the Helmbold lift slope a = 2 pi A / (2 + sqrt(A^2 (1 + tan^2 sweep_half) + 4)),
-// A the effective aspect ratio, scales the section Cl by k = a / a0 (a0 the section slope) in
-// attached flow, |alpha| up to the stall angle and from 180 degrees less the reverse stall angle
-// on. Between those and 90 degrees k rises to 1 as a smoothstep, so stall stays at the table's
-// angle and the separated-flow coefficients are the table's. Induced drag CL^2 / (pi A e) is
-// weighted by 1 - that smoothstep, so it fades out as the flow separates.
+// A the effective aspect ratio, scales the angle at which the section table is read by
+// k = a / a0 (a0 the section slope): in attached flow the finite wing at alpha has the section's
+// coefficients at k alpha, so it reaches the section's Cl maximum at the stall angle divided by k.
+// Past that, up to 90 degrees, the scale on the angle rises to 1 as a smoothstep, so the
+// separated-flow coefficients near 90 degrees are the table's. Reverse flow is treated the same
+// way about 180 degrees with the reverse stall angle. Either stall angle is capped halfway between
+// the section's and 90 degrees. Induced drag CL^2 / (pi A e) is weighted by 1 - that smoothstep,
+// so it fades out as the flow separates.
 //
 // The centre of pressure is on the mean aerodynamic chord through quarter_chord_centre, at 0.25 of
 // it in attached flow, moving with the same smoothstep to 0.5 at 90 degrees and on to 0.75 in
@@ -142,6 +145,10 @@ public:
 
     // Per rad, Helmbold.
     double lift_slope() const { return lift_slope_; }
+    // rad: where the finite wing reaches the section's Cl maximum, ahead and in reverse flow
+    // (the latter measured from pi).
+    double stall_angle() const { return stall_; }
+    double reverse_stall_angle() const { return reverse_stall_; }
 
     // Re-aims the foil, e.g. a rudder turned about its stock. chord_direction is made normal to
     // span_direction. Throws as the constructor does.
@@ -152,13 +159,20 @@ public:
     const FoilSection& section() const { return *section_; }
 
 private:
-    // 0 in attached flow, 1 at 90 degrees.
-    double separation(double alpha) const;
+    struct Coefficients {
+        double cl = 0.0;
+        double cd = 0.0;
+        double cd_induced = 0.0;
+        double cp_chord_fraction = 0.25;
+    };
+    Coefficients coefficients(double alpha) const;
 
     std::shared_ptr<const FoilSection> section_;
     FoilParams params_;
     double lift_slope_ = 0.0;
     double attached_scale_ = 1.0;
+    double stall_ = 0.0;
+    double reverse_stall_ = 0.0;
     double induced_factor_ = 0.0;
     double mac_ = 0.0;
 };
