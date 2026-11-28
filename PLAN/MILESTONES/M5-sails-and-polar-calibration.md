@@ -78,7 +78,7 @@ TWS 6/10/16 kn.
   - approach: Load a small set of documented multipliers from `calibration.json` (main/jib Cl max, Cd0, effective-height factor, interaction factor, hull resistance factor, windage factor) and tune them, fewest changes first, until `compare_polar.py` passes at TWS 6/10/16: against the ORC certificate for the beat and fixed TWA ≤ 75°, and against the Python-VPP main+jib polar from 90° to 180° and at the run optimum (the certificate's speeds from ~90° are spinnaker numbers); beat BSP and VMG gated at 5%, beat angle reported but not gated; residuals accepted by the owner listed in the report. Heel at each point must be plausible (≤ ~25° upwind at 16 kn with reef/flat as the trimmer chooses). Commit the final report and the final `sailsim polar` output as `data/boats/j80/sim_polar.csv` (TWS 6–20 × TWA beat–180, the sim's own polar). Record each multiplier's final value and rationale in `calibration.json`.
   - verify: `compare_polar.py` reports all points within 5% and beat angle within 2° at TWS 6/10/16.
   - size: L
-- [ ] M5.P3.T2 — Polar regression test
+- [x] M5.P3.T2 — Polar regression test
   - files: core/tests/test_j80_polar.cpp
   - approach: ctest (Release only, labelled `slow`, run with the `bench` preset — Release, tests on, no GDExtension; the `release` preset has tests off) runs a reduced polar — TWS 10, TWA 45/90/135 with stored optimal trim from M5.P3.T1 — and asserts BSP within 5% of the reference.
   - verify: `ctest --preset bench -L slow` passes.
