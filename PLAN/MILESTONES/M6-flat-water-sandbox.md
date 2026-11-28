@@ -31,8 +31,8 @@ panel scaffold and a debug HUD. Constant uniform wind.
 
 - [ ] M6.P1.T1 — `SailBoat` GDExtension node
   - files: gdext/src/sail_boat.hpp, gdext/src/sail_boat.cpp, gdext/src/frames.hpp, gdext/src/register_types.cpp, game/tests/test_sail_boat.gd
-  - approach: `SailBoat` (Node3D) owns a core `Simulation` built from a `boat_dir` property (`res://` path resolved to `data/boats/j80`, copied or symlinked into the game at build). `_process(delta)` calls `advance(delta)` and sets its transform from the interpolated state via `frames.hpp` (core Z-up → Godot Y-up, the only conversion point). Exposes control setters (tiller, mainsheet, traveler, backstay, jib sheets, jib car, reef) and read-only state (BSP, heel, leeway, AWA/AWS, TWA/TWS, rudder angle, hinge moment, per-sail angle/AoA/luff state, boom angle), and wind setters (TWS, direction).
-  - verify: `game/tests/test_sail_boat.gd` headless: with trimmed sails at TWA 90°, after 30 s simulated the boat's speed is within 10% of the calibrated polar at TWS 10.
+  - approach: `SailBoat` (Node3D) owns a core `BoatSim` (M5: it already assembles the whole sailing boat — sails, sheets, windage, crew, appendages — and exposes `set_controls`, `set_wind`, `step()`) built from a `boat_dir` property (`res://` path resolved to `data/boats/j80`, copied or symlinked into the game at build). `_process(delta)` calls `advance(delta)` and sets its transform from the interpolated state via `frames.hpp` (core Z-up → Godot Y-up, the only conversion point). Exposes control setters (tiller, mainsheet, traveler, backstay, jib sheets, jib car, reef) and read-only state (BSP, heel, leeway, AWA/AWS, TWA/TWS, rudder angle, hinge moment, per-sail angle/AoA/luff state, boom angle), and wind setters (TWS, direction). The wind is a `LogProfileWind` (TWS at 10 m, ORC log profile), the same field the polar was calibrated in, so sim speeds match `sim_polar.csv`.
+  - verify: `game/tests/test_sail_boat.gd` headless: with trimmed sails at TWA 90°, after 30 s simulated the boat's speed is within 10% of the calibrated polar (`data/boats/j80/sim_polar.csv`, which also stores the trims) at TWS 10.
   - size: L
 - [ ] M6.P1.T2 — Input map for keyboard+mouse and gamepad
   - files: game/project.godot, game/scripts/boat_input.gd, game/tests/test_input.gd
@@ -59,7 +59,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - size: L
 - [ ] M6.P2.T4 — Bathymetry grounding in the core
   - files: core/include/sail/grounding.hpp, core/src/grounding.cpp, core/tests/test_grounding.cpp
-  - approach: Load the bathymetry heightmap (stb_image via FetchContent) with bilinear sampling. A `ForceModule` checks physics-mesh and appendage vertices against seabed height: penetrating vertices get a stiff spring + damper normal force and Coulomb friction, capped to keep the 200 Hz step stable.
+  - approach: Load the bathymetry heightmap (stb_image via FetchContent) with bilinear sampling. A `ForceModule` checks physics-mesh and appendage vertices against seabed height: penetrating vertices get a stiff spring + damper normal force and Coulomb friction, capped to keep the 200 Hz step stable. Add it to `BoatSim`'s module set (with `set_reference_point` for crew-driven CG moves) so the game and harnesses get it.
   - verify: doctest: boat driven at 5 kn onto a 10° slope stops within a boat length without NaNs or bounce-explosion; with the sail drive reversed (or the boat heeled by crew), it moves off again.
   - size: M
 - [ ] M6.P2.T5 — Placeable marks
@@ -82,5 +82,6 @@ panel scaffold and a debug HUD. Constant uniform wind.
 
 ## Decisions
 
+- 2026-11-28 — Freshness check at claim: `SailBoat` wraps M5's `BoatSim` rather than a bare `Simulation`; the sandbox wind is `LogProfileWind` (constant, but height-profiled as calibrated); grounding joins `BoatSim`'s modules.
 - 2026-11-27 — Coastline scene with simple grounding: user chose a bay with coastline over open water, with bathymetry contact physics and no land wind shadow.
 - 2026-11-27 — Keyboard+mouse and gamepad equally: user's choice; both are tested in headless input tests.
