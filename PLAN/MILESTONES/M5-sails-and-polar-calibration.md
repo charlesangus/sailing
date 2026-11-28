@@ -32,7 +32,7 @@ TWS 6/10/16 kn.
 
 ## Phase 5.1: Aerodynamics
 
-- [ ] M5.P1.T1 — Apparent wind at the rig
+- [x] M5.P1.T1 — Apparent wind at the rig
   - files: core/include/sail/wind.hpp, core/src/wind.cpp, core/tests/test_wind.cpp
   - approach: A `WindField` interface (`sample(world_pos, t) → world velocity`) with a `UniformWind` implementation (TWS, direction). A helper computes apparent wind at a body-frame point from the boat state (velocity + ω × r), and the effective AWA/AWS in the heeled sail plane (heel reduces the effective angle per standard cos-heel projection). M7 adds gradient and gusts behind the same interface.
   - verify: doctest: boat at 5 kn into a 10 kn TWS at TWA 90° gives the analytic AWA/AWS; heel 20° reduces effective AWA as expected; ω contributes at the masthead.
