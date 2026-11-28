@@ -67,7 +67,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - approach: "Drop mark" action places a windward mark 0.5 nm upwind and a leeward mark at the boat's position (relative to current wind), replacing any previous pair. Buoys bob slightly; no collision.
   - verify: `test_marks.gd` headless: after the action, two buoys exist at the expected positions relative to wind.
   - size: M
-- [ ] M6.P2.T6 — Cameras
+- [x] M6.P2.T6 — Cameras
   - files: game/scripts/camera_rig.gd, game/scenes/boat.tscn
   - approach: Chase (behind and above, heading-smoothed), orbit (mouse drag / right stick, zoom), helm POV (in the cockpit at the helmsman's eye, rolls and pitches with the boat). Camera-switch action cycles them.
   - verify: `test_cameras.gd` headless cycles all three without errors; UAT for feel.
@@ -86,5 +86,6 @@ panel scaffold and a debug HUD. Constant uniform wind.
 - 2026-11-28 — `SailBoat` calls `BoatSim::advance`, which runs the crew controller before each fixed step through a new `Simulation::advance` hook (calling `simulation().advance()` directly would freeze the crew the polar was calibrated with). Core exceptions are caught at the GDExtension boundary; on error the node goes inert. Boat data reaches the game as configure-time symlinks game/data/{boats,sails,foils,hull} → data/* (gitignored), so the res:// path is res://data/boats/j80.
 - 2026-11-28 — Bay heightmap: seed 7, 1024² at 4 m/px, deterministic sha256 in meta.json; written as a minimal 16-bit PNG (filter 0, no metadata) and decoded in GDScript because Godot 4.7.2's PNG loader reduces 16-bit to 8-bit. Start (0, −1600) 31.6 m deep, harbour mouth ~710 m wide at ≥3 m. Terrain triangle winding/normals not yet viewed rendered — UAT.
 - 2026-11-28 — Grounding: stb_image (pinned) decodes the 16-bit bathymetry; 656 decimated contact points (dense on the keel); contact natural frequency 10 Hz (k 7.1e6 N/m shared across contacts, 0.5 critical damping), smoothed Coulomb friction μ 0.5; a footprint broad phase makes deep water free. Registered in BoatSim only when a bathymetry is set, so harness and polar results are unchanged (byte-identical). `reset()` keeps the bathymetry: it belongs to the scene.
+- 2026-11-28 — Cameras: chase (heading smoothed, horizon level), orbit, helm POV parented to the hull (eye estimated from the tiller geometry; check at UAT). The right stick trims the backstay except in orbit mode, where it orbits; T/G always trim the backstay.
 - 2026-11-27 — Coastline scene with simple grounding: user chose a bay with coastline over open water, with bathymetry contact physics and no land wind shadow.
 - 2026-11-27 — Keyboard+mouse and gamepad equally: user's choice; both are tested in headless input tests.
