@@ -34,8 +34,14 @@ turning behaviour.
   - size: M
 - [ ] M4.P1.T2 — Hull force module: resistance, side force and yaw damping
   - files: core/include/sail/hull_forces.hpp, core/src/hull_forces.cpp, core/tests/test_hull_forces.cpp
-  - approach: `ForceModule` applying M4.P1.T1's resistance opposite the hull's horizontal velocity at the centre of lateral resistance, plus a canoe-body side force from leeway (DSYHS heeled side-force terms, low aspect lifting body) and its induced drag, plus linear+quadratic sway and yaw damping. Smooth at zero speed and valid in sternway.
+  - approach: `ForceModule` applying M4.P1.T1's resistance opposite the hull's horizontal velocity at the centre of lateral resistance, plus a canoe-body side force from leeway (DSYHS heeled side-force terms, low aspect lifting body) and its induced drag, plus linear+quadratic sway and yaw damping. Smooth at zero speed and valid in sternway. The integrator already includes the added-mass Coriolis and Munk-moment terms (Kirchhoff formulation, M3 decision), so this module must not add a Munk moment or any other added-mass-derived term again.
   - verify: doctest: towed at constant velocity, the module's drag equals M4.P1.T1's function; a hull drifting sideways at 1 m/s decelerates monotonically; no NaN at zero speed.
+  - size: M
+
+- [ ] M4.P1.T3 — Decide and implement heel/immersion dependence of added mass
+  - files: core/src/mass_model.cpp, core/include/sail/mass_model.hpp, core/tests/test_mass_model.cpp
+  - approach: Added mass is a constant diagonal from upright strip estimates (`strip_added_mass`). Decide, with the hull forces in place, whether sway/heave/roll added mass should vary with heel and draft (e.g. re-evaluate the strip estimate from the immersed sections at the current pose, updated at a low rate), or stay constant with the limitation documented. If it varies, update `BodyProperties` through the existing mid-run update path (`Simulation::set_body`) and keep it consistent with the integrator's Kirchhoff added-mass terms. Record the decision in this milestone's Decisions.
+  - verify: doctest: if implemented, added mass equals the upright value at 0° heel and changes smoothly and monotonically with heel; the J/80 drop and knockdown tests still pass. If kept constant, the decision and its rationale are recorded and `strip_added_mass` documents the limitation.
   - size: M
 
 ## Phase 4.2: Appendage foils
@@ -69,3 +75,4 @@ turning behaviour.
 ## Decisions
 
 - 2026-11-27 — Tiller steering, no wheel: the J/80 is tiller-steered.
+- 2026-11-28 — Inbox change-request (from the M3 - Rigid Body and Hydrostatics review) applied: added M4.P1.T3 to decide heel/immersion-dependent added mass.
