@@ -72,7 +72,7 @@ LoadedBoat load_boat(const Options& options, sail::MassConfiguration configurati
     }
     sail::MassModel model = sail::MassModel::load(*dir, configuration);
     sail::BoatHydrostatics hydro = sail::load_boat_hydrostatics(*dir);
-    sail::HydrostaticParams params = hydro.params(model, kGravity);
+    sail::HydrostaticParams params = hydro.params(model);
     return {std::move(model), std::move(hydro), std::move(params)};
 }
 

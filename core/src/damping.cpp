@@ -1,76 +1,29 @@
 #include "sail/damping.hpp"
 
 #include <cmath>
-#include <fstream>
 #include <numbers>
 #include <stdexcept>
-#include <string>
 #include <utility>
 
-#include <nlohmann/json.hpp>
+#include "dossier_json.hpp"
+#include "sail/gravity.hpp"
 
 namespace sail {
 
 namespace {
 
-using Json = nlohmann::ordered_json;
+using dossier::Node;
 
-constexpr double kGravity = 9.81;
-
-class Reader {
-public:
-    Reader(const std::filesystem::path& file, const Json& json, std::string where)
-        : file_(&file), json_(&json), where_(std::move(where)) {}
-
-    [[noreturn]] void fail(const std::string& message) const {
-        throw BoatDataError(*file_,
-                            (where_.empty() ? std::string("top level") : where_) + ": " + message);
-    }
-
-    Reader at(const std::string& key) const {
-        if (!json_->is_object()) fail("expected an object");
-        const auto it = json_->find(key);
-        if (it == json_->end()) fail("missing field '" + key + "'");
-        return Reader(*file_, *it, where_.empty() ? key : where_ + "." + key);
-    }
-
-    double number() const {
-        if (!json_->is_number()) fail("expected a number");
-        const double v = json_->get<double>();
-        if (!std::isfinite(v)) fail("expected a finite number");
-        return v;
-    }
-
-    double value() const { return at("value").number(); }
-
-private:
-    const std::filesystem::path* file_;
-    const Json* json_;
-    std::string where_;
-};
-
-Json read_json(const std::filesystem::path& file) {
-    std::ifstream in(file);
-    if (!in) throw BoatDataError(file, "cannot open file");
-    try {
-        Json json = Json::parse(in);
-        if (!json.is_object()) throw BoatDataError(file, "top level: expected an object");
-        return json;
-    } catch (const Json::exception& e) {
-        throw BoatDataError(file, std::string("malformed JSON: ") + e.what());
-    }
-}
-
-double positive(const Reader& node, double v) {
+double positive(const Node& node, double v) {
     if (!(v > 0.0)) node.fail("expected a positive number");
     return v;
 }
 
-DampingRatio parse_ratio(const Reader& dof) {
+DampingRatio parse_ratio(const Node& dof) {
     DampingRatio ratio;
-    const Reader linear = dof.at("zeta_linear");
-    const Reader quadratic = dof.at("zeta_quadratic");
-    const Reader reference = dof.at("reference_velocity");
+    const Node linear = dof.at("zeta_linear");
+    const Node quadratic = dof.at("zeta_quadratic");
+    const Node reference = dof.at("reference_velocity");
     ratio.zeta_linear = linear.value();
     ratio.zeta_quadratic = quadratic.value();
     ratio.reference_velocity = reference.value();
@@ -105,9 +58,8 @@ DampingCoefficient& DampingCoefficients::of(DampingDof dof) {
 }
 
 DampingSpec load_damping_spec(const std::filesystem::path& boat_dir) {
-    const std::filesystem::path file = boat_dir / "damping.json";
-    const Json json = read_json(file);
-    const Reader root(file, json, "");
+    const dossier::Document doc = dossier::read_document(boat_dir / "damping.json");
+    const Node root = doc.root();
     DampingSpec spec;
     spec.heave = parse_ratio(root.at("heave"));
     spec.roll = parse_ratio(root.at("roll"));
@@ -116,28 +68,16 @@ DampingSpec load_damping_spec(const std::filesystem::path& boat_dir) {
 }
 
 DampingStiffness dossier_stiffness(const BoatData& data) {
-    const std::filesystem::path part_file = data.directory / "particulars.json";
-    const std::filesystem::path hydro_file = data.directory / "hull_hydro.json";
-    const Json part_json = read_json(part_file);
-    const Json hydro_json = read_json(hydro_file);
-    const Reader part(part_file, part_json, "");
-    const Reader hydro(hydro_file, hydro_json, "");
-
-    const Reader sink = part.at("sink");
-    const Reader rm = part.at("righting_moment_1deg");
-    const Reader cw = hydro.at("result").at("cw");
     // kg/mm to kg/m.
-    const double waterplane_area = positive(sink.at("value"), sink.value()) * 1000.0 / data.density;
-    const double rm_1deg = positive(rm.at("value"), rm.value());
-    const double waterplane_cw = positive(cw, cw.number());
-
+    const double waterplane_area = data.sink * 1000.0 / data.density;
     const double rho_g = data.density * kGravity;
-    const double inertia_l = waterplane_cw * waterplane_cw * data.hull.bwl *
-                             data.hull.lwl * data.hull.lwl * data.hull.lwl / 12.0;
+    const double cw = data.hull.cw;
+    const double inertia_l = cw * cw * data.hull.bwl * data.hull.lwl * data.hull.lwl *
+                             data.hull.lwl / 12.0;
 
     DampingStiffness k;
     k.heave = rho_g * waterplane_area;
-    k.roll = rm_1deg / std::sin(std::numbers::pi / 180.0);
+    k.roll = data.righting_moment_1deg / std::sin(std::numbers::pi / 180.0);
     k.pitch = rho_g * inertia_l;
     return k;
 }

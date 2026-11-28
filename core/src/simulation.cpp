@@ -1,6 +1,7 @@
 #include "sail/simulation.hpp"
 
 #include <cmath>
+#include <initializer_list>
 #include <utility>
 
 namespace sail {
@@ -52,6 +53,14 @@ void Simulation::step() {
     previous_ = current_;
     integrate_step(body_, wrench, kFixedDt, current_);
     ++step_count_;
+}
+
+void Simulation::set_body(const BodyProperties& body, const Vec3& cg_shift) {
+    body_ = body;
+    for (State* s : {&current_, &previous_}) {
+        s->position += s->orientation * cg_shift;
+        s->linear_velocity += s->angular_velocity.cross(cg_shift);
+    }
 }
 
 double Simulation::alpha() const {

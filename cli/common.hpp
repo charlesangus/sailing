@@ -49,8 +49,6 @@ struct LoadedBoat {
 // Throws UsageError when --boat is missing or not a directory.
 LoadedBoat load_boat(const Options& options, sail::MassConfiguration configuration);
 
-constexpr double kGravity = 9.81;
-
 double deg(double rad);
 double rad(double deg);
 

@@ -133,14 +133,14 @@ TEST_CASE("J/80 total mass matches the dossier in each configuration") {
     CHECK(model.crew_mass() == doctest::Approx(411.0 + 65.8));
     CHECK(model.total_mass() == doctest::Approx(1438.0 + 411.0 + 65.8).epsilon(1e-12));
     CHECK(model.crew_position().y() == 0.0);
-    CHECK(model.crew_position().z() - data.flotation_z_in_body == doctest::Approx(0.708));
+    CHECK(model.crew_position().z() == doctest::Approx(0.708));
 }
 
 TEST_CASE("J/80 measurement-trim VCG equals the certificate VCGM") {
     const MassModel model = MassModel::load(kBoatDir);
     const BoatData& data = model.data();
     CHECK(data.vcgm == doctest::Approx(-0.076));
-    CHECK(std::abs(model.cg().z() - data.flotation_z_in_body - data.vcgm) < 1e-9);
+    CHECK(std::abs(model.cg().z() - data.vcgm) < 1e-9);
     CHECK(std::abs(model.cg().y()) < 1e-12);
 }
 
@@ -151,7 +151,7 @@ TEST_CASE("J/80 residual is solved inside its plausible band") {
     CHECK(res.in_displacement);
     CHECK(res.mass == doctest::Approx(1438.0 - (sum_mass(data, true) - res.mass)));
     CHECK(res.mass > 0.0);
-    const double height = res.cg.z() - data.flotation_z_in_body;
+    const double height = res.cg.z();
     CHECK(height >= 0.3);
     CHECK(height <= 1.1);
     CHECK(std::abs(res.cg.x() - data.hull.lcb_x_canoe) <= 0.5);

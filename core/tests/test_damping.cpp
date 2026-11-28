@@ -13,6 +13,7 @@
 #include "sail/hydrostatics.hpp"
 #include "sail/mass_model.hpp"
 #include "sail/mesh.hpp"
+#include "sail/gravity.hpp"
 #include "sail/simulation.hpp"
 
 namespace {
@@ -29,18 +30,8 @@ using sail::Wrench;
 
 const std::filesystem::path kBoatDir = std::filesystem::path(SAIL_TEST_DATA_DIR) / "boats" / "j80";
 
-constexpr double kG = 9.81;
+constexpr double kG = sail::kGravity;
 
-class Gravity final : public sail::ForceModule {
-public:
-    explicit Gravity(double mass) : mass_(mass) {}
-    void accumulate(const State& state, double, Wrench& wrench) override {
-        wrench.force += state.orientation.conjugate() * Vec3(0.0, 0.0, -mass_ * kG);
-    }
-
-private:
-    double mass_;
-};
 
 TEST_CASE("damping force law is odd, linear plus quadratic, on heave roll and pitch only") {
     DampingCoefficients c;
@@ -182,7 +173,7 @@ TEST_CASE("J/80 dropped into flat water oscillates at the heave period and decay
     dropped.angular_velocity.setZero();
 
     Simulation sim(body, dropped);
-    sim.add_module(std::make_unique<Gravity>(body.mass));
+    sim.add_module(std::make_unique<sail::GravityModule>(body.mass));
     sim.add_module(std::make_unique<sail::HydrostaticsModule>(boat, params));
     sim.add_module(std::make_unique<DampingModule>(coefficients));
 

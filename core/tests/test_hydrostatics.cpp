@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
+#include "sail/equilibrium.hpp"
+#include "sail/gravity.hpp"
 #include "sail/hydrostatics.hpp"
 #include "sail/mesh.hpp"
 
@@ -26,7 +30,7 @@ using sail::TriMesh;
 using sail::Vec3;
 
 constexpr double kRho = 1025.0;
-constexpr double kG = 9.81;
+constexpr double kG = sail::kGravity;
 constexpr double kTol = 0.005;
 
 double deg(double d) { return d * std::numbers::pi / 180.0; }
@@ -381,36 +385,33 @@ TEST_CASE("J/80 physics meshes float at the design waterline") {
     CHECK(rudder.triangle_count() == 1686);
     CHECK(appendages.triangle_count() == 4762);
 
-    TriMesh boat = hull;
-    sail::append_mesh(boat, appendages);
+    const sail::BoatHydrostatics loaded = sail::load_boat_hydrostatics(dir);
+    const TriMesh& boat = loaded.mesh;
+    CHECK(boat.triangle_count() == hull.triangle_count() + appendages.triangle_count());
 
-    // appendages.json foils.keel.root_overlap: the top 0.020 m of the keel mesh lies inside the
-    // hull. Its centroid is placed mid-height in that slab under the mean of the slab's vertices.
-    constexpr double kRootOverlap = 0.00131;
-    constexpr double kRootDepth = 0.020;
+    std::ifstream in(dir / "appendages.json");
+    REQUIRE(in);
+    const nlohmann::json foils = nlohmann::json::parse(in).at("foils").at("keel");
+    const double root_overlap = foils.at("root_overlap").at("value").get<double>();
+    const double root_depth = foils.at("root_overlap_depth").at("value").get<double>();
+
+    // The overlap sits in the top root_overlap_depth of the keel mesh, inside the hull.
     double top = -1e9;
     for (const auto& v : keel.vertices) top = std::max(top, v.z());
-    Vec3 sum = Vec3::Zero();
-    int count = 0;
-    for (const auto& v : keel.vertices) {
-        if (v.z() >= top - kRootDepth) {
-            sum += v;
-            ++count;
-        }
-    }
-    REQUIRE(count > 0);
-    Vec3 overlap_centroid = sum / count;
-    overlap_centroid.z() = top - kRootDepth / 2.0;
+    REQUIRE(loaded.corrections.size() == 1);
+    const sail::VolumeCorrection& overlap = loaded.corrections.front();
+    CHECK(overlap.volume == doctest::Approx(root_overlap));
+    CHECK(overlap.centroid.z() == doctest::Approx(top - root_depth / 2.0));
 
     HydrostaticParams params;
-    params.corrections.push_back({overlap_centroid, kRootOverlap});
+    params.corrections = loaded.corrections;
     const HydrostaticResult r = compute_hydrostatics(boat, State{}, 0.0, params);
     const HydrostaticResult raw = compute_hydrostatics(boat, State{}, 0.0);
 
     // hull_hydro.json result.total_volume
     constexpr double kTotalVolume = 1.40293;
-    CHECK(r.correction_volume == doctest::Approx(kRootOverlap));
-    CHECK(raw.volume - r.volume == doctest::Approx(kRootOverlap));
+    CHECK(r.correction_volume == doctest::Approx(root_overlap));
+    CHECK(raw.volume - r.volume == doctest::Approx(root_overlap));
     CHECK(std::abs(r.volume - kTotalVolume) / kTotalVolume < 0.02);
     CHECK(r.force_world.z() == doctest::Approx(kRho * kG * r.volume));
 }

@@ -92,6 +92,7 @@ Every entry marked `estimated` or `derived` in the JSON files, 94 in total, gene
 - `foils.keel.wetted_area` (estimated): area of the mesh triangles whose centroid is below hull_visual.obj
 - `foils.keel.volume_below_hull` (estimated): mesh volume minus its intersection with hull_physics.obj (manifold3d boolean): fin, bulb, tip and the root fairing below the canoe body
 - `foils.keel.root_overlap` (derived): the root fairing extends 0.020 m into the canoe body at every root vertex, so the overlap is 0.020 m times the Section 1 area (0.0657 m^2)
+- `foils.keel.root_overlap_depth` (derived): depth the root fairing reaches into the canoe body above the hull bottom at every root vertex; the simulator places the root_overlap correction in this band below the top of the keel mesh
 - `foils.keel.root_fairing_height` (derived): range over the Section 1 outline of the height from root_z up to hull_visual.obj
 - `foils.rudder.span` (estimated): from the root at the flotation plane (appendages.json stock_axis z) down to Section 5
 - `foils.rudder.quarter_chord_sweep` (derived): least-squares slope of the mesh quarter-chord line over the whole span

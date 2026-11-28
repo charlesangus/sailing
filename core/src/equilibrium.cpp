@@ -2,53 +2,37 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <string>
 #include <vector>
 
 #include <Eigen/Core>
 #include <Eigen/LU>
-#include <nlohmann/json.hpp>
 
-#include "sail/boat_data.hpp"
+#include "dossier_json.hpp"
 
 namespace sail {
 
 namespace {
 
-using Json = nlohmann::ordered_json;
+struct RootOverlap {
+    // m^3
+    double volume = 0.0;
+    // How far the keel's root fairing reaches into the canoe body, m.
+    double depth = 0.0;
+};
 
-// appendages.json describes the overlap as the root fairing reaching this far into the canoe
-// body at every root vertex.
-constexpr double kKeelRootDepth = 0.020;
-
-double read_root_overlap(const std::filesystem::path& file) {
-    std::ifstream in(file);
-    if (!in) throw BoatDataError(file, "cannot open file");
-    Json json;
-    try {
-        json = Json::parse(in);
-    } catch (const Json::exception& e) {
-        throw BoatDataError(file, std::string("malformed JSON: ") + e.what());
-    }
-    const Json* node = &json;
-    std::string where;
-    for (const char* key : {"foils", "keel", "root_overlap", "value"}) {
-        where += where.empty() ? key : std::string(".") + key;
-        if (!node->is_object() || !node->contains(key)) {
-            throw BoatDataError(file, "missing field '" + where + "'");
-        }
-        node = &(*node)[key];
-    }
-    if (!node->is_number()) throw BoatDataError(file, where + ": expected a number");
-    const double v = node->get<double>();
-    if (!std::isfinite(v) || v < 0.0) {
-        throw BoatDataError(file, where + ": expected a non-negative number");
-    }
-    return v;
+RootOverlap read_root_overlap(const std::filesystem::path& file) {
+    const dossier::Document doc = dossier::read_document(file);
+    const dossier::Node keel = doc.root().at("foils").at("keel");
+    const dossier::Node volume = keel.at("root_overlap");
+    RootOverlap overlap;
+    overlap.volume = volume.value();
+    if (overlap.volume < 0.0) volume.at("value").fail("expected a non-negative number");
+    overlap.depth = keel.at("root_overlap_depth").positive_value();
+    return overlap;
 }
 
-VolumeCorrection keel_root_correction(const TriMesh& keel, double volume,
+VolumeCorrection keel_root_correction(const TriMesh& keel, const RootOverlap& overlap,
                                       const std::filesystem::path& file) {
     if (keel.vertices.empty()) throw ObjError(file, 0, "object 'keel' has no vertices");
     double top = keel.vertices.front().z();
@@ -56,15 +40,15 @@ VolumeCorrection keel_root_correction(const TriMesh& keel, double volume,
     Vec3 sum = Vec3::Zero();
     int count = 0;
     for (const Vec3& v : keel.vertices) {
-        if (v.z() >= top - kKeelRootDepth) {
+        if (v.z() >= top - overlap.depth) {
             sum += v;
             ++count;
         }
     }
     VolumeCorrection c;
     c.centroid = sum / count;
-    c.centroid.z() = top - kKeelRootDepth / 2.0;
-    c.volume = volume;
+    c.centroid.z() = top - overlap.depth / 2.0;
+    c.volume = overlap.volume;
     return c;
 }
 
@@ -88,14 +72,14 @@ HydrostaticParams BoatHydrostatics::params(const MassModel& model, double gravit
 
 BoatHydrostatics load_boat_hydrostatics(const std::filesystem::path& boat_dir) {
     const std::filesystem::path appendages = boat_dir / "appendages.obj";
-    const double overlap = read_root_overlap(boat_dir / "appendages.json");
+    const RootOverlap overlap = read_root_overlap(boat_dir / "appendages.json");
 
     BoatHydrostatics boat;
     boat.mesh = load_obj(boat_dir / "hull_physics.obj");
     append_mesh(boat.mesh, load_obj(appendages));
     const std::vector<std::string> keel_name = {"keel"};
     const TriMesh keel = load_obj(appendages, keel_name);
-    if (overlap > 0.0) boat.corrections.push_back(keel_root_correction(keel, overlap, appendages));
+    if (overlap.volume > 0.0) boat.corrections.push_back(keel_root_correction(keel, overlap, appendages));
     return boat;
 }
 
@@ -156,13 +140,16 @@ Equilibrium solve_equilibrium(const TriMesh& mesh, const HydrostaticParams& para
         step.x() = std::clamp(step.x(), -kMaxDz, kMaxDz);
         step.y() = std::clamp(step.y(), -kMaxDtrim, kMaxDtrim);
 
+        // The last trial is taken even if it does not improve, so that a stalled solve still
+        // moves and the stored hydrostatics always belong to the returned pose.
+        constexpr int kMaxTrials = 10;
         double alpha = 1.0;
         HydrostaticResult trial;
         Eigen::Vector2d g;
-        for (int halving = 0; halving < 10; ++halving) {
+        for (int k = 0;; ++k) {
             trial = evaluate(z - alpha * step.x(), trim - alpha * step.y());
             g = residual(trial);
-            if (g.norm() < f.norm()) break;
+            if (g.norm() < f.norm() || k + 1 == kMaxTrials) break;
             alpha *= 0.5;
         }
         z -= alpha * step.x();
@@ -207,20 +194,32 @@ std::vector<GzPoint> gz_curve(const TriMesh& mesh, const HydrostaticParams& para
     return curve;
 }
 
+int gz_sign_changes(const std::vector<GzPoint>& curve) {
+    constexpr double kPi = 3.14159265358979323846;
+    int changes = 0;
+    int last = 0;
+    for (const GzPoint& p : curve) {
+        if (p.heel <= 0.0 || p.heel >= kPi - 1e-9) continue;
+        const int sign = p.gz > kGzZero ? 1 : (p.gz < -kGzZero ? -1 : 0);
+        if (sign == 0) continue;
+        if (last != 0 && sign != last) ++changes;
+        last = sign;
+    }
+    return changes;
+}
+
 std::optional<double> angle_of_vanishing_stability(const TriMesh& mesh,
                                                    const HydrostaticParams& params, double mass,
                                                    const std::vector<GzPoint>& curve,
                                                    bool free_trim, bool* converged) {
     if (curve.empty()) return std::nullopt;
     constexpr double kPi = 3.14159265358979323846;
-    // GZ at pi is the mesh's small port-starboard asymmetry, not a crossing.
-    constexpr double kZeroGz = 1e-5;
     std::size_t imax = 0;
     for (std::size_t i = 1; i < curve.size(); ++i) {
         if (curve[i].gz > curve[imax].gz) imax = i;
     }
     for (std::size_t i = imax + 1; i < curve.size(); ++i) {
-        if (curve[i].heel >= kPi - 1e-9 || curve[i].gz > -kZeroGz) continue;
+        if (curve[i].heel >= kPi - 1e-9 || curve[i].gz > -kGzZero) continue;
         GzPoint a = curve[i - 1];
         GzPoint b = curve[i];
         double root = a.heel - a.gz * (b.heel - a.heel) / (b.gz - a.gz);

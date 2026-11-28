@@ -35,7 +35,7 @@ The first build compiles godot-cpp from source, which takes about 15 minutes on 
 
 The `release` preset (`cmake --preset release`, `cmake --build --preset release`) builds an optimised core, CLI and GDExtension with tests off. The Godot test script uses the `dev` build.
 
-The `bench` preset (`cmake --preset bench`, `cmake --build --preset bench`, `ctest --preset bench`) builds the core, CLI and tests in Release without godot-cpp, in about a minute. Use it for `build/bench/cli/sailsim bench --boat data/boats/j80` and for the step-cost budget test, which is skipped in non-Release builds.
+The `bench` preset (`cmake --preset bench`, `cmake --build --preset bench`, `ctest --preset bench`) builds the core, CLI and tests in Release without godot-cpp, in about a minute. Use it for `build/bench/cli/sailsim bench --boat data/boats/j80` and for the step-cost budget test. Other builds mark that test with doctest's skip decorator: ctest does not list it, and a direct run of `sailcore_tests` counts it as skipped.
 
 Build output goes to `build/<preset>/`.
 
@@ -63,7 +63,8 @@ Build output goes to `build/<preset>/`.
 ### Frames
 
 - Core world frame: right-handed, x east, y north, z up, water plane z = 0.
-- Body frame: x forward, y to port, z up, origin at the hull's DWL midship on the centreline.
+- Hull frame: dossier data and meshes use the hull frame: x forward, y to port, z up, origin at the hull's DWL midship on the centreline.
+- Rigid-body state: the state's position is the CG's world position. Body-frame vectors (velocities, wrenches) are expressed in axes parallel to the hull frame, about the CG. The hydrostatics module maps mesh vertices with `HydrostaticParams::reference_point`, the CG in hull-frame coordinates.
 - The GDExtension converts to Godot's Y-up, -Z-forward frame at the boundary, and nowhere else.
 
 ### Boat data

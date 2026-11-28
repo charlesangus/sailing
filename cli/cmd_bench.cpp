@@ -9,6 +9,7 @@
 
 #include "common.hpp"
 #include "sail/damping.hpp"
+#include "sail/gravity.hpp"
 #include "sail/hydrostatics.hpp"
 #include "sail/simulation.hpp"
 
@@ -33,17 +34,6 @@ constexpr const char* kUsage =
     "  --boat DIR   boat dossier directory, e.g. data/boats/j80\n"
     "  --steps N    fixed steps to time, default 10000\n"
     "  --heel DEG   held heel, default 30\n";
-
-class Gravity final : public sail::ForceModule {
-public:
-    explicit Gravity(double mass) : mass_(mass) {}
-    void accumulate(const sail::State& state, double, sail::Wrench& wrench) override {
-        wrench.force += state.orientation.conjugate() * sail::Vec3(0.0, 0.0, -mass_ * kGravity);
-    }
-
-private:
-    double mass_;
-};
 
 // Times each accumulate() call into a preallocated per-step array.
 class Timed final : public sail::ForceModule {
@@ -103,7 +93,7 @@ int bench(const Options& options) {
     if (!start.converged) throw std::runtime_error("equilibrium at the requested heel did not converge");
 
     std::vector<std::unique_ptr<Timed>> owned;
-    owned.push_back(std::make_unique<Timed>("gravity", std::make_unique<Gravity>(body.mass), steps));
+    owned.push_back(std::make_unique<Timed>("gravity", std::make_unique<sail::GravityModule>(body.mass), steps));
     owned.push_back(std::make_unique<Timed>(
         "hydrostatics", std::make_unique<sail::HydrostaticsModule>(boat.hydro.mesh, boat.params), steps));
     owned.push_back(std::make_unique<Timed>(

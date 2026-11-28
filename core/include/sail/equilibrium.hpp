@@ -4,6 +4,7 @@
 #include <optional>
 #include <vector>
 
+#include "sail/gravity.hpp"
 #include "sail/hydrostatics.hpp"
 #include "sail/mass_model.hpp"
 #include "sail/mesh.hpp"
@@ -19,7 +20,7 @@ struct BoatHydrostatics {
 
     // Parameters for `model`: its water density, its CG as the reference point, and the
     // corrections above.
-    HydrostaticParams params(const MassModel& model, double gravity = 9.81) const;
+    HydrostaticParams params(const MassModel& model, double gravity = kGravity) const;
 };
 
 // Loads hull_physics.obj and appendages.obj from `boat_dir`, and the keel-root overlap volume
@@ -80,6 +81,14 @@ GzPoint solve_gz_point(const TriMesh& mesh, const HydrostaticParams& params, dou
 // `step` in rad, > 0.
 std::vector<GzPoint> gz_curve(const TriMesh& mesh, const HydrostaticParams& params, double mass,
                               double step, bool free_trim);
+
+// |GZ| at or below this, m, counts as zero. 0 and pi are equilibria by symmetry, and what GZ the
+// mesh leaves there is its small port-starboard asymmetry.
+inline constexpr double kGzZero = 1e-5;
+
+// Sign changes of GZ along `curve` on the open heel interval (0, pi), skipping points whose GZ
+// counts as zero.
+int gz_sign_changes(const std::vector<GzPoint>& curve);
 
 // The first heel (rad) past the GZ maximum of `curve` where GZ turns negative, bracketed on the
 // curve and refined by root finding with the same `mass` and `free_trim` the curve was built

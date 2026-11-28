@@ -15,6 +15,8 @@ public:
 
     // Adds this module's contribution to `wrench` (body frame, about the CG) for the given state
     // at simulation time `t` seconds. Must add, never overwrite, and must be deterministic.
+    // The integrator applies the rigid-body and added-mass Coriolis and Munk terms itself, so
+    // modules must not add them.
     virtual void accumulate(const State& state, double t, Wrench& wrench) = 0;
 };
 
@@ -60,6 +62,12 @@ public:
     std::uint64_t step_count() const { return step_count_; }
 
     const BodyProperties& body() const { return body_; }
+
+    // Replaces the inertial properties between steps, e.g. after the crew moves. `cg_shift` is
+    // the new CG minus the old one, body frame. The state's reference point is the CG, so it is
+    // re-anchored on the new CG with the hull's motion unchanged: position moves by R * cg_shift
+    // and linear velocity by omega x cg_shift, in both state() and previous_state().
+    void set_body(const BodyProperties& body, const Vec3& cg_shift = Vec3::Zero());
 
 private:
     BodyProperties body_;

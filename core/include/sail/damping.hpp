@@ -60,9 +60,8 @@ struct DampingStiffness {
 DampingSpec load_damping_spec(const std::filesystem::path& boat_dir);
 
 // Heave k = rho g A_wp from the certificate immersion, roll k = RM(1 deg) / sin(1 deg) from the
-// certificate righting moment, pitch k = rho g I_L with I_L = Cw^2 BWL LWL^3 / 12. Reads
-// particulars.json and hull_hydro.json from data.directory and throws BoatDataError on a
-// problem.
+// certificate righting moment, pitch k = rho g I_L with I_L = Cw^2 BWL LWL^3 / 12, all from the
+// measurement-trim values load_boat_data read.
 DampingStiffness dossier_stiffness(const BoatData& data);
 
 // b_crit = 2 sqrt(k (M + A)).

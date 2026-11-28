@@ -482,6 +482,13 @@
         "confidence": "derived",
         "method": "the root fairing extends 0.020 m into the canoe body at every root vertex, so the overlap is 0.020 m times the Section 1 area (0.0657 m^2); volume_below_hull excludes it"
       },
+      "root_overlap_depth": {
+        "value": 0.02,
+        "unit": "m",
+        "source": "tools/hull/appendages.py",
+        "confidence": "derived",
+        "method": "depth the root fairing reaches into the canoe body above the hull bottom at every root vertex; the simulator places the root_overlap correction in this band below the top of the keel mesh"
+      },
       "root_fairing_height": {
         "value": [
           0.0894,

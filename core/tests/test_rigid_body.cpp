@@ -1,8 +1,10 @@
 #include <doctest/doctest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
+#include "sail/gravity.hpp"
 #include "sail/rigid_body.hpp"
 #include "sail/simulation.hpp"
 
@@ -15,18 +17,8 @@ using sail::State;
 using sail::Vec3;
 using sail::Wrench;
 
-constexpr double kG = 9.80665;
+constexpr double kG = sail::kGravity;
 
-class Gravity : public ForceModule {
-public:
-    explicit Gravity(double mass) : mass_(mass) {}
-    void accumulate(const State& state, double, Wrench& wrench) override {
-        wrench.force += state.orientation.conjugate() * Vec3(0.0, 0.0, -mass_ * kG);
-    }
-
-private:
-    double mass_;
-};
 
 Vec3 world_angular_momentum(const BodyProperties& body, const State& s) {
     return s.rotation() * (body.inertia * s.angular_velocity);
@@ -45,7 +37,7 @@ TEST_CASE("free fall under a gravity module matches g t^2 / 2") {
     State initial;
     initial.position = Vec3(3.0, -2.0, 100.0);
     Simulation sim(body, initial);
-    sim.add_module(std::make_unique<Gravity>(body.mass));
+    sim.add_module(std::make_unique<sail::GravityModule>(body.mass));
 
     // Semi-implicit Euler overshoots the drop by a factor (1 + 1/n) after n steps, so the run
     // must exceed 1000 steps for the 0.1% bound to hold.
@@ -86,6 +78,91 @@ TEST_CASE("torque-free spin about a principal axis conserves angular momentum") 
     }
 }
 
+TEST_CASE("torque-free spin about a non-principal axis conserves |L| and kinetic energy") {
+    BodyProperties body;
+    body.mass = 10.0;
+    body.inertia = Vec3(1.0, 2.0, 3.0).asDiagonal();
+
+    State initial;
+    initial.orientation = sail::Quat(Eigen::AngleAxisd(0.4, Vec3(-1.0, 0.5, 2.0).normalized()));
+    initial.angular_velocity = Vec3(1.0, 1.0, 1.0);
+    Simulation sim(body, initial);
+
+    const auto energy = [&] {
+        const Vec3& w = sim.state().angular_velocity;
+        return 0.5 * w.dot(body.inertia * w);
+    };
+    const Vec3 l0 = world_angular_momentum(body, sim.state());
+    const double e0 = energy();
+    double worst_norm = 0.0;
+    double worst_vector = 0.0;
+    double worst_energy = 0.0;
+    const int steps = static_cast<int>(std::llround(60.0 / Simulation::kFixedDt));
+    for (int i = 0; i < steps; ++i) {
+        sim.step();
+        const Vec3 l = world_angular_momentum(body, sim.state());
+        worst_norm = std::max(worst_norm, std::abs(l.norm() / l0.norm() - 1.0));
+        worst_vector = std::max(worst_vector, (l - l0).norm() / l0.norm());
+        worst_energy = std::max(worst_energy, std::abs(energy() / e0 - 1.0));
+    }
+    MESSAGE("non-principal spin over 60 s: |L| drift " << worst_norm << ", L direction drift "
+                                                       << worst_vector << ", energy drift "
+                                                       << worst_energy);
+    CHECK(worst_norm < 5e-3);
+    CHECK(worst_energy < 5e-3);
+    CHECK(worst_vector < 5e-3);
+}
+
+TEST_CASE("torque-free motion with added mass conserves kinetic energy and momentum norms") {
+    BodyProperties body;
+    body.mass = 1500.0;
+    body.inertia << 2500.0, 0.0, -120.0, 0.0, 6000.0, 0.0, -120.0, 0.0, 7000.0;
+    sail::Mat6 added = sail::Mat6::Zero();
+    added.diagonal() << 75.0, 900.0, 2600.0, 400.0, 9000.0, 3000.0;
+    added(1, 5) = added(5, 1) = 150.0;
+    added(2, 4) = added(4, 2) = -300.0;
+    body.added_mass = added;
+    const sail::Mat6 m = body.generalised_mass();
+
+    State initial;
+    initial.linear_velocity = Vec3(3.0, 0.4, -0.2);
+    initial.angular_velocity = Vec3(0.6, -0.3, 0.5);
+    Simulation sim(body, initial);
+
+    const auto momentum = [&] {
+        sail::Vec6 nu;
+        nu << sim.state().linear_velocity, sim.state().angular_velocity;
+        return sail::Vec6(m * nu);
+    };
+    const auto energy = [&] {
+        sail::Vec6 nu;
+        nu << sim.state().linear_velocity, sim.state().angular_velocity;
+        return 0.5 * nu.dot(m * nu);
+    };
+    const double e0 = energy();
+    const sail::Vec6 p0 = momentum();
+    const double lin0 = p0.head<3>().norm();
+    const double cross0 = p0.head<3>().dot(p0.tail<3>());
+    double worst_energy = 0.0;
+    double worst_linear = 0.0;
+    double worst_cross = 0.0;
+    const int steps = static_cast<int>(std::llround(60.0 / Simulation::kFixedDt));
+    for (int i = 0; i < steps; ++i) {
+        sim.step();
+        const sail::Vec6 p = momentum();
+        worst_energy = std::max(worst_energy, std::abs(energy() / e0 - 1.0));
+        worst_linear = std::max(worst_linear, std::abs(p.head<3>().norm() / lin0 - 1.0));
+        worst_cross = std::max(worst_cross, std::abs(p.head<3>().dot(p.tail<3>()) - cross0) /
+                                                (lin0 * p0.tail<3>().norm()));
+    }
+    MESSAGE("added-mass motion over 60 s: energy drift " << worst_energy << ", |p_lin| drift "
+                                                         << worst_linear << ", p_lin.p_ang drift "
+                                                         << worst_cross);
+    CHECK(worst_energy < 5e-3);
+    CHECK(worst_linear < 5e-3);
+    CHECK(worst_cross < 5e-3);
+}
+
 TEST_CASE("intermediate-axis spin tumbles (Dzhanibekov effect)") {
     BodyProperties body;
     body.mass = 10.0;
@@ -118,8 +195,8 @@ TEST_CASE("accumulator gives the same state regardless of how real time is slice
 
     Simulation coarse(body, initial);
     Simulation fine(body, initial);
-    coarse.add_module(std::make_unique<Gravity>(body.mass));
-    fine.add_module(std::make_unique<Gravity>(body.mass));
+    coarse.add_module(std::make_unique<sail::GravityModule>(body.mass));
+    fine.add_module(std::make_unique<sail::GravityModule>(body.mass));
 
     int coarse_steps = 0;
     for (int i = 0; i < 100; ++i) coarse_steps += coarse.advance(0.01);
@@ -139,7 +216,7 @@ TEST_CASE("accumulator gives the same state regardless of how real time is slice
 TEST_CASE("a large frame hitch runs at most 20 substeps and drops the rest") {
     BodyProperties body;
     Simulation sim(body, State{});
-    sim.add_module(std::make_unique<Gravity>(body.mass));
+    sim.add_module(std::make_unique<sail::GravityModule>(body.mass));
 
     CHECK(sim.advance(1.0) == Simulation::kMaxSubsteps);
     CHECK(sim.step_count() == 20);
@@ -158,7 +235,7 @@ TEST_CASE("previous and current states bracket the latest step") {
     State initial;
     initial.position = Vec3(0.0, 0.0, 10.0);
     Simulation sim(body, initial);
-    sim.add_module(std::make_unique<Gravity>(body.mass));
+    sim.add_module(std::make_unique<sail::GravityModule>(body.mass));
 
     sim.advance(Simulation::kFixedDt * 3.5);
     CHECK(sim.step_count() == 3);

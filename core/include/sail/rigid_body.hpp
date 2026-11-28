@@ -65,14 +65,17 @@ struct BodyProperties {
     Mat6 generalised_mass() const;
 };
 
-// Advances `state` by one semi-implicit (symplectic) Euler step of length `dt` under `wrench`.
+// Advances `state` by one step of length `dt` under `wrench`, which is held over the step.
 //
-// Velocities are updated first from the body-frame Kirchhoff equations with the full
-// generalised mass M = M_rb + M_A and momentum p = M * nu = (p_lin, p_ang):
-//   d(p_lin)/dt = F - omega x p_lin
-//   d(p_ang)/dt = Q - omega x p_ang - v x p_lin
-// then position and orientation are advanced with the new velocities, and the quaternion is
-// renormalised.
+// The velocity nu = (v, omega) solves the body-frame Kirchhoff equations with the full
+// generalised mass M = M_rb + M_A, momentum p = M * nu = (p_lin, p_ang), at the step midpoint:
+//   M (nu_new - nu) / dt = (F, Q) - C(nu_mid) nu_mid,  nu_mid = (nu + nu_new) / 2,
+//   C(nu) nu = (omega x p_lin, omega x p_ang + v x p_lin),
+// by Newton iteration. Position and orientation then advance with nu_new, and the quaternion is
+// renormalised. With no wrench, the kinetic energy nu . M nu / 2, |p_lin| and, without added
+// mass, |p_ang| are conserved to round-off for any spin axis.
+//
+// The added-mass Coriolis and Munk terms are applied here: force modules must not add them.
 void integrate_step(const BodyProperties& body, const Wrench& wrench, double dt, State& state);
 
 }  // namespace sail

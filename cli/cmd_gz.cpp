@@ -62,19 +62,7 @@ int gz(const Options& options) {
         if (sweep[i].gz > sweep[imax].gz) imax = i;
     }
 
-    // 0 and 180 degrees are equilibria by symmetry, and what GZ the mesh leaves there is its
-    // small port-starboard asymmetry, so only the open interval counts towards sign changes.
-    constexpr double kZeroGz = 1e-5;
-    int sign_changes = 0;
-    int last_sign = 0;
-    for (const Point& p : sweep) {
-        if (p.heel <= 0.0 || deg(p.heel) >= 180.0 - 1e-9) continue;
-        const int sign = p.gz > kZeroGz ? 1 : (p.gz < -kZeroGz ? -1 : 0);
-        if (sign != 0) {
-            if (last_sign != 0 && sign != last_sign) ++sign_changes;
-            last_sign = sign;
-        }
-    }
+    const int sign_changes = sail::gz_sign_changes(sweep);
 
     bool converged = one.eq.converged;
     for (const Point& p : sweep) converged = converged && p.eq.converged;

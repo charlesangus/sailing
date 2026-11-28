@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "sail/gravity.hpp"
 #include "sail/mesh.hpp"
 #include "sail/rigid_body.hpp"
 #include "sail/simulation.hpp"
@@ -43,7 +44,7 @@ struct HydrostaticParams {
     // kg/m^3
     double density = 1025.0;
     // m/s^2
-    double gravity = 9.81;
+    double gravity = kGravity;
     // Mesh-frame location of the body's reference point (the CG). State::position is where this
     // point is in the world, and moments are taken about it.
     Vec3 reference_point = Vec3::Zero();
@@ -105,6 +106,10 @@ public:
     const HydrostaticResult& last_result() const { return last_; }
     const TriMesh& mesh() const { return mesh_; }
     const HydrostaticParams& params() const { return params_; }
+
+    // Moves the reference point (mesh frame), e.g. to the new CG after the crew moves; see
+    // Simulation::set_body.
+    void set_reference_point(const Vec3& point) { params_.reference_point = point; }
 
 private:
     TriMesh mesh_;

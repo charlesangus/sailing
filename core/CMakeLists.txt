@@ -8,6 +8,7 @@ add_library(sailcore STATIC
     src/boat_data.cpp
     src/damping.cpp
     src/equilibrium.cpp
+    src/gravity.cpp
     src/hydrostatics.cpp
     src/mass_model.cpp
     src/mesh.cpp

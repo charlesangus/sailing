@@ -32,6 +32,8 @@ MassProperties combine(std::span<const MassItem> items);
 // the waterline centre rho pi (b^2 - T^2)^2/16. They are integrated over an equivalent prism of
 // length L = length_factor * LWL (default Cp * LWL), with pitch and yaw from heave and sway times
 // L^2/12. Rotational terms are about the waterline centre, not the CG, and leave out the keel.
+// The matrix is constant in the body frame and does not follow immersion or heel, so it
+// overstates the heave and sway terms, and their Munk moments, at large heel or inverted.
 Mat6 strip_added_mass(const HullDims& hull, const AddedMassCoefficients& coeffs, double density,
                       double rigid_mass);
 
