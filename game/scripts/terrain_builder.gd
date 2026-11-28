@@ -2,8 +2,8 @@ class_name TerrainBuilder
 extends Node3D
 
 ## Builds the land and seabed mesh from a heightmap PNG and its meta.json (written by
-## tools/scene/make_bay.py) when the node enters the tree. Core world (x east, y north, z up) maps
-## to Godot as (x, z, -y).
+## tools/scene/make_bay.py) when the node enters the tree. Core world points are converted to Godot
+## by the SailBoat frame helpers.
 
 const PNG_SIGNATURE_HEX := "89504e470d0a1a0a"
 
@@ -70,12 +70,23 @@ func height_at_world(x_m: float, y_m: float) -> float:
 
 
 func height_at_godot(point: Vector3) -> float:
-	return height_at_world(point.x, -point.z)
+	var core := SailBoat.godot_to_core_point(point)
+	return height_at_world(core.x, core.y)
 
 
 func start_position_godot() -> Vector3:
 	var start: Dictionary = meta["start"]
-	return Vector3(float(start["x_m"]), 0.0, -float(start["y_m"]))
+	return SailBoat.core_to_godot_point(float(start["x_m"]), float(start["y_m"]), 0.0)
+
+
+## The map's extent on the Godot xz plane, from pixel centre to pixel centre.
+func godot_bounds() -> Rect2:
+	var north_west := SailBoat.core_to_godot_point(origin_x_m, origin_y_m, 0.0)
+	var south_east := SailBoat.core_to_godot_point(origin_x_m + (width_px - 1) * pixel_size_m,
+			origin_y_m - (height_px - 1) * pixel_size_m, 0.0)
+	var a := Vector2(north_west.x, north_west.z)
+	var b := Vector2(south_east.x, south_east.z)
+	return Rect2(a.min(b), (b - a).abs())
 
 
 func _fail(message: String) -> bool:
@@ -176,20 +187,21 @@ func _build_mesh() -> ArrayMesh:
 	vertices.resize(count)
 	normals.resize(count)
 	colours.resize(count)
+	var to_godot := SailBoat.core_to_godot_basis()
 	i = 0
 	for r in grid_rows:
 		var north := maxi(r - 1, 0) * grid_columns
 		var south := mini(r + 1, grid_rows - 1) * grid_columns
 		var row_span := (mini(r + 1, grid_rows - 1) - maxi(r - 1, 0)) * step_m
-		var godot_z := -(origin_y_m - r * step_m)
+		var y_m := origin_y_m - r * step_m
 		for c in grid_columns:
 			var h := heights[i]
 			var west := maxi(c - 1, 0)
 			var east := mini(c + 1, grid_columns - 1)
 			var dh_dx := (heights[r * grid_columns + east] - heights[r * grid_columns + west]) / ((east - west) * step_m)
 			var dh_dy := (heights[north + c] - heights[south + c]) / row_span
-			vertices[i] = Vector3(origin_x_m + c * step_m, h, godot_z)
-			normals[i] = Vector3(-dh_dx, 1.0, dh_dy).normalized()
+			vertices[i] = to_godot * Vector3(origin_x_m + c * step_m, y_m, h)
+			normals[i] = (to_godot * Vector3(-dh_dx, -dh_dy, 1.0)).normalized()
 			colours[i] = _colour(h, sqrt(dh_dx * dh_dx + dh_dy * dh_dy))
 			i += 1
 

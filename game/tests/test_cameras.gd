@@ -125,6 +125,30 @@ func _run(main: Node) -> void:
 	_check(rig.orbit_pitch > pitch_before, "the right stick should raise the orbit camera")
 	await _tap(func(): _key(KEY_T, true), func(): _key(KEY_T, false))
 	_check(boat.backstay > 0.5, "the backstay key should work in orbit mode")
+
+	# The stick clicks zoom; the left stick, which steers, no longer does.
+	var distance_before := rig.orbit_distance
+	await _tap(func(): _pad_button(JOY_BUTTON_RIGHT_STICK, true), func(): _pad_button(JOY_BUTTON_RIGHT_STICK, false))
+	_check(rig.orbit_distance < distance_before, "R3 should zoom in: %f -> %f" % [distance_before, rig.orbit_distance])
+	distance_before = rig.orbit_distance
+	await _tap(func(): _pad_button(JOY_BUTTON_LEFT_STICK, true), func(): _pad_button(JOY_BUTTON_LEFT_STICK, false))
+	_check(rig.orbit_distance > distance_before, "L3 should zoom out: %f -> %f" % [distance_before, rig.orbit_distance])
+	distance_before = rig.orbit_distance
+	await _tap(func(): _pad_axis(JOY_AXIS_LEFT_Y, 1.0), func(): _pad_axis(JOY_AXIS_LEFT_Y, 0.0))
+	_check(is_equal_approx(rig.orbit_distance, distance_before), "the left stick should not zoom")
+
+	# In helm mode the right stick looks around instead of trimming the backstay.
+	rig.set_mode(CameraRig.Mode.HELM)
+	boat.backstay = 0.5
+	await _tap(func(): _pad_axis(JOY_AXIS_RIGHT_X, 1.0), func(): _pad_axis(JOY_AXIS_RIGHT_X, 0.0))
+	_check(rig._look_yaw < 0.0, "the right stick right should look to starboard, yaw %f" % rig._look_yaw)
+	await _tap(func(): _pad_axis(JOY_AXIS_RIGHT_Y, -1.0), func(): _pad_axis(JOY_AXIS_RIGHT_Y, 0.0))
+	_check(rig._look_pitch > 0.0, "the right stick up should look up, pitch %f" % rig._look_pitch)
+	_check(is_equal_approx(boat.backstay, 0.5), "the right stick should not trim the backstay in helm mode")
+	var look := -rig.helm_camera.basis.z
+	_check(look.y < 0.0, "a look to starboard should turn the helm view towards hull -y, got %s" % look)
+	await _tap(func(): _key(KEY_T, true), func(): _key(KEY_T, false))
+	_check(boat.backstay > 0.5, "the backstay key should work in helm mode")
 	rig.set_mode(CameraRig.Mode.CHASE)
 	await _frames(2)
 

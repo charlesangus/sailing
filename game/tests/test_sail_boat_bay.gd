@@ -6,6 +6,12 @@ const RUN_SECONDS := 30.0
 const MEAN_SECONDS := 5.0
 const TARGET_TWA_DEG := 90.0
 const POLAR_PATH := "res://data/boats/j80/sim_polar.csv"
+## Core world x, y in each quadrant, off both axes and between pixel centres, one on the east
+## headland's flank.
+const CROSS_CHECK_POINTS: Array[Vector2] = [
+	Vector2(1234.5, 987.3), Vector2(-1102.7, 1311.9), Vector2(-1677.1, -1453.3), Vector2(877.9, -666.6),
+]
+const CROSS_CHECK_TOLERANCE_M := 1e-3
 
 
 func _fail(message: String) -> void:
@@ -28,6 +34,31 @@ func _polar_row(tws_kn: float, twa_deg: float) -> Dictionary:
 		if is_equal_approx(float(row["tws_kn"]), tws_kn) and is_equal_approx(float(row["twa_deg"]), twa_deg):
 			return row
 	return {}
+
+
+# The core's seabed and the terrain the player sees must agree away from the x = 0 axis too, which
+# a mirrored or half-pixel-shifted sampler in either one would not.
+func _seabed_mismatch(boat: Node) -> String:
+	var terrain := TerrainBuilder.new()
+	terrain.scene_dir = SCENE_DIR
+	if not terrain.build():
+		var error := "terrain did not build: " + terrain.last_error
+		terrain.free()
+		return error
+	var result := ""
+	for point in CROSS_CHECK_POINTS:
+		var at := SailBoat.core_to_godot_point(point.x, point.y, 0.0)
+		if not boat.reset_boat(at, 0.0, 0.0):
+			result = "reset_boat at %s failed: %s" % [point, boat.get_last_error()]
+			break
+		var core_z := float(boat.get_state()["seabed_z_m"])
+		var terrain_z: float = terrain.height_at_world(point.x, point.y)
+		print("seabed at %s: core %.3f m, terrain %.3f m" % [point, core_z, terrain_z])
+		if absf(core_z - terrain_z) > CROSS_CHECK_TOLERANCE_M:
+			result = "seabed at %s: core %.4f m, terrain %.4f m" % [point, core_z, terrain_z]
+			break
+	terrain.free()
+	return result
 
 
 func _initialize() -> void:
@@ -101,7 +132,11 @@ func _initialize() -> void:
 	var moved: Vector3 = boat.transform.origin - start
 	print("seabed z %.2f m at the start, %.2f m at the end, BSP %.3f kn, moved %s m, max contacts %d" % [
 		float(first["seabed_z_m"]), float(state["seabed_z_m"]), bsp_kn, moved, max_contacts])
+	var mismatch := _seabed_mismatch(boat)
 	boat.free()
+	if mismatch != "":
+		_fail(mismatch)
+		return
 
 	if absf(float(first["seabed_z_m"]) - (-31.62)) > 0.01:
 		_fail("seabed z %.3f m at the start, expected -31.62" % float(first["seabed_z_m"]))

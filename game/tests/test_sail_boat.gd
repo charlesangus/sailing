@@ -13,6 +13,26 @@ func _fail(message: String) -> void:
 	quit(1)
 
 
+func _frame_helper_error() -> String:
+	var point := SailBoat.core_to_godot_point(1.0, 2.0, 3.0)
+	if not point.is_equal_approx(Vector3(1.0, 3.0, -2.0)):
+		return "core (1, 2, 3) maps to %s, want (1, 3, -2)" % point
+	var back := SailBoat.godot_to_core_point(point)
+	if not back.is_equal_approx(Vector3(1.0, 2.0, 3.0)):
+		return "the round trip of core (1, 2, 3) gives %s" % back
+	if not (SailBoat.core_to_godot_basis() * Vector3(1.0, 2.0, 3.0)).is_equal_approx(point):
+		return "core_to_godot_basis disagrees with core_to_godot_point"
+	if not SailBoat.compass_dir(0.0).is_equal_approx(Vector3(0.0, 0.0, -1.0)):
+		return "north is %s, want -Z" % SailBoat.compass_dir(0.0)
+	if not SailBoat.compass_dir(90.0).is_equal_approx(Vector3(1.0, 0.0, 0.0)):
+		return "east is %s, want +X" % SailBoat.compass_dir(90.0)
+	var hull := SailBoat.hull_to_local_basis()
+	if not (hull * Vector3(1.0, 0.0, 0.0)).is_equal_approx(Vector3(0.0, 0.0, -1.0)) \
+			or not (hull * Vector3(0.0, 1.0, 0.0)).is_equal_approx(Vector3(-1.0, 0.0, 0.0)):
+		return "hull forward and port are local %s and %s, want -Z and -X" % [hull.x, hull.y]
+	return ""
+
+
 func _polar_row(tws_kn: float, twa_deg: float) -> Dictionary:
 	var file := FileAccess.open(POLAR_PATH, FileAccess.READ)
 	if file == null:
@@ -129,6 +149,13 @@ func _initialize() -> void:
 		return
 	if absf(rad_to_deg(basis.get_euler().z) + heel_deg) > 0.5:
 		_fail("roll %.2f deg does not mirror heel %.2f deg" % [rad_to_deg(basis.get_euler().z), heel_deg])
+		return
+	if not state.is_read_only():
+		_fail("get_state should return a read-only Dictionary")
+		return
+	var frame_error := _frame_helper_error()
+	if frame_error != "":
+		_fail(frame_error)
 		return
 
 	print("PASS")

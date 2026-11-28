@@ -14,6 +14,8 @@ const LOOK_YAW_LIMIT := deg_to_rad(100.0)
 const LOOK_PITCH_MIN := deg_to_rad(-40.0)
 const LOOK_PITCH_MAX := deg_to_rad(30.0)
 const HELM_SIDE_RATE := 2.0
+const LOOK_YAW_RATE := 2.0
+const LOOK_PITCH_RATE := 1.0
 
 @export var boat_path: NodePath
 @export var input_path: NodePath
@@ -125,8 +127,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _apply_mode() -> void:
 	if _input != null:
-		# The right stick is the orbit control in orbit mode and the backstay otherwise.
-		_input.pad_backstay_enabled = mode != Mode.ORBIT
+		# The right stick moves the camera in orbit and helm modes and trims the backstay in chase.
+		_input.pad_backstay_enabled = mode == Mode.CHASE
 	current_camera().make_current()
 
 
@@ -137,15 +139,24 @@ func _update_cameras(delta: float) -> void:
 			_azimuth = lerp_angle(_azimuth, _behind_azimuth(), alpha)
 			_place(chase_distance_m, chase_height_m, chase_target_height_m)
 		Mode.ORBIT:
-			var yaw := Input.get_action_strength(&"orbit_right") - Input.get_action_strength(&"orbit_left")
-			var pitch := Input.get_action_strength(&"orbit_up") - Input.get_action_strength(&"orbit_down")
+			var yaw := _camera_axis(&"orbit_right", &"orbit_left")
+			var pitch := _camera_axis(&"orbit_up", &"orbit_down")
 			_orbit_by(yaw * ORBIT_YAW_RATE * delta, pitch * ORBIT_PITCH_RATE * delta)
 			var zoom := Input.get_action_strength(&"zoom_out") - Input.get_action_strength(&"zoom_in")
 			_zoom_by(exp(zoom * ZOOM_RATE * delta))
 			var height := maxf(orbit_target_height_m + sin(orbit_pitch) * orbit_distance, orbit_min_height_m)
 			_place(cos(orbit_pitch) * orbit_distance, height, orbit_target_height_m)
 		Mode.HELM:
+			var yaw := _camera_axis(&"orbit_left", &"orbit_right")
+			var pitch := _camera_axis(&"orbit_up", &"orbit_down")
+			_look_by(yaw * LOOK_YAW_RATE * delta, pitch * LOOK_PITCH_RATE * delta)
 			_update_helm(delta)
+
+
+# The same stick and keys orbit in orbit mode and look around in helm mode. Positive look yaw is
+# to port, the opposite sense of positive orbit yaw.
+func _camera_axis(positive: StringName, negative: StringName) -> float:
+	return Input.get_action_strength(positive) - Input.get_action_strength(negative)
 
 
 func _place(horizontal: float, height: float, target_height: float) -> void:

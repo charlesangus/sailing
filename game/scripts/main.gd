@@ -28,9 +28,8 @@ func _ready() -> void:
 	if not terrain.is_built():
 		push_error("Main: the bay terrain did not build: " + terrain.last_error)
 		return
-	var start: Dictionary = terrain.meta["start"]
-	var at := Vector3(float(start["x_m"]), 0.0, -float(start["y_m"]))
-	if not _boat.reset_boat(at, float(start["heading_deg"]), START_SPEED_MPS):
+	var heading_deg := float(terrain.meta["start"]["heading_deg"])
+	if not _boat.reset_boat(terrain.start_position_godot(), heading_deg, START_SPEED_MPS):
 		push_error("Main: cannot place the boat: " + _boat.get_last_error())
 		return
 	for key in START_TRIM:

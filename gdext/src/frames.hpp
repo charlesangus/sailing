@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cmath>
+
 #include <godot_cpp/variant/basis.hpp>
 #include <godot_cpp/variant/transform3d.hpp>
 #include <godot_cpp/variant/vector3.hpp>
@@ -58,13 +60,21 @@ inline sail::Mat3 body_map() {
     return m;
 }
 
-inline godot::Basis rotation_to_godot(const sail::Quat& orientation) {
-    const sail::Mat3 g = world_map() * orientation.toRotationMatrix() * body_map().transpose();
+inline godot::Basis to_basis(const sail::Mat3& g) {
     return godot::Basis(static_cast<godot::real_t>(g(0, 0)), static_cast<godot::real_t>(g(0, 1)),
                         static_cast<godot::real_t>(g(0, 2)), static_cast<godot::real_t>(g(1, 0)),
                         static_cast<godot::real_t>(g(1, 1)), static_cast<godot::real_t>(g(1, 2)),
                         static_cast<godot::real_t>(g(2, 0)), static_cast<godot::real_t>(g(2, 1)),
                         static_cast<godot::real_t>(g(2, 2)));
+}
+
+inline godot::Basis rotation_to_godot(const sail::Quat& orientation) {
+    return to_basis(world_map() * orientation.toRotationMatrix() * body_map().transpose());
+}
+
+// Unit horizontal core world vector towards a compass bearing, clockwise from north.
+inline sail::Vec3 compass_to_world(double bearing_rad) {
+    return sail::Vec3(std::sin(bearing_rad), std::cos(bearing_rad), 0.0);
 }
 
 // The node's forward axis, local -Z, as a core world vector.

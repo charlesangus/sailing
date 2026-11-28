@@ -50,12 +50,12 @@ func _initialize() -> void:
 	var state: Dictionary = boat.get_state()
 
 	var boom_deg := _yaw_deg(visual.boom)
-	if absf(absf(boom_deg) - absf(state["boom_angle_deg"])) > ANGLE_TOLERANCE_DEG or absf(state["boom_angle_deg"]) < 1.0:
-		_fail("boom %f deg does not follow boom_angle_deg %f" % [boom_deg, state["boom_angle_deg"]])
+	if absf(absf(boom_deg) - absf(state["main_angle_deg"])) > ANGLE_TOLERANCE_DEG or absf(state["main_angle_deg"]) < 1.0:
+		_fail("boom %f deg does not follow main_angle_deg %f" % [boom_deg, state["main_angle_deg"]])
 		return
 	# Positive chord angle has the clew to port, which is a negative rotation about the hull's up.
-	if signf(boom_deg) == signf(state["boom_angle_deg"]):
-		_fail("boom turns the wrong way: %f for %f" % [boom_deg, state["boom_angle_deg"]])
+	if signf(boom_deg) == signf(state["main_angle_deg"]):
+		_fail("boom turns the wrong way: %f for %f" % [boom_deg, state["main_angle_deg"]])
 		return
 	var main_deg := _yaw_deg(visual.main_sail)
 	if absf(main_deg - boom_deg) > ANGLE_TOLERANCE_DEG:
@@ -80,7 +80,7 @@ func _initialize() -> void:
 		_fail("hull frame offset %s is not the CG offset" % hull_origin)
 		return
 	print("boom %.2f deg for %.2f, jib chord %.2f for %.2f, rudder %.2f for %.2f" % [
-		boom_deg, state["boom_angle_deg"], jib_chord_deg, state["jib_angle_deg"], rudder_deg,
+		boom_deg, state["main_angle_deg"], jib_chord_deg, state["jib_angle_deg"], rudder_deg,
 		state["rudder_angle_deg"]])
 	boat.queue_free()
 	await process_frame

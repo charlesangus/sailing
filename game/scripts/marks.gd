@@ -42,8 +42,7 @@ func drop_marks() -> bool:
 		return false
 	var origin: Vector3 = _boat.global_position
 	origin.y = 0.0
-	var bearing := deg_to_rad(float(_boat.wind_direction_deg))
-	var upwind := Vector3(sin(bearing), 0.0, -cos(bearing))
+	var upwind := SailBoat.compass_dir(float(_boat.wind_direction_deg))
 	_clear()
 	leeward = _place(origin, "Leeward")
 	windward = _place(origin + upwind * WINDWARD_DISTANCE_M, "Windward")

@@ -74,6 +74,7 @@ bool SailBoat::guarded(const char* what, F&& body) {
 
 void SailBoat::fail(const char* what, const char* detail) {
     boat_.reset();
+    state_stale_ = true;
     last_error_ = godot::String("SailBoat ") + what + ": " + to_godot(detail);
     godot::UtilityFunctions::push_error(last_error_);
 }
@@ -93,11 +94,18 @@ void SailBoat::set_scene_dir(const godot::String& dir) {
         });
         if (!ok) return;
     }
-    load();
+    if (!boat_) {
+        load();
+        return;
+    }
+    // A loaded boat only needs the new seabed and a restart, not a second full load.
+    guarded("set scene", [&] { boat_->set_bathymetry(bathymetry_); });
+    if (boat_) restart_in_place();
 }
 
 void SailBoat::load() {
     boat_.reset();
+    state_stale_ = true;
     last_error_ = godot::String();
     main_index_.reset();
     jib_index_.reset();
@@ -122,8 +130,10 @@ void SailBoat::load() {
             if (specs[i].name == "jib") jib_index_ = i;
         }
     });
-    if (!boat_) return;
+    if (boat_) restart_in_place();
+}
 
+void SailBoat::restart_in_place() {
     const sail::Vec3 forward = frames::forward_to_world(get_transform().basis);
     const double heading =
         std::hypot(forward.x(), forward.y()) > 1e-9 ? to_deg(std::atan2(forward.x(), forward.y()))
@@ -136,6 +146,7 @@ void SailBoat::apply_wind() {
         wind_ = std::make_shared<const sail::LogProfileWind>(wind_speed_mps_, wind_from_deg_);
         if (boat_) boat_->set_wind(wind_);
     });
+    state_stale_ = true;
 }
 
 void SailBoat::set_wind_speed_kn(double knots) {
@@ -161,6 +172,7 @@ void SailBoat::set_wind_direction_deg(double from_deg) {
 void SailBoat::apply_controls(const sail::Controls& controls) {
     controls_ = sail::clamped(controls);
     if (boat_) guarded("set controls", [&] { boat_->set_controls(controls_); });
+    state_stale_ = true;
 }
 
 #define SAILGD_CONTROL_SETTER(name)          \
@@ -211,6 +223,24 @@ bool SailBoat::set_controls_from_dictionary(const godot::Dictionary& controls) {
     apply_controls(c);
     return ok;
 }
+
+godot::Vector3 SailBoat::core_to_godot_point(double x, double y, double z) {
+    return frames::world_to_godot(sail::Vec3(x, y, z));
+}
+
+godot::Vector3 SailBoat::godot_to_core_point(const godot::Vector3& point) {
+    const sail::Vec3 v = frames::godot_to_world(point);
+    return godot::Vector3(static_cast<godot::real_t>(v.x()), static_cast<godot::real_t>(v.y()),
+                          static_cast<godot::real_t>(v.z()));
+}
+
+godot::Vector3 SailBoat::compass_dir(double bearing_deg) {
+    return frames::world_to_godot(frames::compass_to_world(bearing_deg * kDeg));
+}
+
+godot::Basis SailBoat::core_to_godot_basis() { return frames::to_basis(frames::world_map()); }
+
+godot::Basis SailBoat::hull_to_local_basis() { return frames::to_basis(frames::body_map()); }
 
 godot::Dictionary SailBoat::get_controls() const {
     godot::Dictionary d;
@@ -304,6 +334,7 @@ int SailBoat::timed_advance(double seconds) {
 }
 
 void SailBoat::update_transform() {
+    state_stale_ = true;
     if (!boat_) return;
     guarded("update transform", [&] {
         const sail::Simulation& sim = boat_->simulation();
@@ -317,6 +348,16 @@ void SailBoat::update_transform() {
 }
 
 godot::Dictionary SailBoat::get_state() const {
+    if (state_stale_) {
+        state_ = build_state();
+        // Callers share the cached copy, so none of them may change it under the others.
+        state_.make_read_only();
+        state_stale_ = false;
+    }
+    return state_;
+}
+
+godot::Dictionary SailBoat::build_state() const {
     godot::Dictionary d;
     d["active"] = boat_ != nullptr;
     if (!boat_) return d;
@@ -355,7 +396,6 @@ godot::Dictionary SailBoat::get_state() const {
 
         const sail::SheetedSailState& main = boat.sheets().main();
         const sail::SheetedSailState& jib = boat.sheets().jib();
-        d["boom_angle_deg"] = to_deg(main.angle);
         d["main_angle_deg"] = to_deg(main.angle);
         d["main_aoa_deg"] = to_deg(main.aoa);
         d["main_luffing"] = main.luffing;
@@ -438,6 +478,18 @@ void SailBoat::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_last_error"), &SailBoat::get_last_error);
     ClassDB::bind_method(D_METHOD("get_state"), &SailBoat::get_state);
     ClassDB::bind_method(D_METHOD("get_step_time_us"), &SailBoat::get_step_time_us);
+
+    const godot::StringName cls = get_class_static();
+    ClassDB::bind_static_method(cls, D_METHOD("core_to_godot_point", "x", "y", "z"),
+                                &SailBoat::core_to_godot_point);
+    ClassDB::bind_static_method(cls, D_METHOD("godot_to_core_point", "point"),
+                                &SailBoat::godot_to_core_point);
+    ClassDB::bind_static_method(cls, D_METHOD("compass_dir", "bearing_deg"),
+                                &SailBoat::compass_dir);
+    ClassDB::bind_static_method(cls, D_METHOD("core_to_godot_basis"),
+                                &SailBoat::core_to_godot_basis);
+    ClassDB::bind_static_method(cls, D_METHOD("hull_to_local_basis"),
+                                &SailBoat::hull_to_local_basis);
 
     ADD_PROPERTY(PropertyInfo(Variant::STRING, "boat_dir", godot::PROPERTY_HINT_DIR),
                  "set_boat_dir", "get_boat_dir");

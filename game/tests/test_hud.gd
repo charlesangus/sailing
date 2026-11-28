@@ -71,7 +71,9 @@ func _run(main: Node) -> void:
 	_check(not boat.get_state()["main_luffing"] and not boat.get_state()["jib_luffing"], "the sails should be drawing at the start")
 	await create_timer(0.3).timeout
 	_check(hud.readout.text != text_before, "the readout did not update on its own")
-	_check(hud.readout.text.contains("BSP %5.2f" % bsp_after) or hud.readout.text.contains("BSP"), "no BSP line")
+	hud.refresh()
+	var bsp_line := "BSP %5.2f kn" % float(boat.get_state()["bsp_kn"])
+	_check(hud.readout.text.contains(bsp_line), "the readout does not show '%s': %s" % [bsp_line, hud.readout.text])
 	_check(boat.get_step_time_us() > 0.0, "the step time is not positive")
 	_check(hud.readout.text.contains("step"), "no step time line")
 

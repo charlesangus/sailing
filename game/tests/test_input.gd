@@ -64,6 +64,25 @@ func _sheet_move(value_of: Callable, press: Callable, release: Callable, label: 
 	_check(delta * expect_sign > 0.1, "%s moved %f, expected sign %f" % [label, delta, expect_sign])
 
 
+# A press and release two frames apart, left to the node's own _process: just-pressed actions are
+# only seen within the frame of the press.
+func _tap_key(code: Key) -> void:
+	_key(code, true)
+	await process_frame
+	await process_frame
+	_key(code, false)
+	await process_frame
+	await process_frame
+
+
+# Steering reads no just-pressed state, so a tap is driven by hand for exact steps.
+func _tap_steer(code: Key) -> void:
+	_key(code, true)
+	_input._process(STEP)
+	_key(code, false)
+	_input._process(STEP)
+
+
 func _initialize() -> void:
 	if not ClassDB.class_exists("SailBoat"):
 		_fail("class SailBoat is not registered")
@@ -213,6 +232,45 @@ func _initialize() -> void:
 			await process_frame
 			_input._process(STEP)
 			_check(counts[signal_case[0]] == before_count + 1, "%s %s fired %d times" % [signal_case[0], device, counts[signal_case[0]] - before_count])
+
+	# Helm hold: a tap steps the tiller by a fixed amount, the held helm keeps it, and releasing the
+	# hold lets it self-centre again.
+	_reset_controls()
+	await _tap_key(KEY_V)
+	_check(_input.helm_hold, "key V should hold the helm")
+	_input.set_process(false)
+	_tap_steer(KEY_D)
+	_tap_steer(KEY_D)
+	_run(1.0)
+	_check(is_equal_approx(_boat.tiller, 2.0 * BoatInput.HELM_TAP_STEP), "two held taps should give %f, got %f" % [2.0 * BoatInput.HELM_TAP_STEP, _boat.tiller])
+	_tap_steer(KEY_A)
+	_check(is_equal_approx(_boat.tiller, BoatInput.HELM_TAP_STEP), "a tap to port should step back, got %f" % _boat.tiller)
+	_input.set_process(true)
+	await _tap_key(KEY_V)
+	_check(not _input.helm_hold, "key V again should release the hold")
+	_run(0.5)
+	_check(is_zero_approx(_boat.tiller), "the released hold should self-centre, got %f" % _boat.tiller)
+
+	# With a panel open the helm centres, so the boat does not circle under it.
+	_reset_controls()
+	_boat.tiller = 1.0
+	_pad_axis(JOY_AXIS_LEFT_X, 1.0)
+	_input.controls_enabled = false
+	_run(0.5)
+	_check(is_zero_approx(_boat.tiller), "the helm should centre while controls are disabled, got %f" % _boat.tiller)
+	_input.controls_enabled = true
+	_pad_axis(JOY_AXIS_LEFT_X, 0.0)
+
+	# A pad button held through an unplug is released, so its key presses fresh afterwards.
+	_pad_button(JOY_BUTTON_Y, true)
+	await process_frame
+	await process_frame
+	var camera_count: int = counts["camera"]
+	Input.joy_connection_changed.emit(0, false)
+	_check(not Input.is_action_pressed(&"camera_switch"), "camera_switch stayed held after the unplug")
+	await _tap_key(KEY_C)
+	_check(counts["camera"] == camera_count + 1, "key C after the unplug fired %d times" % (counts["camera"] - camera_count))
+	_pad_button(JOY_BUTTON_Y, false)
 
 	# Unplugging a pad with a trigger held stops that input and leaves the keyboard working.
 	_reset_controls()

@@ -4,6 +4,7 @@
 #include <optional>
 
 #include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/variant/basis.hpp>
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/string.hpp>
 #include <godot_cpp/variant/vector3.hpp>
@@ -66,15 +67,28 @@ public:
 
     bool is_active() const { return boat_ != nullptr; }
     godot::String get_last_error() const { return last_error_; }
+    // Rebuilt only after the simulation, wind or controls change, so every reader in a frame
+    // shares one read-only Dictionary.
     godot::Dictionary get_state() const;
     // Wall time per fixed step in microseconds, the mean over the last full second of stepping.
     double get_step_time_us() const { return step_time_us_; }
+
+    // The frame maps of frames.hpp for scripts, so no script converts frames by hand. Core
+    // points travel in a Vector3 holding core (x, y, z); compass_dir is the horizontal Godot unit
+    // vector towards a compass bearing; the bases map core world and hull-frame vectors.
+    static godot::Vector3 core_to_godot_point(double x, double y, double z);
+    static godot::Vector3 godot_to_core_point(const godot::Vector3& point);
+    static godot::Vector3 compass_dir(double bearing_deg);
+    static godot::Basis core_to_godot_basis();
+    static godot::Basis hull_to_local_basis();
 
 protected:
     static void _bind_methods();
 
 private:
     void load();
+    void restart_in_place();
+    godot::Dictionary build_state() const;
     void apply_wind();
     void apply_controls(const sail::Controls& controls);
     void update_transform();
@@ -95,6 +109,8 @@ private:
     std::optional<std::size_t> jib_index_;
     godot::String last_error_;
     double step_time_us_ = 0.0;
+    mutable godot::Dictionary state_;
+    mutable bool state_stale_ = true;
     double window_wall_us_ = 0.0;
     long window_steps_ = 0;
 };

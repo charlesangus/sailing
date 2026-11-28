@@ -10,13 +10,7 @@ const SHEET_RATE := 0.25
 const TRAVELER_RATE := 0.5
 const HELM_RAMP_RATE := 2.0
 const HELM_CENTRE_RATE := 4.0
-
-const PAD_ACTIONS: Array[StringName] = [
-	&"steer_axis_left", &"steer_axis_right", &"mainsheet_in", &"mainsheet_out", &"jib_sheet_in",
-	&"jib_sheet_out", &"traveler_windward", &"traveler_leeward", &"backstay_pad_on",
-	&"backstay_pad_off", &"jib_car_forward", &"jib_car_aft", &"orbit_left", &"orbit_right",
-	&"orbit_up", &"orbit_down", &"zoom_in", &"zoom_out",
-]
+const HELM_TAP_STEP := 0.03
 
 @export var boat_path: NodePath
 ## Cleared by the camera rig while the right stick orbits the camera, so it does not also trim the
@@ -25,8 +19,11 @@ var pad_backstay_enabled := true
 ## Cleared while a UI panel is open so the d-pad and keys act on the UI alone. The settings action
 ## keeps working so the panel can be closed.
 var controls_enabled := true
+## Set by the helm_hold key: released steer keys leave the tiller where it is instead of centring.
+var helm_hold := false
 
 var _boat: Node
+var _key_steer_direction := 0.0
 
 
 func _ready() -> void:
@@ -43,8 +40,12 @@ func _process(delta: float) -> void:
 	if Input.is_action_just_pressed(&"settings_toggle"):
 		settings_toggled.emit()
 	if not controls_enabled:
+		# The sim keeps running under a panel, so a tiller left over would circle the boat.
+		_boat.tiller = _released_helm(_boat.tiller, delta)
 		return
 
+	if Input.is_action_just_pressed(&"helm_hold"):
+		helm_hold = not helm_hold
 	_boat.tiller = _next_helm(_boat.tiller, delta)
 	_boat.mainsheet = _held(_boat.mainsheet, &"mainsheet_in", &"mainsheet_out", SHEET_RATE * delta, 0.0, 1.0)
 
@@ -82,16 +83,26 @@ func _backstay_push() -> float:
 	return on - off
 
 
-# The stick sets the tiller directly. Keys ramp it, and it self-centres once they are released, so
-# a tap gives a small correction instead of leaving the helm over.
+# The stick sets the tiller directly. A key press steps it by HELM_TAP_STEP and holding ramps it, so
+# a tap is the same nudge at any frame rate. Released keys let it self-centre unless the helm is
+# held, which lets the keys keep the small steady angle the stick can hold.
 func _next_helm(current: float, delta: float) -> float:
 	var stick := Input.get_axis(&"steer_axis_left", &"steer_axis_right")
 	if stick != 0.0:
 		return clampf(stick, -1.0, 1.0)
 	var keys := Input.get_axis(&"steer_left", &"steer_right")
+	var direction := signf(keys)
+	var pressed_now := direction != _key_steer_direction
+	_key_steer_direction = direction
+	if keys != 0.0 and pressed_now:
+		return clampf(current + direction * HELM_TAP_STEP, -1.0, 1.0)
 	if keys != 0.0:
 		return clampf(current + keys * HELM_RAMP_RATE * delta, -1.0, 1.0)
-	return move_toward(current, 0.0, HELM_CENTRE_RATE * delta)
+	return _released_helm(current, delta)
+
+
+func _released_helm(current: float, delta: float) -> float:
+	return current if helm_hold else move_toward(current, 0.0, HELM_CENTRE_RATE * delta)
 
 
 # awa_deg is positive with the wind over the starboard side, so the jib is to port and the port
@@ -106,9 +117,16 @@ func _leeward_is_port() -> bool:
 func _on_joy_connection_changed(_device: int, connected: bool) -> void:
 	if connected:
 		return
-	for action in PAD_ACTIONS:
-		if Input.is_action_pressed(action) and not _held_by_key(action):
+	for action in InputMap.get_actions():
+		if _has_pad_event(action) and Input.is_action_pressed(action) and not _held_by_key(action):
 			Input.action_release(action)
+
+
+func _has_pad_event(action: StringName) -> bool:
+	for event in InputMap.action_get_events(action):
+		if event is InputEventJoypadButton or event is InputEventJoypadMotion:
+			return true
+	return false
 
 
 func _held_by_key(action: StringName) -> bool:

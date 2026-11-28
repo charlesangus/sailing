@@ -37,11 +37,11 @@ func _process(_delta: float) -> void:
 ## Bakes water depth in metres (0 on land) into a low-resolution float texture. Pixel i covers
 ## the world span [i, i + 1] / resolution of the terrain's extent, sampled at its centre.
 func bake_depth(terrain: Node) -> void:
-	var min_x: float = terrain.origin_x_m
-	var min_z: float = -terrain.origin_y_m
-	var size_x: float = (terrain.width_px - 1) * terrain.pixel_size_m
-	var size_z: float = (terrain.height_px - 1) * terrain.pixel_size_m
-	depth_rect = Rect2(min_x, min_z, size_x, size_z)
+	depth_rect = terrain.godot_bounds()
+	var min_x := depth_rect.position.x
+	var min_z := depth_rect.position.y
+	var size_x := depth_rect.size.x
+	var size_z := depth_rect.size.y
 	depth_image = Image.create(depth_resolution, depth_resolution, false, Image.FORMAT_RF)
 	for row in depth_resolution:
 		var z := min_z + (row + 0.5) / depth_resolution * size_z

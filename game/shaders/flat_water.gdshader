@@ -1,8 +1,8 @@
 shader_type spatial;
 render_mode cull_back, diffuse_burley, specular_schlick_ggx;
 
-uniform sampler2D normal_a : source_color, filter_linear_mipmap, repeat_enable;
-uniform sampler2D normal_b : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D normal_a : hint_normal, filter_linear_mipmap, repeat_enable;
+uniform sampler2D normal_b : hint_normal, filter_linear_mipmap, repeat_enable;
 uniform float scale_a = 0.07;
 uniform float scale_b = 0.31;
 uniform vec2 scroll_a = vec2(0.012, 0.007);
@@ -30,7 +30,7 @@ void vertex() {
 void fragment() {
 	vec2 uv_a = world_xz * scale_a + TIME * scroll_a;
 	vec2 uv_b = world_xz * scale_b + TIME * scroll_b;
-	vec2 slope = (texture(normal_a, uv_a).xy + texture(normal_b, uv_b).xy) * 2.0 - 2.0;
+	vec2 slope = (texture(normal_a, uv_a).xy * 2.0 - 1.0) + (texture(normal_b, uv_b).xy * 2.0 - 1.0);
 	float fade = 1.0 - clamp(length(VERTEX) / ripple_fade_m, 0.0, 1.0);
 	slope *= normal_strength * fade;
 	NORMAL_MAP = normalize(vec3(slope, 1.0)) * 0.5 + 0.5;

@@ -23,9 +23,6 @@ const MAIN_ROACH_M := 0.25
 const ROACH_POINTS := 4
 const SWING_ITERATIONS := 30
 
-## Hull frame x, y, z in Godot node-local axes, the body map of frames.hpp.
-const HULL_TO_LOCAL := Basis(Vector3(0.0, 0.0, -1.0), Vector3(-1.0, 0.0, 0.0), Vector3(0.0, 1.0, 0.0))
-
 var hull_frame: Node3D
 var hull_mesh: MeshInstance3D
 var keel_mesh: MeshInstance3D
@@ -83,7 +80,7 @@ func build() -> bool:
 
 	hull_frame = Node3D.new()
 	hull_frame.name = "HullFrame"
-	hull_frame.basis = HULL_TO_LOCAL
+	hull_frame.basis = SailBoat.hull_to_local_basis()
 	add_child(hull_frame)
 
 	var hull_material := _material(HULL_COLOUR)
@@ -152,8 +149,7 @@ func update_from_state() -> void:
 	rudder_pivot.basis = Basis(Vector3(0.0, 0.0, 1.0), deg_to_rad(float(state["rudder_angle_deg"])))
 
 	var main_swing := _swing_for_chord_angle(_main_geometry, deg_to_rad(float(state["main_angle_deg"])))
-	var boom_swing := _swing_for_chord_angle(_main_geometry, deg_to_rad(float(state["boom_angle_deg"])))
-	boom.basis = Basis(Vector3(0.0, 0.0, 1.0), boom_swing)
+	boom.basis = Basis(Vector3(0.0, 0.0, 1.0), main_swing)
 	main_sail.position = _main_geometry["tack"]
 	main_sail.basis = Basis(_luff_axis(_main_geometry), main_swing)
 	var jib_swing := _swing_for_chord_angle(_jib_geometry, deg_to_rad(float(state["jib_angle_deg"])))
