@@ -52,7 +52,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - approach: Large camera-following water plane at y = 0 with scrolling normal-map ripples, Fresnel sky reflection and depth tint near shore (from the terrain depth); Godot procedural sky with sun; distance fog to the horizon.
   - verify: Scene loads headless without errors (`test_scene_load.gd`); looks checked at UAT.
   - size: M
-- [ ] M6.P2.T3 — Procedural bay heightmap and terrain
+- [x] M6.P2.T3 — Procedural bay heightmap and terrain
   - files: tools/scene/make_bay.py, data/scenes/bay/heightmap.png, data/scenes/bay/meta.json, game/scenes/bay_terrain.tscn, game/scripts/terrain_builder.gd
   - approach: Python generates a 16-bit heightmap (~4 × 4 km, 4 m/px) of a bay: headlands, a harbour mouth, a beach, open water to one side; `meta.json` gives scale and sea level. Godot builds a terrain mesh from it at load with slope/height colouring. The same heightmap is the bathymetry for M6.P2.T4.
   - verify: `make_bay.py` is deterministic (same seed → same hash); the terrain scene loads headless; UAT for looks.
@@ -84,5 +84,6 @@ panel scaffold and a debug HUD. Constant uniform wind.
 
 - 2026-11-28 — Freshness check at claim: `SailBoat` wraps M5's `BoatSim` rather than a bare `Simulation`; the sandbox wind is `LogProfileWind` (constant, but height-profiled as calibrated); grounding joins `BoatSim`'s modules.
 - 2026-11-28 — `SailBoat` calls `BoatSim::advance`, which runs the crew controller before each fixed step through a new `Simulation::advance` hook (calling `simulation().advance()` directly would freeze the crew the polar was calibrated with). Core exceptions are caught at the GDExtension boundary; on error the node goes inert. Boat data reaches the game as configure-time symlinks game/data/{boats,sails,foils,hull} → data/* (gitignored), so the res:// path is res://data/boats/j80.
+- 2026-11-28 — Bay heightmap: seed 7, 1024² at 4 m/px, deterministic sha256 in meta.json; written as a minimal 16-bit PNG (filter 0, no metadata) and decoded in GDScript because Godot 4.7.2's PNG loader reduces 16-bit to 8-bit. Start (0, −1600) 31.6 m deep, harbour mouth ~710 m wide at ≥3 m. Terrain triangle winding/normals not yet viewed rendered — UAT.
 - 2026-11-27 — Coastline scene with simple grounding: user chose a bay with coastline over open water, with bathymetry contact physics and no land wind shadow.
 - 2026-11-27 — Keyboard+mouse and gamepad equally: user's choice; both are tested in headless input tests.
