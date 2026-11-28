@@ -74,7 +74,7 @@ turning behaviour.
 
 ## Phase 4.3: Validation
 
-- [ ] M4.P3.T1 — Tow and turning harnesses
+- [x] M4.P3.T1 — Tow and turning harnesses
   - files: cli/cmd_tow.cpp, cli/cmd_turn.cpp, core/tests/test_j80_tow.cpp
   - approach: `sailsim tow --speeds 1..7 --heel H --leeway L` holds the boat at the given attitude, applies a horizontal tow force solved to steady speed, and prints resistance and side force vs speed as JSON. `sailsim turn --speed 5 --tiller 1` gives the boat an initial speed with a constant thrust matching resistance and full tiller, and reports turning circle diameter and time to 90° heading change. ctest checks the J/80's upright resistance at 3/5/6 kn against Python-VPP within 5%.
   - verify: `ctest -R j80_tow` passes; `sailsim turn` diameter is 1.5 boat lengths ±10% at full rudder, 5 kn, asserted by a `j80_turn` ctest (record the value in the PR body).
