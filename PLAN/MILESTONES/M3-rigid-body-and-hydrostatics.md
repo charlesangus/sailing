@@ -51,7 +51,7 @@ and trim and reproducing the certificate's righting-moment figures.
   - approach: A `ForceModule` with linear + quadratic damping on heave, roll and pitch (body frame), coefficients from `damping.json`. Start roll damping from a fraction of critical computed from roll inertia and initial GM, heave from waterplane area and added mass; document the formulas inline in the data file's comments field.
   - verify: doctest: J/80 dropped 0.1 m into flat water settles with a heave natural period within 10% of the analytic value from waterplane area and mass+added mass, and decays to <5% within 5 periods without overshoot growth.
   - size: M
-- [ ] M3.P2.T3 — Hydrostatics CLI tools
+- [x] M3.P2.T3 — Hydrostatics CLI tools
   - files: cli/cmd_hydro.cpp, cli/cmd_gz.cpp, cli/main.cpp
   - approach: `sailsim hydro --boat data/boats/j80` settles the boat in flat water (heavy damping) and prints draft, trim, displaced volume, LCB as JSON. `sailsim gz --boat … --step 5` for heel 0–180°: hold heel, let sinkage and trim settle, record righting moment and GZ; output JSON (heel, rm_Nm, gz_m) and the angle of vanishing stability.
   - verify: Both commands run on the J/80 and emit valid JSON; `gz` GZ is ~0 at 0° and changes sign once at the reported AVS.
