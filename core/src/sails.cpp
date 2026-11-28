@@ -370,7 +370,12 @@ SailSet::SailSet(SailSetParams params, std::shared_ptr<const WindField> wind)
         if (role == SailRole::main && !main_) main_ = i;
         if (role == SailRole::headsail && !headsail_) headsail_ = i;
     }
-    trims_.resize(params_.sails.size());
+    reset();
+}
+
+void SailSet::reset() {
+    trims_.assign(params_.sails.size(), SailTrim{});
+    last_ = SailSetResult{};
     last_.sails.resize(params_.sails.size());
     place(rig_state(), last_.sails);
 }

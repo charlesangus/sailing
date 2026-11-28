@@ -43,17 +43,26 @@ struct SettleChannel {
     double mean_change = std::numeric_limits<double>::infinity();
     // Largest max - min within the latest window.
     double spread = std::numeric_limits<double>::infinity();
+    // Largest |tail()|: how far the latest window's mean may still be from where the approach
+    // ends.
+    double residual = std::numeric_limits<double>::infinity();
     double relative = 0.0;
 };
 
 // Rolling windows over equally spaced samples of several channels. Settled once two full
-// windows have been seen and, in every channel, the latest window's spread and the change of
-// its mean from the window before are within tolerance: a drift fails the mean test, an
-// oscillation or limit cycle the spread test, so neither is averaged into a steady value.
+// windows have been seen and, in every channel, the latest window's spread, the change of its
+// mean from the window before and the tail still to come are within tolerance: a drift fails the
+// mean test, an oscillation or limit cycle the spread test, and a slow exponential approach,
+// whose window-to-window change can be small while it is still far from its end, the tail
+// test, so none is averaged into a steady value.
 class SettleDetector {
 public:
-    // Throws std::invalid_argument on no channels or a window of fewer than 2 samples.
-    SettleDetector(std::vector<SettleChannel> channels, std::size_t window);
+    // `max_tail_ratio` in [0, 1) caps the per-window decay ratio tail() assumes, so the slowest
+    // approach it models has the time constant -window / ln(max_tail_ratio). Throws
+    // std::invalid_argument on no channels, a window of fewer than 2 samples or a ratio outside
+    // [0, 1).
+    SettleDetector(std::vector<SettleChannel> channels, std::size_t window,
+                   double max_tail_ratio = 0.9);
 
     void reset();
     // One sample of every channel, in the constructor's order. Throws std::invalid_argument on
@@ -70,12 +79,23 @@ public:
     double spread(std::size_t channel) const;
     // Latest window's mean less the previous window's; 0 until full().
     double mean_change(std::size_t channel) const;
+    // The change still to come from the latest window's mean to the end of an exponential
+    // approach through the samples, 0 until full(). With h half a window, the decay ratio over
+    // one window is rho = d_new / d_old, d_new the latest h samples' mean less the h before and
+    // d_old the same one window earlier; the tail is then mean_change * rho / (1 - rho), rho
+    // capped at max_tail_ratio, and taken at the cap when d_old is 0. When d_new and d_old differ in sign
+    // the samples are not a monotonic approach and the tail is 0, leaving them to the mean and
+    // spread tests.
+    double tail(std::size_t channel) const;
 
 private:
     double at(std::size_t channel, std::size_t age) const;
+    // Mean of `count` samples from age `from` back.
+    double block_mean(std::size_t channel, std::size_t from, std::size_t count) const;
 
     std::vector<SettleChannel> channels_;
     std::size_t window_;
+    double max_tail_ratio_;
     std::vector<std::vector<double>> ring_;
     std::size_t head_ = 0;
     std::size_t count_ = 0;
@@ -87,11 +107,13 @@ struct SettleParams {
     double sample_interval = 0.05;
     double check_interval = 0.5;
     double max_time = 150.0;
+    // The slowest approach SettleDetector::tail() models, as its time constant.
+    double max_time_constant = 60.0;
     // m/s
-    SettleChannel bsp{0.004, 0.03, 0.002};
+    SettleChannel bsp{0.004, 0.03, 0.004, 0.002};
     // rad
-    SettleChannel heel{0.0015, 0.01, 0.0};
-    SettleChannel leeway{0.0015, 0.01, 0.0};
+    SettleChannel heel{0.0015, 0.01, 0.0015, 0.0};
+    SettleChannel leeway{0.0015, 0.01, 0.0015, 0.0};
 };
 
 // What a run hands the next one to start from.
@@ -105,13 +127,14 @@ struct SailingState {
     double autopilot_integral = 0.0;
 };
 
-// Steady sailing in flat water: a LogProfileWind of `tws` at 10 m laid out so that a heading along
-// world +x has true wind angle `twa`, the autopilot holding `twa`, the sails at `trim` (its
-// tiller is ignored) and the crew controller hiking.
+// Steady sailing in flat water: a LogProfileWind of `tws` at 10 m laid out so that a course along
+// world +x has true wind angle `twa`, the autopilot holding `twa` as course_true_wind_angle(),
+// the sails at `trim` (its tiller is ignored) and the crew controller hiking.
 struct SteadyRequest {
     // m/s
     double tws = 0.0;
-    // rad, positive starboard tack.
+    // rad, positive starboard tack: the course's, heading plus leeway, as the ORC and Python-VPP
+    // polars tabulate it.
     double twa = 0.0;
     Controls trim;
     AutopilotParams autopilot;
@@ -127,13 +150,15 @@ struct SteadyResult {
     // Means over the latest window when settled, NaN otherwise. Speeds in m/s, angles in rad.
     // bsp is the CG's horizontal speed; vmg its component toward the true wind's origin,
     // negative downwind; heel positive starboard down; leeway the velocity's angle off the
-    // heading, positive to port; rudder positive with the tiller to port; twa the achieved one.
+    // heading, positive to port; rudder positive with the tiller to port; twa the achieved
+    // course TWA and heading_twa the heading's, twa less leeway.
     double bsp = std::numeric_limits<double>::quiet_NaN();
     double vmg = std::numeric_limits<double>::quiet_NaN();
     double heel = std::numeric_limits<double>::quiet_NaN();
     double leeway = std::numeric_limits<double>::quiet_NaN();
     double rudder = std::numeric_limits<double>::quiet_NaN();
     double twa = std::numeric_limits<double>::quiet_NaN();
+    double heading_twa = std::numeric_limits<double>::quiet_NaN();
     // The latest window's mean and spread of bsp, heel and leeway whether settled or not, for
     // diagnosis only.
     double window_bsp = 0.0;
@@ -148,8 +173,9 @@ struct SteadyResult {
 };
 
 // Runs `boat` with aero on from `warm` (its position moved to the origin) or, without it, from
-// a cold start, until settled or settle.max_time, replacing its Simulation. Deterministic for
-// the same boat data, request and warm state.
+// a cold start, until settled or settle.max_time. It first calls BoatSim::reset(), so the
+// result depends on the boat data, request and warm state alone, never on what the boat ran
+// before; a cold start is upright at the still-water equilibrium of the centreline crew.
 SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
                              const std::optional<SailingState>& warm = std::nullopt);
 

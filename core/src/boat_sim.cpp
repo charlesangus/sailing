@@ -162,13 +162,38 @@ void BoatSim::update_crew(double y, double z, CrewPosture posture) {
 const CrewPosition& BoatSim::step_crew(double dt, const WindField& wind) {
     Simulation& sim = simulation();
     const State& state = sim.state();
-    const ApparentWind apparent = apparent_wind(state, Vec3::Zero(), wind, sim.time());
+    const ApparentWind apparent = apparent_wind(state, rig_point(), wind, sim.time());
     const CrewPosition& pos = crew_.step(dt, heel_angle(state.rotation()), apparent);
     const double moved = std::hypot(pos.y - pushed_crew_.y(), pos.z - pushed_crew_.z());
     if (moved >= crew_.params().update_min_move || pos.posture != pushed_posture_) {
         update_crew(pos.y, pos.z, pos.posture);
     }
     return pos;
+}
+
+Vec3 BoatSim::rig_point() const {
+    const SailSetResult& sails = sails_.last_result();
+    Vec3 sum = Vec3::Zero();
+    double area = 0.0;
+    for (const SailState& st : sails.sails) {
+        sum += st.area * st.centre_of_effort;
+        area += st.area;
+    }
+    if (!(area > 0.0)) return Vec3::Zero();
+    return sum / area - sails_.params().reference_point;
+}
+
+void BoatSim::reset() {
+    sim_.reset();
+    crew_.reset();
+    apply_crew(crew_.position().y, crew_.position().z, crew_.position().posture);
+    set_controls(Controls{});
+    sheets_.reset(0.0);
+    sails_.reset();
+    appendages_.rudder().reset(0.0);
+    thrust_.set_thrust(0.0);
+    aero_ = true;
+    set_wind(std::make_shared<const UniformWind>(0.0, 0.0));
 }
 
 void BoatSim::step() {

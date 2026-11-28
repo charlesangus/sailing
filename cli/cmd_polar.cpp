@@ -31,7 +31,7 @@ constexpr const char* kUsage =
     "                     [--kp K] [--ki K] [--kd K] [--model orc|dsyhs] [--section FILE]\n"
     "\n"
     "Steady polar of the sailing boat in flat water, by the full dynamic simulation: an autopilot\n"
-    "holds each true wind angle on starboard tack with the crew hiking, and an auto-trimmer\n"
+    "holds each course true wind angle on starboard tack with the crew hiking, and an auto-trimmer\n"
     "searches mainsheet, jib sheet, traveler, jib car, backstay and reef for the best steady\n"
     "boat speed. Each evaluation runs until boat speed, heel and leeway settle in rolling windows;\n"
     "a point that never settles (drift, oscillation or limit cycle) is reported with settled 0\n"
@@ -40,7 +40,7 @@ constexpr const char* kUsage =
     "\n"
     "  --boat DIR      boat dossier directory, e.g. data/boats/j80\n"
     "  --tws LIST      true wind speeds at 10 m, knots, with the ORC log wind profile below\n"
-    "  --twa LIST      true wind angles, degrees, 1..180, trimmed for boat speed (kind fixed)\n"
+    "  --twa LIST      course true wind angles, degrees, 1..180, trimmed for boat speed (kind fixed)\n"
     "  --beat          add the TWA of best upwind VMG per TWS, searched over 30..60 degrees by golden section\n"
     "                  plus a final parabolic-vertex step, 7 trims\n"
     "  --run           add the TWA of best downwind VMG per TWS, searched over 130..178 degrees\n"
@@ -52,9 +52,14 @@ constexpr const char* kUsage =
     "  --model NAME    canoe-body resistance model, orc or dsyhs; default the dossier's\n"
     "  --section FILE  keel and rudder section table, default DIR/../../foils/naca0012.csv\n"
     "\n"
-    "Columns: tws_kn, twa_deg, bsp_kn, vmg_kn (toward the wind, negative downwind), heel_deg\n"
-    "(negative to port), leeway_deg, rudder_deg, settled, the trim (mainsheet, traveler,\n"
-    "backstay, jib_sheet, jib_car, reef), evaluations, sim_time_s, and kind as orc_polar.csv.\n"
+    "Every TWA is the course's, between the true wind and the boat's track through the water\n"
+    "(heading plus leeway), as the ORC and Python-VPP polars tabulate it.\n"
+    "\n"
+    "Columns: tws_kn, twa_deg (the course TWA held), twa_heading_deg (the heading's, settled\n"
+    "mean), bsp_kn, vmg_kn (bsp along the true wind, negative downwind), heel_deg (negative to\n"
+    "port), leeway_deg (positive to leeward on starboard tack), rudder_deg, settled, the trim\n"
+    "(mainsheet, traveler, backstay, jib_sheet, jib_car, reef), evaluations, sim_time_s, and kind\n"
+    "as orc_polar.csv.\n"
     "Wall times go to stderr. The exit status is 3 when any point did not settle.\n";
 
 struct Flags {
@@ -99,8 +104,10 @@ void write_row(std::FILE* out, const PolarPointResult& p) {
     const sail::harness::SteadyResult& s = p.best.steady;
     const sail::Controls& t = p.best.trim;
     std::fprintf(out,
-                 "%.6g,%.4f,%.4f,%.4f,%.3f,%.3f,%.3f,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.0f,%d,%.2f,%s\n",
-                 p.tws / kKnot, deg(p.twa), s.bsp / kKnot, s.vmg / kKnot, deg(s.heel),
+                 "%.6g,%.4f,%.4f,%.4f,%.4f,%.3f,%.3f,%.3f,%d,%.4f,%.4f,%.4f,%.4f,%.4f,%.0f,%d,%.2f,"
+                 "%s\n",
+                 p.tws / kKnot, deg(p.twa), deg(s.heading_twa), s.bsp / kKnot, s.vmg / kKnot,
+                 deg(s.heel),
                  deg(s.leeway), deg(s.rudder), s.settled ? 1 : 0, t.mainsheet, t.traveler,
                  t.backstay, t.jib_sheet_port, t.jib_car, t.reef, p.evaluations, p.sim_time,
                  sail::harness::polar_kind_name(p.kind));
@@ -203,8 +210,8 @@ int polar(const Options& options) {
     if (failure) std::rethrow_exception(failure);
 
     std::fputs(
-        "tws_kn,twa_deg,bsp_kn,vmg_kn,heel_deg,leeway_deg,rudder_deg,settled,mainsheet,traveler,"
-        "backstay,jib_sheet,jib_car,reef,evaluations,sim_time_s,kind\n",
+        "tws_kn,twa_deg,twa_heading_deg,bsp_kn,vmg_kn,heel_deg,leeway_deg,rudder_deg,settled,"
+        "mainsheet,traveler,backstay,jib_sheet,jib_car,reef,evaluations,sim_time_s,kind\n",
         out);
     bool all_settled = true;
     for (const auto& r : results) {

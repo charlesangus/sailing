@@ -122,14 +122,26 @@ public:
     // does not move the CrewController.
     void update_crew(double y, double z, CrewPosture posture = CrewPosture::sitting);
 
-    // Steps the crew controller by dt for the running Simulation's heel and the apparent wind at
-    // the CG in `wind`, then calls update_crew() if the crew moved at least
+    // Steps the crew controller by dt for the running Simulation's heel and the apparent wind in
+    // `wind` at rig_point(), then calls update_crew() if the crew moved at least
     // CrewParams::update_min_move since the last update or changed posture. Call once per
     // Simulation::step(), before it, with dt = Simulation::kFixedDt. Throws std::logic_error before
     // start().
     const CrewPosition& step_crew(double dt, const WindField& wind);
     // The same in the boat's own wind.
     const CrewPosition& step_crew(double dt) { return step_crew(dt, *wind_); }
+
+    // m, body frame from the CG: the sail plan's area-weighted centre of effort as the sails
+    // were last placed, or the CG with no sail area. The crew judges the wind there because the
+    // wind near the water, under the log profile, is far lighter than what drives the rig.
+    Vec3 rig_point() const;
+
+    // Back to the state a fresh load leaves, apart from crew listeners: no Simulation, the crew
+    // controller and the crew mass on the centreline with the mass properties and every module's
+    // CG reference following, default controls, the sheet controller reset with the reef out, the
+    // sail set reset, the rudder centred with its time base cleared, zero thrust, aero on and a
+    // calm wind. A run that starts from here depends only on its own inputs, not on earlier runs.
+    void reset();
 
     // One fixed step: step_crew(Simulation::kFixedDt), then Simulation::step(). Throws
     // std::logic_error before start().

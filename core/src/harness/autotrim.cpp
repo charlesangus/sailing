@@ -26,7 +26,7 @@ double tolerance(const SettleChannel& c, double v, double mean) {
     return v + c.relative * std::abs(mean);
 }
 
-enum Channel : std::size_t { kBsp, kHeel, kLeeway, kVmg, kRudder, kTwa, kChannels };
+enum Channel : std::size_t { kBsp, kHeel, kLeeway, kVmg, kRudder, kTwa, kHeadingTwa, kChannels };
 
 struct Coordinate {
     double Controls::*member;
@@ -144,10 +144,14 @@ GoldenResult parabolic_peak_max(const std::function<double(double)>& f, double l
     return out;
 }
 
-SettleDetector::SettleDetector(std::vector<SettleChannel> channels, std::size_t window)
-    : channels_(std::move(channels)), window_(window) {
+SettleDetector::SettleDetector(std::vector<SettleChannel> channels, std::size_t window,
+                               double max_tail_ratio)
+    : channels_(std::move(channels)), window_(window), max_tail_ratio_(max_tail_ratio) {
     if (channels_.empty()) throw std::invalid_argument("SettleDetector: no channels");
     if (window_ < 2) throw std::invalid_argument("SettleDetector: window under 2 samples");
+    if (!(max_tail_ratio_ >= 0.0 && max_tail_ratio_ < 1.0)) {
+        throw std::invalid_argument("SettleDetector: max_tail_ratio outside [0, 1)");
+    }
     ring_.assign(channels_.size(), std::vector<double>(2 * window_, 0.0));
 }
 
@@ -197,6 +201,27 @@ double SettleDetector::mean_change(std::size_t channel) const {
     return mean(channel) - previous / static_cast<double>(window_);
 }
 
+double SettleDetector::block_mean(std::size_t channel, std::size_t from, std::size_t count) const {
+    double sum = 0.0;
+    for (std::size_t i = from; i < from + count; ++i) sum += at(channel, i);
+    return sum / static_cast<double>(count);
+}
+
+double SettleDetector::tail(std::size_t channel) const {
+    if (!full()) return 0.0;
+    const std::size_t h = window_ / 2;
+    const double d_new = block_mean(channel, 0, h) - block_mean(channel, h, h);
+    const double d_old = block_mean(channel, window_, h) - block_mean(channel, window_ + h, h);
+    if (d_new == 0.0) return 0.0;
+    double rho = max_tail_ratio_;
+    if (d_old != 0.0) {
+        const double ratio = d_new / d_old;
+        if (ratio <= 0.0) return 0.0;
+        rho = std::min(ratio, max_tail_ratio_);
+    }
+    return mean_change(channel) * rho / (1.0 - rho);
+}
+
 bool SettleDetector::settled() const {
     if (!full()) return false;
     for (std::size_t c = 0; c < channels_.size(); ++c) {
@@ -205,6 +230,7 @@ bool SettleDetector::settled() const {
         if (!std::isfinite(m)) return false;
         if (std::abs(mean_change(c)) > tolerance(ch, ch.mean_change, m)) return false;
         if (spread(c) > tolerance(ch, ch.spread, m)) return false;
+        if (std::abs(tail(c)) > tolerance(ch, ch.residual, m)) return false;
     }
     return true;
 }
@@ -221,7 +247,11 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
     const auto window = static_cast<std::size_t>(std::max<long long>(
         2, std::llround(sp.window / (static_cast<double>(sample_every) * dt))));
     const auto max_steps = std::llround(sp.max_time / dt);
+    const double window_time = static_cast<double>(window * sample_every) * dt;
+    const double max_tail_ratio =
+        sp.max_time_constant > 0.0 ? std::exp(-window_time / sp.max_time_constant) : 0.0;
 
+    boat.reset();
     const double twa_deg = request.twa * 180.0 / std::numbers::pi;
     const auto wind = std::make_shared<const LogProfileWind>(request.tws, 90.0 + twa_deg);
     boat.set_wind(wind);
@@ -255,7 +285,7 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
     const Vec3 upwind = to_norm > 0.0 ? Vec3(-to.x() / to_norm, -to.y() / to_norm, 0.0)
                                       : Vec3::Zero();
 
-    SettleDetector detector({sp.bsp, sp.heel, sp.leeway, {}, {}, {}}, window);
+    SettleDetector detector({sp.bsp, sp.heel, sp.leeway, {}, {}, {}, {}}, window, max_tail_ratio);
     SteadyResult out;
     std::array<double, kChannels> sample{};
     bool settled = false;
@@ -263,7 +293,7 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
     for (; step < max_steps; ++step) {
         const State& s = sim.state();
         const Mat3 r = s.rotation();
-        const double twa = true_wind_angle(s, *wind, sim.time());
+        const double twa = course_true_wind_angle(s, *wind, sim.time());
         const double yaw_rate = (r * s.angular_velocity).z();
         trim.tiller = pilot.update(dt, twa, yaw_rate);
         boat.appendages().set_controls(trim);
@@ -286,7 +316,8 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
             sample[kLeeway] = speed > 1e-6 ? std::atan2(across, along) : 0.0;
             sample[kVmg] = v.dot(upwind);
             sample[kRudder] = boat.appendages().rudder_angle();
-            sample[kTwa] = true_wind_angle(n, *wind, sim.time());
+            sample[kTwa] = course_true_wind_angle(n, *wind, sim.time());
+            sample[kHeadingTwa] = true_wind_angle(n, *wind, sim.time());
             detector.push(sample);
         }
         if ((step + 1) % check_every == 0 && detector.settled()) {
@@ -309,6 +340,7 @@ SteadyResult evaluate_steady(BoatSim& boat, const SteadyRequest& request,
         out.leeway = detector.mean(kLeeway);
         out.rudder = detector.mean(kRudder);
         out.twa = detector.mean(kTwa);
+        out.heading_twa = detector.mean(kHeadingTwa);
     }
     out.final.state = sim.state();
     out.final.crew_y = boat.mass_model().crew_position().y();

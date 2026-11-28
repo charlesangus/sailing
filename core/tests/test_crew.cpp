@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <memory>
 #include <numbers>
+#include <stdexcept>
 
 #include "sail/boat_sim.hpp"
 #include "sail/crew.hpp"
@@ -209,4 +210,33 @@ TEST_CASE("auto-hiking reduces the steady heel under a heeling moment") {
     CHECK(y_on < -0.5);
     CHECK(std::abs(heel_on) < std::abs(heel_off));
     CHECK(std::abs(heel_off) > 3.0 * kDeg);
+}
+
+TEST_CASE("the crew judges the wind at the rig, not at the CG near the water") {
+    const auto boat = BoatSim::load(kBoatDir, naca0012());
+    const Vec3 r = boat->rig_point();
+    MESSAGE("rig point " << r.transpose() << " m from the CG");
+    CHECK(r.z() > 3.0);
+    const LogProfileWind log_wind(6.0 * kKnot, 180.0);
+    State upright = boat->equilibrium().pose;
+    const double at_rig = apparent_wind(upright, r, log_wind, 0.0).aws;
+    const double at_cg = apparent_wind(upright, Vec3::Zero(), log_wind, 0.0).aws;
+    MESSAGE("log-profile 6 kn: " << at_rig / kKnot << " kn at the rig, " << at_cg / kKnot
+                                 << " kn at the CG");
+    CHECK(at_rig > 1.5 * at_cg);
+}
+
+TEST_CASE("reset puts the crew, the CG and the mass properties back as loaded") {
+    const auto boat = BoatSim::load(kBoatDir, naca0012());
+    const auto fresh = BoatSim::load(kBoatDir, naca0012());
+    boat->start(boat->equilibrium().pose);
+    boat->update_crew(-1.0, 0.8, CrewPosture::hiking);
+    REQUIRE(boat->mass_model().cg() != fresh->mass_model().cg());
+    boat->reset();
+    fresh->reset();
+    CHECK(boat->mass_model().cg() == fresh->mass_model().cg());
+    CHECK(boat->body().inertia == fresh->body().inertia);
+    CHECK(boat->crew().position().y == 0.0);
+    CHECK(boat->equilibrium().pose.position == fresh->equilibrium().pose.position);
+    CHECK_THROWS_AS(boat->simulation(), std::logic_error);
 }

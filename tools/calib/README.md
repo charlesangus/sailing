@@ -12,15 +12,23 @@ Targets: the beat and fixed TWA up to `--downwind-from` (default 75 deg) come fr
 above it and the run optimum come from Python-VPP main + jib. The certificate's 90 deg speed appears to carry a
 spinnaker, and the J/80 here sails main + jib only.
 
-Beat: BSP and VMG must each be within `--bsp-tol` of the certificate's beat BSP and VMG. The beat angle and its
-error are reported but not gated unless `--gate-beat-angle DEG` is given. Beat angles come out narrower than the
-certificate's; Python-VPP with the same ORC sail method is also 3 to 9 deg narrower.
+TWA and VMG: every TWA is the course's, between the true wind and the boat's track through the water (heading
+plus leeway). That is the angle the ORC VPP and Python-VPP tabulate: Python-VPP's `AeroMod.wind_triangle` adds
+the boat speed along the TWA axis and models leeway separately, and its VMG is `BSP * cos(TWA)`. The sim CSV's
+`twa_deg` is the course TWA its autopilot held, `twa_heading_deg` the heading's, and `vmg_kn` its velocity along
+the true wind. A CSV without `twa_heading_deg` predates that and is rejected; regenerate it.
+
+Beat: BSP and VMG (`vmg_kn`) must each be within `--bsp-tol` of the certificate's beat BSP and VMG. The beat angle
+and its error are reported but not gated unless `--gate-beat-angle DEG` is given, because the references disagree
+on it: Python-VPP with the same ORC sail method sits 3 to 9 deg below the certificate from 8 kn up. Run VMG is
+reported only.
 
 Accepted residuals: `--accepted FILE` (default `<boat>/calibration_accepted.json` if it exists) is a JSON list of
 `{tws, point, metric, max_error_pct | max_error_deg, reason}`. `point` is `"run"`, `"beat"` or a fixed TWA in deg;
 `metric` is `"bsp"` (bound `max_error_pct`) or `"beat_angle"` (bound `max_error_deg`). A point that misses its
 tolerance but is within the entry's bound is reported as accepted and does not fail; anything beyond the bound
-still fails. The report lists every entry and whether it was used.
+still fails. An optional `min_error_pct` or `min_error_deg` makes the bound signed, `min <= error <= max`, so a
+residual that changes sign is no longer accepted. The report lists every entry and whether it was used.
 
 Missing beat or run rows, unsettled points, NaN BSP and points outside the target table are failures.
 

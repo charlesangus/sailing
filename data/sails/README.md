@@ -37,7 +37,8 @@ lines are skipped. Keys:
   trim gives an explicit angle of attack. The optimum angle of attack at
   apparent wind angle b is max(min(aoa_design, b), b - max_ease); the stalled
   sail tends to a flat plate of normal-force coefficient Cn. These are not
-  ORC values. They are provisional estimates: a design angle near the angle
+  ORC values. They are provisional estimates: a design angle of 25 degrees
+  for the main and 18 for the genoa, a little below the apparent wind angles
   of maximum lift in the tables (28 degrees for the main, 20 to 27 for the
   genoa), a main that eases out to 90 degrees off the centreline (ORC: at
   180 degrees AWA the main is at about 90 degrees of attack), a genoa sheet

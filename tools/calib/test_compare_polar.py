@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import compare_polar as cp  # noqa: E402
 
 BOAT = Path(__file__).resolve().parents[2] / "data" / "boats" / "j80"
-HEADER = ["tws_kn", "twa_deg", "bsp_kn", "vmg_kn", "heel_deg", "leeway_deg", "rudder_deg", "settled",
+HEADER = ["tws_kn", "twa_deg", "twa_heading_deg", "bsp_kn", "vmg_kn", "heel_deg", "leeway_deg", "rudder_deg", "settled",
           "mainsheet", "traveler", "backstay", "jib_sheet", "jib_car", "reef", "evaluations",
           "sim_time_s", "kind"]
 TWS = (6.0, 10.0, 16.0)
@@ -30,18 +30,19 @@ def target_rows(scale=1.0):
     return rows
 
 
-def write_sim(path, rows, unsettled=()):
+def write_sim(path, rows, unsettled=(), vmg_scale=None):
     with open(path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(HEADER)
         for i, (tws, twa, bsp, kind) in enumerate(rows):
             settled = 0 if i in unsettled else 1
-            w.writerow([tws, twa, bsp, 0, -10, 2, 1, settled, .7, 0, 0, .6, .5, 0, 10, 100, kind])
+            vmg = bsp * math.cos(math.radians(twa)) * (vmg_scale or {}).get(i, 1.0)
+            w.writerow([tws, twa, twa - 2, bsp, vmg, -10, 2, 1, settled, .7, 0, 0, .6, .5, 0, 10, 100, kind])
 
 
-def run(tmp, name, rows, extra=(), unsettled=()):
+def run(tmp, name, rows, extra=(), unsettled=(), vmg_scale=None):
     sim = Path(tmp) / f"{name}.csv"
-    write_sim(sim, rows, unsettled)
+    write_sim(sim, rows, unsettled, vmg_scale)
     out = Path(tmp) / f"{name}.md"
     code = cp.main(["--sim", str(sim), "--boat", str(BOAT), "--out", str(out), *extra])
     return code, out.read_text()
@@ -77,6 +78,19 @@ def test_all():
         code, md = run(tmp, "beat_slow", rows)
         assert code == 1
 
+        code, md = run(tmp, "beat_vmg_column", target_rows(), vmg_scale={0: 0.93})
+        assert code == 1 and "error -7.0 %" in md
+        code, md = run(tmp, "run_vmg_reported", target_rows(), vmg_scale={1: 0.9})
+        assert code == 0 and "Run VMG:" in md and "(error -10.0 %)" in md
+
+        old = Path(tmp) / "old.csv"
+        old.write_text("tws_kn,twa_deg,bsp_kn,vmg_kn,settled,kind\n")
+        try:
+            cp.read_sim(old)
+            raise AssertionError("a CSV without twa_heading_deg was read")
+        except ValueError as e:
+            assert "twa_heading_deg" in str(e)
+
         nan_rows = target_rows()
         nan_rows[2] = (*nan_rows[2][:2], math.nan, nan_rows[2][3])
         code, _ = run(tmp, "nan", nan_rows)
@@ -105,6 +119,21 @@ def test_all():
         rows[1] = (rows[1][0], rows[1][1], rows[1][2] * 1.065 / 1.051, "run")
         code, md = run(tmp, "run_beyond", rows, extra=("--accepted", str(acc)))
         assert code == 1 and "| no | owner test |" in md
+
+        signed = dict(entry, min_error_pct=4.0)
+        acc.write_text(json.dumps([signed]))
+        rows[1] = (rows[1][0], rows[1][1], rows[1][2] * 1.051 / 1.065, "run")
+        code, md = run(tmp, "run_signed", rows, extra=("--accepted", str(acc)))
+        assert code == 0 and "+4 to +6%" in md
+        rows[1] = (rows[1][0], rows[1][1], rows[1][2] * 0.949 / 1.051, "run")
+        code, md = run(tmp, "run_flipped", rows, extra=("--accepted", str(acc)))
+        assert code == 1
+        acc.write_text(json.dumps([dict(entry, min_error_pct=7.0)]))
+        try:
+            cp.load_accepted(acc)
+            raise AssertionError("min above max was accepted")
+        except ValueError:
+            pass
 
         one = [(10.0, 90.0, 6.4082, "fixed")]
         code, md = run(tmp, "one", one, extra=("--tws", "10"))

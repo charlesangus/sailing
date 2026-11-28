@@ -284,6 +284,10 @@ public:
     void set_reference_point(const Vec3& point) { params_.reference_point = point; }
     void set_wind(std::shared_ptr<const WindField> wind);
 
+    // Back to the state the constructor leaves: every trim at its default and last_result() the
+    // sails placed at those trims with nothing evaluated.
+    void reset();
+
 private:
     struct RigState {
         double fractionality = 1.0;

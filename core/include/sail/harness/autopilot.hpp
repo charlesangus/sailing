@@ -9,6 +9,15 @@ namespace sail::harness {
 // horizontal), positive with the wind over the starboard side, as ApparentWind::awa.
 double true_wind_angle(const State& state, const WindField& wind, double t);
 
+// Below this horizontal speed, m/s, the course is taken to be the heading.
+inline constexpr double kMinCourseSpeed = 0.1;
+
+// rad in (-pi, pi]: the true wind's origin from the course, the horizontal velocity of the CG
+// through the (still) water, signed as true_wind_angle(). It is the heading's angle plus the
+// leeway (positive to port), the angle ORC's and Python-VPP's polars tabulate. The heading's
+// angle below kMinCourseSpeed.
+double course_true_wind_angle(const State& state, const WindField& wind, double t);
+
 // Gains of the tiller PID, in tiller units (-1..1) per radian of true wind angle error.
 struct AutopilotParams {
     // Per rad of error.

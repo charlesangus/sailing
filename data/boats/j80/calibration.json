@@ -1,30 +1,30 @@
 {
-  "description": "Calibration multipliers on the J/80 force models, read by load_calibration (core/include/sail/calibration.hpp). Each entry is dimensionless; 1 is the uncalibrated model. Targets: the ORC 2019 certificate for the beat and fixed TWA up to 90 deg, the Python-VPP main + jib polar beyond (tools/calib/compare_polar.py). The largest error, 7 to 16 percent too fast downwind, was not a coefficient: the polar harness sailed in a uniform wind while both references quote TWS at 10 m over the ORC log profile, so the rig saw too much wind low down and the hull and crew windage too much drag. The harness now uses LogProfileWind (ORC VPP Documentation 2023, 7.1), after which every factor below stays at 1.",
+  "description": "Calibration multipliers on the J/80 force models, read by load_calibration (core/include/sail/calibration.hpp). Each entry is dimensionless; 1 is the uncalibrated model. Targets (tools/calib/compare_polar.py): the ORC 2019 certificate for the beat and fixed TWA up to 75 deg, the Python-VPP main + jib polar beyond and for the run, because the certificate has no non-spinnaker velocity table and its 90 deg speed appears to carry a spinnaker. Every TWA is the course's, heading plus leeway, as both references tabulate it. The polar harness sails in LogProfileWind (ORC VPP Documentation 2023, 7.1) because both references quote TWS at 10 m over that profile; in a uniform wind the rig, hull and crew all see the 10 m speed and the boat comes out 7 to 16 percent fast downwind with no coefficient at fault.",
   "main_lift": {
     "value": 1.0,
     "physical_meaning": "Factor on the main's section lift coefficient, the ORC Cl_max at the optimum angle of attack and the lift curve built on it.",
-    "source": "ORC VPP Documentation 2023, table 5.2 (main Cl_max against AWA), data/sails/orc_main.csv",
-    "rationale": "Fixed TWA 52 deg sits within 1.5 percent of the certificate at 6, 10 and 16 kn, so close-hauled lift is right as tabulated.",
-    "change": "None. The one region it could help, 6 kn at 90 deg (9 percent slow against the certificate), is 4 percent slow against Python-VPP main + jib, and more lift would push the downwind points, already 2 to 4 percent fast, past tolerance."
+    "source": "ORC VPP Documentation 2023, table 5.1 (main Cl_max against AWA), data/sails/orc_main.csv",
+    "rationale": "Fixed TWA 52 deg sits 3.2, 1.6 and 2.9 percent below the certificate at 6, 10 and 16 kn, so close-hauled lift is right as tabulated.",
+    "change": "None. The one region it could help, 6 kn at 90 deg, is 3.2 percent slow against Python-VPP main + jib, and more lift would push the downwind points, already up to 4.8 percent fast, past tolerance."
   },
   "jib_lift": {
     "value": 1.0,
     "physical_meaning": "Factor on the jib's section lift coefficient.",
-    "source": "ORC VPP Documentation 2023, table 5.5 (jib Cl_max against AWA), data/sails/orc_jib.csv",
+    "source": "ORC VPP Documentation 2023, table 5.4 (jib Cl_max against AWA), data/sails/orc_jib.csv",
     "rationale": "As main_lift: close-hauled and broad-reaching speeds already agree.",
     "change": "None."
   },
   "main_parasitic_drag": {
     "value": 1.0,
     "physical_meaning": "Factor on the main's parasitic drag coefficient Cd0, which at large AWA is most of the main's drag and so its drive.",
-    "source": "ORC VPP Documentation 2023, table 5.2 (main Cd0 against AWA)",
-    "rationale": "With the wind gradient the run points from 120 to 180 deg sit 0 to 3.6 percent above Python-VPP, inside tolerance, so the downwind drive needs no factor.",
+    "source": "ORC VPP Documentation 2023, table 5.1 (main Cd0 against AWA)",
+    "rationale": "With the wind gradient the fixed points from 120 to 180 deg sit 0.6 to 4.8 percent above Python-VPP at 6, 10 and 16 kn, inside tolerance, so the downwind drive needs no factor.",
     "change": "None."
   },
   "jib_parasitic_drag": {
     "value": 1.0,
     "physical_meaning": "Factor on the jib's parasitic drag coefficient Cd0.",
-    "source": "ORC VPP Documentation 2023, table 5.5 (jib Cd0 against AWA)",
+    "source": "ORC VPP Documentation 2023, table 5.4 (jib Cd0 against AWA)",
     "rationale": "As main_parasitic_drag.",
     "change": "None."
   },
@@ -32,21 +32,21 @@
     "value": 1.0,
     "physical_meaning": "Factor on the sail plan's effective height heff = eff_span_corr kheff(AWA) (b + HBI); the induced drag coefficient is A CL^2 / (pi heff^2).",
     "source": "ORC VPP Documentation 2023, eqs. 5.42 to 5.47 and Figure 5.14 (kheff, revised 2023)",
-    "rationale": "A uniform factor below 1 would add induced drag at every AWA, slowing the 75 and 90 deg reaches that are already 3 to 9 percent slow; the close-hauled-only test of the same idea is kheff_upwind_rise, which made the fit worse.",
+    "rationale": "A uniform factor below 1 would add induced drag at every AWA, slowing the 75 and 90 deg reaches that are already up to 5.4 percent slow (75 deg at 16 kn); the close-hauled-only test of the same idea is kheff_upwind_rise, which made the fit worse.",
     "change": "None."
   },
   "kheff_upwind_rise": {
     "value": 1.0,
     "physical_meaning": "Factor on the rise of kheff above its reaching value 0.8 at small AWA, kheff' = 0.8 + f (kheff - 0.8). Below 1 it shortens heff and so raises induced drag close-hauled while leaving reaching heff alone.",
     "source": "ORC VPP Documentation 2023, Figure 5.14 (revised 2023) against the pre-2023 kheff curve, tools/vpp/vendor/Python-VPP/src/python_vpp/dat/kheff.dat",
-    "rationale": "The certificate is a 2019 ORC VPP run, presumably made with the pre-2023 kheff curve, which peaks at 1.22 near 18 deg AWA where the 2023 curve peaks at 1.45; 0.65 reproduces the older curve within 0.04 from 15 to 60 deg AWA. Kept at 1 because that curve made the fit worse.",
-    "change": "None. Tried 0.65 against the beat angles, which sat 2.7 deg (6 kn) and 4.5 deg (16 kn) narrower than the certificate: the optimum barely moved (39.8 to 39.8, 32.7 to 33.3 deg) while beat BSP fell to 4.09, 5.48 and 5.68 kn and VMG fell 5 to 9 percent below the certificate's. At 1 the sim's BSP at the certificate's beat angles, interpolated toward 52 deg, matches the certificate and its VMG equals or beats it, so the angle gap is a flat VMG optimum rather than missing drag."
+    "rationale": "The certificate is a 2019 ORC VPP run, presumably made with the pre-2023 kheff curve, which peaks at 1.22 near 18 deg AWA where the 2023 curve peaks at 1.45; 0.65 reproduces the older curve within 0.04 from 15 to 60 deg AWA. Kept at 1 because the shorter heff only adds close-hauled drag, and the beat is already slow rather than fast: at 1 the course beat angle is 2.5 deg (6 kn), 3.2 deg (10 kn) and 1.3 deg (16 kn) wider than the certificate's, BSP 0.5, 0.0 and 2.5 percent low and VMG 4.7, 4.6 and 4.3 percent low.",
+    "change": "None. Tried 0.65: beat BSP fell a further 2.9, 2.2 and 0.6 percent at 6, 10 and 16 kn with the optimum angle barely moving, so it would widen the VMG deficit rather than close it."
   },
   "headsail_blanketing": {
     "value": 1.0,
     "physical_meaning": "Factor on the headsail's blanketing loss 1 - bk behind the main from 135 to 180 deg AWA, the main-jib interaction downwind.",
     "source": "ORC VPP Documentation 2023, 5.6.2",
-    "rationale": "The downwind interaction term. Python-VPP keeps the jib's bk at 1, yet the sim with ORC blanketing is still 2 to 4 percent faster than Python-VPP at 165 and 180 deg, so more blanketing would be the direction if those points ever drift past tolerance.",
+    "rationale": "The downwind interaction term. Python-VPP keeps the jib's bk at 1, yet the sim with ORC blanketing is still 1.7 to 4.7 percent faster than Python-VPP at 165 and 180 deg, so more blanketing would be the direction if those points ever drift past tolerance.",
     "change": "None."
   },
   "hull_resistance": {
