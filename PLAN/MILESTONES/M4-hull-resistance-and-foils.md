@@ -27,17 +27,27 @@ turning behaviour.
 
 ## Phase 4.1: Hull resistance
 
-- [ ] M4.P1.T1 — DSYHS residuary and frictional resistance
-  - files: core/include/sail/hull_resistance.hpp, core/src/hull_resistance.cpp, core/tests/test_hull_resistance.cpp
-  - approach: Implement Keuning & Sonnenberg 1998 upright residuary resistance (coefficients per Principles of Yacht Design / ORC VPP docs) as a function of Fn and hull parameters from `hull_hydro.json`; ITTC-57 frictional resistance with a form factor; the DSYHS heeled-resistance delta. Pure function first (`resistance(speed, heel)`), with a range check that warns if hull parameters fall outside the regression range.
-  - verify: doctest: resistance at Fn 0.2/0.35/0.45 matches Python-VPP's hull resistance for the same J/80 inputs within 5% (export reference numbers from `tools/vpp/` into the test).
+- [ ] M4.P1.T4 — Sailing-condition hydrostatics in the dossier
+  - files: tools/hull/morph.py (or a new tools/hull/condition_hydro.py), data/boats/j80/hull_hydro.json, data/boats/j80/README.md, data/boats/j80/sources.md
+  - approach: The resistance models take hull parameters at the sailing condition (boat + 350 kg crew + sails/gear, 1809 kg per mass.json), but hull_hydro.json only holds them at measurement trim. Measure Lwl, Bwl, Tc, ∇c, LCB, LCF, Cp, Cm, Aw, wetted area Sc and max section area on hull_physics.obj + appendages.obj at the sailing displacement, level trim, with `tools/hull/dsyhs_table.py`'s `hydrostatics` (as tools/vpp/run_pyvpp.py already does for its subset); write them as a `conditions.sailing` block (keeping the measurement block), with method/provenance. Make run_pyvpp.py read its hull inputs from this block instead of re-measuring, so both share one source.
+  - verify: the script regenerates the block deterministically; its Lwl/Bwl/Tc/∇c/Sc equal what run_pyvpp.py `--inputs-only` used before (within 1e-6); `morph.py --check` still passes.
   - size: M
+- [ ] M4.P1.T1 — ORC VPP hull resistance (default model)
+  - files: core/include/sail/hull_resistance.hpp, core/src/hull_resistance.cpp, core/tests/test_hull_resistance.cpp, data/hull/orci_drag_surfaces.csv (or equivalent), tools/vpp/hull_reference.py, data/boats/j80/hull_resistance_reference.json
+  - approach: Implement the ORC VPP Documentation 2023 hull model from the documentation: ORCi residuary-resistance surfaces (Fn × Lsm/∇^1/3 × Bwl/Tc), its viscous resistance (friction line, reference length, form factor as documented), and its heel terms. Behind a `HullResistanceModel` interface with a config switch (`orc` default, `dsyhs` added by M4.P1.T5): pure function `resistance(speed, heel) -> {residuary, frictional, total, fn, ...}`, parameters from the dossier's sailing-condition block (M4.P1.T4), water properties in data. Range check flags inputs outside the surfaces' grid. Note where Python-VPP deviates from the ORC documentation (it uses the Hughes line at 0.85·L with k = 0.05 and only a >30° heel term) and follow the documentation, recording the deviations.
+  - verify: doctest: total resistance at Fn 0.2/0.35/0.45 matches Python-VPP's hull model for the same J/80 inputs within 5% where the two follow the same method (reference numbers exported by tools/vpp/hull_reference.py into the data file, with provenance; any documented deviation compared separately with its own stated tolerance); zero speed → zero force; the range check flags an out-of-grid hull.
+  - size: L
 - [ ] M4.P1.T2 — Hull force module: resistance, side force and yaw damping
   - files: core/include/sail/hull_forces.hpp, core/src/hull_forces.cpp, core/tests/test_hull_forces.cpp
-  - approach: `ForceModule` applying M4.P1.T1's resistance opposite the hull's horizontal velocity at the centre of lateral resistance, plus a canoe-body side force from leeway (DSYHS heeled side-force terms, low aspect lifting body) and its induced drag, plus linear+quadratic sway and yaw damping. Smooth at zero speed and valid in sternway. The integrator already includes the added-mass Coriolis and Munk-moment terms (Kirchhoff formulation, M3 decision), so this module must not add a Munk moment or any other added-mass-derived term again.
+  - approach: `ForceModule` applying the selected resistance model's (M4.P1.T1/T5) resistance opposite the hull's horizontal velocity at the centre of lateral resistance, plus a canoe-body side force from leeway (DSYHS heeled side-force terms, low aspect lifting body) and its induced drag, plus linear+quadratic sway and yaw damping. Smooth at zero speed and valid in sternway. The integrator already includes the added-mass Coriolis and Munk-moment terms (Kirchhoff formulation, M3 decision), so this module must not add a Munk moment or any other added-mass-derived term again.
   - verify: doctest: towed at constant velocity, the module's drag equals M4.P1.T1's function; a hull drifting sideways at 1 m/s decelerates monotonically; no NaN at zero speed.
   - size: M
 
+- [ ] M4.P1.T5 — DSYHS 1998 resistance as the alternative model
+  - files: core/src/hull_resistance.cpp, core/include/sail/hull_resistance.hpp, core/tests/test_hull_resistance.cpp, data/hull/dsyhs1998_coefficients.csv, tools/hull/dsyhs1998_reference.py
+  - approach: Add the Keuning & Sonnenberg 1998 upright residuary regression (published coefficient table, Fn 0.10–0.60, interpolated in Fn), ITTC-57 friction with a configurable form factor, and the DSYHS heeled-resistance delta, as the `dsyhs` model behind M4.P1.T1's switch, using the same sailing-condition parameters. Coefficients from a primary source (Keuning & Sonnenberg 1998 / ORC VPP documentation appendix), transcribed into a CSV with provenance. Range check against the regression's validity range.
+  - verify: doctest: residuary resistance at three Fn for a published DSYHS example hull matches the paper's (or an independent evaluation script's) numbers within 2%; ITTC-57 friction matches the formula by hand; heeled delta zero at 0°; the J/80's total at Fn 0.2/0.35/0.45 lies within 25% of the ORC model (a sanity band, with the gap reported); the switch selects each model.
+  - size: M
 - [ ] M4.P1.T3 — Decide and implement heel/immersion dependence of added mass
   - files: core/src/mass_model.cpp, core/include/sail/mass_model.hpp, core/tests/test_mass_model.cpp
   - approach: Added mass is a constant diagonal from upright strip estimates (`strip_added_mass`). Decide, with the hull forces in place, whether sway/heave/roll added mass should vary with heel and draft (e.g. re-evaluate the strip estimate from the immersed sections at the current pose, updated at a low rate), or stay constant with the limitation documented. If it varies, update `BodyProperties` through the existing mid-run update path (`Simulation::set_body`) and keep it consistent with the integrator's Kirchhoff added-mass terms. Record the decision in this milestone's Decisions.
@@ -75,4 +85,5 @@ turning behaviour.
 ## Decisions
 
 - 2026-11-27 — Tiller steering, no wheel: the J/80 is tiller-steered.
+- 2026-11-28 — Hull resistance: both the ORC VPP 2023 method (default) and DSYHS 1998 + ITTC-57 behind a config switch (user decision). Both calibration targets (the ORC certificate and the Python-VPP polar) use ORC's method, so ORC is the default; the vendored Python-VPP is not DSYHS (ORCi surfaces, Hughes friction line, heel term only above 30°), so the original "match Python-VPP within 5%" check applies to the ORC model only. M4.P1.T1 split into T4 (sailing-condition hydrostatics), T1 (ORC) and T5 (DSYHS).
 - 2026-11-28 — Inbox change-request (from the M3 - Rigid Body and Hydrostatics review) applied: added M4.P1.T3 to decide heel/immersion-dependent added mass.
