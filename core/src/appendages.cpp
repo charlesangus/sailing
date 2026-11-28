@@ -130,6 +130,8 @@ void RudderForceModule::accumulate(const State& state, double t, Wrench& wrench)
     last_ = foil_.evaluate(downwashed, params_.foil.density);
     last_wrench_.force = last_.force;
     last_wrench_.moment = (last_.centre_of_pressure - ref).cross(last_.force);
+    hinge_moment_ =
+        (last_.centre_of_pressure - params_.stock_position).cross(last_.force).dot(params_.stock_axis);
     wrench += last_wrench_;
 }
 

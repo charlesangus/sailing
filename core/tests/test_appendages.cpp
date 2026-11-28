@@ -363,3 +363,78 @@ TEST_CASE("J/80 roll decay stays plausible at rest and at 3 m/s") {
     CHECK(fast > rest + 0.02);
     CHECK(fast <= 0.16);
 }
+
+TEST_CASE("rudder hinge moment about the leading-edge stock") {
+    static constexpr double kSpeed = 3.0;
+    auto hinge_at = [](double angle, double u, double v) {
+        Foils f;
+        f.hold_rudder(angle);
+        f.app.rudder().set_downwash_factor(0.0);
+        f.apply(moving(Vec3(u, v, 0.0)));
+        return f.app.rudder_hinge_moment_Nm();
+    };
+    // Rudder angle delta in straight flow gives alpha = -delta for this blade, so the sign of the
+    // restoring moment is read from the product with delta rather than assumed.
+    SUBCASE("zero at zero angle of attack") {
+        CHECK(std::abs(hinge_at(0.0, kSpeed, 0.0)) < 1e-9);
+    }
+
+    SUBCASE("grows with angle in attached flow and restores toward centre") {
+        double prev = 0.0;
+        // The section stalls between 10 and 20 degrees, where the normal force dips.
+        for (const double deg : {5.0, 10.0, 20.0}) {
+            const double m = hinge_at(deg * kDeg, kSpeed, 0.0);
+            CHECK(m * deg < 0.0);
+            if (deg < 15.0) CHECK(std::abs(m) > prev);
+            prev = std::abs(m);
+            CHECK(hinge_at(-deg * kDeg, kSpeed, 0.0) == doctest::Approx(-m));
+        }
+    }
+
+    SUBCASE("centre of pressure moves aft past stall so moment per normal force rises") {
+        auto ratio = [](double deg) {
+            Foils f;
+            f.hold_rudder(deg * kDeg);
+            f.app.rudder().set_downwash_factor(0.0);
+            f.apply(moving(Vec3(kSpeed, 0.0, 0.0)));
+            const auto& r = f.app.rudder().last_result();
+            const auto& g = f.app.rudder().foil().params().geometry;
+            const Vec3 normal = g.chord_direction.cross(g.span_direction);
+            return std::pair{f.app.rudder_hinge_moment_Nm() / std::abs(r.force.dot(normal)),
+                             r.cp_chord_fraction};
+        };
+        const auto attached = ratio(5.0);
+        const auto stalled = ratio(40.0);
+        CHECK(attached.second == doctest::Approx(0.25));
+        CHECK(stalled.second > 0.25);
+        CHECK(std::abs(stalled.first) > std::abs(attached.first));
+        CHECK(stalled.first * attached.first > 0.0);
+    }
+
+    SUBCASE("sign stays restoring through 90 degrees and flips relative to alpha in reverse flow") {
+        double last_sign = 0.0;
+        for (const double deg : {10.0, 30.0, 60.0, 85.0}) {
+            Foils f;
+            f.hold_rudder(deg * kDeg);
+            f.app.rudder().set_downwash_factor(0.0);
+            f.apply(moving(Vec3(kSpeed, 0.0, 0.0)));
+            CHECK(f.app.rudder().last_result().cp_chord_fraction <= 0.5 + 1e-9);
+            CHECK(f.app.rudder_hinge_moment_Nm() < 0.0);
+            last_sign = f.app.rudder_hinge_moment_Nm();
+        }
+        CHECK(last_sign < 0.0);
+        // Sternway at a small rudder angle: alpha near 180 degrees, centre of pressure at 0.75c.
+        Foils f;
+        f.hold_rudder(5.0 * kDeg);
+        f.app.rudder().set_downwash_factor(0.0);
+        f.apply(moving(Vec3(-kSpeed, 0.0, 0.0)));
+        CHECK(f.app.rudder().last_result().cp_chord_fraction == doctest::Approx(0.75).epsilon(0.05));
+        CHECK(f.app.rudder_hinge_moment_Nm() > 0.0);
+    }
+
+    SUBCASE("values at 3 m/s") {
+        for (const double deg : {0.0, 5.0, 10.0, 20.0, 30.0}) {
+            MESSAGE("delta " << deg << " deg: " << hinge_at(deg * kDeg, kSpeed, 0.0) << " N m");
+        }
+    }
+}

@@ -65,6 +65,16 @@ public:
     // The blade's evaluation at the latest accumulate(); its alpha is the downwashed one.
     const FoilForces& last_result() const { return last_; }
     const Wrench& last_wrench() const { return last_wrench_; }
+    // N*m, the hydrodynamic moment on the blade about the stock axis at the latest accumulate():
+    // ((r_cp - r_stock) x F) . stock_axis, with F and the centre of pressure from last_result().
+    // Positive tends to increase the rudder angle (+delta, right-handed about the stock axis);
+    // negative tends to return it toward zero when delta is positive. The stock is on the
+    // leading edge, so in attached flow the centre of pressure is 0.25c aft of it and the moment
+    // is restoring. It stays restoring as the centre of pressure moves aft toward 0.5c at 90
+    // degrees, and in reverse flow the normal force reverses while the centre of pressure stays
+    // aft of the stock (0.75c), so the sign relative to alpha flips but the arm never changes
+    // sign. It is a value from the latest accumulate(), not a derivative of the angle.
+    double rudder_hinge_moment_Nm() const { return hinge_moment_; }
     // rad: the keel's angle of attack and the downwash angle eps at the latest accumulate().
     double keel_alpha() const { return keel_alpha_; }
     double downwash() const { return downwash_; }
@@ -91,6 +101,7 @@ private:
     double last_time_ = 0.0;
     double keel_alpha_ = 0.0;
     double downwash_ = 0.0;
+    double hinge_moment_ = 0.0;
     FoilForces last_;
     Wrench last_wrench_;
 };
@@ -117,6 +128,8 @@ public:
 
     void set_controls(const Controls& controls) { rudder_.set_controls(controls); }
     double rudder_angle() const { return rudder_.angle(); }
+    // N*m; see RudderForceModule::rudder_hinge_moment_Nm.
+    double rudder_hinge_moment_Nm() const { return rudder_.rudder_hinge_moment_Nm(); }
 
     // Moves both modules' reference point, e.g. to the new CG; see Simulation::set_body.
     void set_reference_point(const Vec3& point);
