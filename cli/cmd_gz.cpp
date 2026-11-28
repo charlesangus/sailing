@@ -36,11 +36,7 @@ constexpr const char* kUsage =
     "which GZ turns negative, bracketed on the sweep and refined by root finding.\n"
     "rm_1deg_Nm is solved at exactly 1 degree.\n";
 
-struct Point {
-    double heel = 0.0;
-    sail::Equilibrium eq;
-    double gz = 0.0;
-};
+using Point = sail::GzPoint;
 
 int gz(const Options& options) {
     const ConfigChoice config = parse_config(options.get("--config"));
@@ -54,30 +50,12 @@ int gz(const Options& options) {
 
     const LoadedBoat boat = load_boat(options, config.configuration);
     const double mass = boat.model.total_mass();
-    const double weight = mass * boat.params.gravity;
 
-    const auto solve = [&](double heel_deg, const sail::Equilibrium* guess) {
-        sail::EquilibriumRequest request;
-        request.heel = rad(heel_deg);
-        request.free_trim = free_trim;
-        if (guess) {
-            request.z = guess->pose.position.z();
-            request.trim = free_trim ? guess->trim : 0.0;
-        }
-        Point p;
-        p.heel = heel_deg;
-        p.eq = sail::solve_equilibrium(boat.hydro.mesh, boat.params, mass, request);
-        p.gz = p.eq.righting_moment / weight;
-        return p;
-    };
-
-    std::vector<Point> sweep;
-    const int count = static_cast<int>(std::ceil(180.0 / step - 1e-9));
-    for (int i = 0; i <= count; ++i) {
-        const double heel = std::min(180.0, i * step);
-        sweep.push_back(solve(heel, sweep.empty() ? nullptr : &sweep.back().eq));
-    }
-    const Point one = solve(1.0, &sweep.front().eq);
+    const std::vector<Point> sweep =
+        sail::gz_curve(boat.hydro.mesh, boat.params, mass, rad(step), free_trim);
+    const Point one =
+        sail::solve_gz_point(boat.hydro.mesh, boat.params, mass, rad(1.0), free_trim,
+                             &sweep.front().eq);
 
     std::size_t imax = 0;
     for (std::size_t i = 1; i < sweep.size(); ++i) {
@@ -90,7 +68,7 @@ int gz(const Options& options) {
     int sign_changes = 0;
     int last_sign = 0;
     for (const Point& p : sweep) {
-        if (p.heel <= 0.0 || p.heel >= 180.0) continue;
+        if (p.heel <= 0.0 || deg(p.heel) >= 180.0 - 1e-9) continue;
         const int sign = p.gz > kZeroGz ? 1 : (p.gz < -kZeroGz ? -1 : 0);
         if (sign != 0) {
             if (last_sign != 0 && sign != last_sign) ++sign_changes;
@@ -98,44 +76,15 @@ int gz(const Options& options) {
         }
     }
 
-    std::optional<double> avs;
     bool converged = one.eq.converged;
     for (const Point& p : sweep) converged = converged && p.eq.converged;
-    for (std::size_t i = imax + 1; i < sweep.size(); ++i) {
-        if (sweep[i].heel < 180.0 && sweep[i].gz <= -kZeroGz) {
-            Point a = sweep[i - 1];
-            Point b = sweep[i];
-            double root = a.heel - a.gz * (b.heel - a.heel) / (b.gz - a.gz);
-            // Illinois-modified regula falsi on the solved GZ, from the linear interpolation.
-            double ga = a.gz;
-            double gb = b.gz;
-            int side = 0;
-            for (int k = 0; k < 40; ++k) {
-                const Point m = solve(root, &a.eq);
-                converged = converged && m.eq.converged;
-                if (std::abs(m.gz) < 1e-7 || b.heel - a.heel < 1e-6) break;
-                if (m.gz > 0.0) {
-                    a = m;
-                    ga = m.gz;
-                    if (side == 1) gb *= 0.5;
-                    side = 1;
-                } else {
-                    b = m;
-                    gb = m.gz;
-                    if (side == -1) ga *= 0.5;
-                    side = -1;
-                }
-                root = a.heel - ga * (b.heel - a.heel) / (gb - ga);
-            }
-            avs = root;
-            break;
-        }
-    }
+    const std::optional<double> avs = sail::angle_of_vanishing_stability(
+        boat.hydro.mesh, boat.params, mass, sweep, free_trim, &converged);
 
     Json points = Json::array();
     for (const Point& p : sweep) {
         Json j;
-        j["heel_deg"] = p.heel;
+        j["heel_deg"] = deg(p.heel);
         j["rm_Nm"] = p.eq.righting_moment;
         j["gz_m"] = p.gz;
         j["trim_deg"] = deg(p.eq.trim);
@@ -151,8 +100,8 @@ int gz(const Options& options) {
     out["converged"] = converged;
     out["rm_1deg_Nm"] = one.eq.righting_moment;
     out["gz_max_m"] = sweep[imax].gz;
-    out["gz_max_heel_deg"] = sweep[imax].heel;
-    out["avs_deg"] = avs ? Json(*avs) : Json(nullptr);
+    out["gz_max_heel_deg"] = deg(sweep[imax].heel);
+    out["avs_deg"] = avs ? Json(deg(*avs)) : Json(nullptr);
     out["sign_changes"] = sign_changes;
     out["heel_sign"] = "positive starboard down (rotation about body +x)";
     out["trim_sign"] = "positive bow down";

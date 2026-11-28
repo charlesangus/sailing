@@ -41,12 +41,13 @@ if(SAIL_BUILD_TESTS)
     add_executable(sailcore_tests
         tests/test_damping.cpp
         tests/test_hydrostatics.cpp
+        tests/test_j80_hydrostatics.cpp
         tests/test_main.cpp
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
         tests/test_version.cpp
     )
-    target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest)
+    target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest nlohmann_json::nlohmann_json)
     target_compile_definitions(sailcore_tests PRIVATE
         SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}"
         SAIL_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/data"

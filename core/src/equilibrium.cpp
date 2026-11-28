@@ -179,4 +179,75 @@ Equilibrium solve_equilibrium(const TriMesh& mesh, const HydrostaticParams& para
     return eq;
 }
 
+GzPoint solve_gz_point(const TriMesh& mesh, const HydrostaticParams& params, double mass,
+                       double heel, bool free_trim, const Equilibrium* guess) {
+    EquilibriumRequest request;
+    request.heel = heel;
+    request.free_trim = free_trim;
+    if (guess) {
+        request.z = guess->pose.position.z();
+        request.trim = free_trim ? guess->trim : 0.0;
+    }
+    GzPoint p;
+    p.heel = heel;
+    p.eq = solve_equilibrium(mesh, params, mass, request);
+    p.gz = p.eq.righting_moment / (mass * params.gravity);
+    return p;
+}
+
+std::vector<GzPoint> gz_curve(const TriMesh& mesh, const HydrostaticParams& params, double mass,
+                              double step, bool free_trim) {
+    constexpr double kPi = 3.14159265358979323846;
+    std::vector<GzPoint> curve;
+    const int count = static_cast<int>(std::ceil(kPi / step - 1e-9));
+    for (int i = 0; i <= count; ++i) {
+        curve.push_back(solve_gz_point(mesh, params, mass, std::min(kPi, i * step), free_trim,
+                                       curve.empty() ? nullptr : &curve.back().eq));
+    }
+    return curve;
+}
+
+std::optional<double> angle_of_vanishing_stability(const TriMesh& mesh,
+                                                   const HydrostaticParams& params, double mass,
+                                                   const std::vector<GzPoint>& curve,
+                                                   bool free_trim, bool* converged) {
+    if (curve.empty()) return std::nullopt;
+    constexpr double kPi = 3.14159265358979323846;
+    // GZ at pi is the mesh's small port-starboard asymmetry, not a crossing.
+    constexpr double kZeroGz = 1e-5;
+    std::size_t imax = 0;
+    for (std::size_t i = 1; i < curve.size(); ++i) {
+        if (curve[i].gz > curve[imax].gz) imax = i;
+    }
+    for (std::size_t i = imax + 1; i < curve.size(); ++i) {
+        if (curve[i].heel >= kPi - 1e-9 || curve[i].gz > -kZeroGz) continue;
+        GzPoint a = curve[i - 1];
+        GzPoint b = curve[i];
+        double root = a.heel - a.gz * (b.heel - a.heel) / (b.gz - a.gz);
+        // Illinois-modified regula falsi on the solved GZ, from the linear interpolation.
+        double ga = a.gz;
+        double gb = b.gz;
+        int side = 0;
+        for (int k = 0; k < 40; ++k) {
+            const GzPoint m = solve_gz_point(mesh, params, mass, root, free_trim, &a.eq);
+            if (converged) *converged = *converged && m.eq.converged;
+            if (std::abs(m.gz) < 1e-7 || b.heel - a.heel < 1e-8) break;
+            if (m.gz > 0.0) {
+                a = m;
+                ga = m.gz;
+                if (side == 1) gb *= 0.5;
+                side = 1;
+            } else {
+                b = m;
+                gb = m.gz;
+                if (side == -1) ga *= 0.5;
+                side = -1;
+            }
+            root = a.heel - ga * (b.heel - a.heel) / (gb - ga);
+        }
+        return root;
+    }
+    return std::nullopt;
+}
+
 }  // namespace sail

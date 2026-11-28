@@ -63,4 +63,31 @@ struct Equilibrium {
 Equilibrium solve_equilibrium(const TriMesh& mesh, const HydrostaticParams& params, double mass,
                               const EquilibriumRequest& request = {});
 
+struct GzPoint {
+    // rad
+    double heel = 0.0;
+    Equilibrium eq;
+    // Righting arm: righting_moment over weight, m.
+    double gz = 0.0;
+};
+
+// Equilibrium at a held `heel` (rad) and its GZ. `guess`, typically the neighbouring heel's
+// solution, seeds the height and, with free trim, the trim; level trim always starts at zero.
+GzPoint solve_gz_point(const TriMesh& mesh, const HydrostaticParams& params, double mass,
+                       double heel, bool free_trim, const Equilibrium* guess = nullptr);
+
+// GZ at heel 0, step, 2 step, ... up to and including pi, each solved from the previous one.
+// `step` in rad, > 0.
+std::vector<GzPoint> gz_curve(const TriMesh& mesh, const HydrostaticParams& params, double mass,
+                              double step, bool free_trim);
+
+// The first heel (rad) past the GZ maximum of `curve` where GZ turns negative, bracketed on the
+// curve and refined by root finding with the same `mass` and `free_trim` the curve was built
+// with. Empty when GZ never goes negative before pi. `converged`, when given, is cleared if a
+// refinement solve fails to converge.
+std::optional<double> angle_of_vanishing_stability(const TriMesh& mesh,
+                                                   const HydrostaticParams& params, double mass,
+                                                   const std::vector<GzPoint>& curve,
+                                                   bool free_trim, bool* converged = nullptr);
+
 }  // namespace sail
