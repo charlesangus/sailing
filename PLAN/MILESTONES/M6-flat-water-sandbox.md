@@ -42,7 +42,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
 
 ## Phase 6.2: Scene
 
-- [ ] M6.P2.T1 — Boat visuals with placeholder sails
+- [x] M6.P2.T1 — Boat visuals with placeholder sails
   - files: game/scenes/boat.tscn, game/scripts/boat_visual.gd, game/assets/boat/
   - approach: Import `hull_visual.obj` and `appendages.obj`; simple procedural mast and boom from `rig.json`; boom and tiller rotate from sim state; main and jib as flat triangle-fan meshes from `sails.json` geometry, rotated to sheeted angle and tinted when luffing (replaced in M9). Simple materials.
   - verify: `game/tests/test_boat_visual.gd` headless checks boom rotation follows the sim boom angle; user UAT at the gate for looks.
