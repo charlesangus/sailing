@@ -52,7 +52,7 @@ TWS 6/10/16 kn.
   - approach: `ForceModule` with drag from mast (cylinder by height strips), boom, rigging wire, hull topsides above the heeled waterline (projected area), and crew (area by position), each Cd from ORC docs. Applied at each element's centre so it contributes heel and yaw moments.
   - verify: doctest: with sails fully luffed, windage drag at AWS 20 kn head-to-wind matches a hand-computed total within 5%; windage is nonzero with sails furled.
   - size: M
-- [ ] M5.P1.T5 — Auto-hiking crew controller
+- [x] M5.P1.T5 — Auto-hiking crew controller
   - files: core/include/sail/crew.hpp, core/src/crew.cpp, core/tests/test_crew.cpp
   - approach: Moves the crew point mass (M3 `set_crew_position`) toward the windward rail in proportion to heel above a threshold (full rail-out by ~15°), centreline in light air (< ~6 kn AWS) and downwind, with a 2 s transit lag when the windward side changes. Parameters in `data/boats/j80/crew.json`. Drive the crew through `MassModel::set_crew_position` and push the result into the running sim with `Simulation::set_body` plus each module's `set_reference_point` (the M3/M4 mid-run CG update path; `BoatSim` owns the modules).
   - verify: doctest: crew is at the windward rail at 20° heel, centred at 0°; switching tack moves it across in ~2 s.
@@ -62,7 +62,7 @@ TWS 6/10/16 kn.
 
 - [ ] M5.P2.T1 — Autopilot, auto-trimmer and `sailsim polar`
   - files: cli/cmd_polar.cpp, core/include/sail/harness/autopilot.hpp, core/src/harness/autopilot.cpp, core/include/sail/harness/autotrim.hpp, core/src/harness/autotrim.cpp
-  - approach: PID autopilot on tiller holding a TWA. Auto-trimmer: coordinate-wise golden-section search over sheets, traveler, backstay, jib car and reef maximising time-averaged steady BSP (optionally VMG for beat/run), each evaluation running the dynamic sim to steady state (settle detection on BSP, heel, leeway). Build on M4's `BoatSim` (core/include/sail/boat_sim.hpp), which already assembles the full J/80 and runs turns and tows; settle detection must recognise a non-settling run (M4 saw a roll–yaw limit cycle in a hard-over 7 kn turn) and report it rather than averaging an oscillation. `sailsim polar --boat … --tws 6,10,16 --twa …` (with `--beat` / `--run` modes searching optimal VMG angles) writes CSV: tws, twa, bsp, heel, leeway, rudder, trim settings.
+  - approach: PID autopilot on tiller holding a TWA. Auto-trimmer: coordinate-wise golden-section search over sheets, traveler, backstay, jib car and reef maximising time-averaged steady BSP (optionally VMG for beat/run), each evaluation running the dynamic sim to steady state (settle detection on BSP, heel, leeway). Build on M4's `BoatSim` (core/include/sail/boat_sim.hpp), which already assembles the full J/80 and runs turns and tows — and make `BoatSim` own the sail set, sheet controller, windage and crew controller too (today the crew update reaches sails/sheets/windage only through a listener), so one object assembles the sailing boat; settle detection must recognise a non-settling run (M4 saw a roll–yaw limit cycle in a hard-over 7 kn turn) and report it rather than averaging an oscillation. `sailsim polar --boat … --tws 6,10,16 --twa …` (with `--beat` / `--run` modes searching optimal VMG angles) writes CSV: tws, twa, bsp, heel, leeway, rudder, trim settings.
   - verify: Running TWS 10, TWA 90 converges to a steady BSP repeatably (two runs within 0.5%); output CSV loads.
   - size: L
 - [ ] M5.P2.T2 — Polar comparison report
