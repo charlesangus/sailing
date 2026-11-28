@@ -4,16 +4,28 @@ configure_file(
     @ONLY
 )
 
-add_library(sailcore STATIC src/version.cpp)
+add_library(sailcore STATIC
+    src/boat_data.cpp
+    src/damping.cpp
+    src/equilibrium.cpp
+    src/gravity.cpp
+    src/hydrostatics.cpp
+    src/mass_model.cpp
+    src/mesh.cpp
+    src/rigid_body.cpp
+    src/simulation.cpp
+    src/version.cpp
+)
 add_library(sail::core ALIAS sailcore)
 target_include_directories(sailcore
     PUBLIC include
     PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated
 )
-target_link_libraries(sailcore PUBLIC Eigen3::Eigen)
+target_link_libraries(sailcore PUBLIC Eigen3::Eigen PRIVATE nlohmann_json::nlohmann_json)
 target_compile_features(sailcore PUBLIC cxx_std_20)
 set_target_properties(sailcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 sail_enable_warnings(sailcore)
+sail_optimise_debug(sailcore)
 
 if(SAIL_BUILD_TESTS)
     FetchContent_Declare(
@@ -27,9 +39,22 @@ if(SAIL_BUILD_TESTS)
     FetchContent_MakeAvailable(doctest)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
-    add_executable(sailcore_tests tests/test_main.cpp tests/test_version.cpp)
-    target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest)
-    target_compile_definitions(sailcore_tests PRIVATE SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}")
+    add_executable(sailcore_tests
+        tests/test_bench_budget.cpp
+        tests/test_damping.cpp
+        tests/test_hydrostatics.cpp
+        tests/test_j80_hydrostatics.cpp
+        tests/test_main.cpp
+        tests/test_mass_model.cpp
+        tests/test_rigid_body.cpp
+        tests/test_version.cpp
+    )
+    target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest nlohmann_json::nlohmann_json)
+    target_compile_definitions(sailcore_tests PRIVATE
+        SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}"
+        SAIL_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
+    )
     sail_enable_warnings(sailcore_tests)
+    sail_optimise_debug(sailcore_tests)
     doctest_discover_tests(sailcore_tests)
 endif()

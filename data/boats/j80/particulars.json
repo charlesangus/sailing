@@ -132,7 +132,7 @@
     "unit": "m",
     "source": "ORC J/80 OD certificate 2019, p.1",
     "confidence": "high",
-    "note": "VCGM"
+    "note": "VCGM, measurement-trim VCG. ORC measures z up from the flotation plane, so -0.076 m is 0.076 m below it. At this VCG the morphed hull_physics.obj + appendages.obj give RM at 1 deg of about 300 N m, 13% above the certificate's 264.8 N m: the morphed hull is too stiff, not too tender. The VCGM is used as is (mass.json solves the hull residual's height to it) and the hull is to be corrected later."
   },
   "sink": {
     "value": 8.99,

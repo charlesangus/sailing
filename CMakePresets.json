@@ -30,16 +30,32 @@
         "SAIL_BUILD_GDEXT": "ON",
         "GODOTCPP_TARGET": "template_release"
       }
+    },
+    {
+      "name": "bench",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "SAIL_BUILD_TESTS": "ON",
+        "SAIL_BUILD_GDEXT": "OFF"
+      }
     }
   ],
   "buildPresets": [
     { "name": "dev", "configurePreset": "dev" },
-    { "name": "release", "configurePreset": "release" }
+    { "name": "release", "configurePreset": "release" },
+    { "name": "bench", "configurePreset": "bench" }
   ],
   "testPresets": [
     {
       "name": "dev",
       "configurePreset": "dev",
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
+    },
+    {
+      "name": "bench",
+      "configurePreset": "bench",
       "output": { "outputOnFailure": true },
       "execution": { "noTestsAction": "error" }
     }

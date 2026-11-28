@@ -65,11 +65,11 @@ From `particulars.json` (certificate p.2):
 - Stability index 104.9.
 - VCGM -0.076 m (VCGD -0.15 m).
 
-Open issue: matching the certificate RM at 1 deg on the morphed mesh at the sailing displacement needs VCG +0.067 m above the flotation plane, against the certificate's VCGM of -0.076 m. The 0.143 m difference suggests the morphed hull has too little transverse waterplane inertia, that is, low form stability.
+Open issue: ORC measures VCGM up from the flotation plane, so -0.076 m is 0.076 m below it. At that VCG the morphed hull and appendage meshes give RM at 1 deg of 300.0 N m at 1438 kg, 13.3% above the certificate's measured 264.8 N m: the morphed hull is too stiff, with too much form stability. The VCGM is kept as the boat's VCG (`mass.json` solves the hull residual's height to it) and the hull is to be corrected later.
 
 ## Estimated and derived values
 
-Every entry marked `estimated` or `derived` in the JSON files, 76 in total, generated from the `confidence` fields. Methods are shortened to their first clause; the files carry the full text. `particulars.json` has none; the `beat` and `run` rows of `orc_polar.csv` are also derived (see above).
+Every entry marked `estimated` or `derived` in the JSON files, 94 in total, generated from the `confidence` fields. Methods are shortened to their first clause; the files carry the full text. `particulars.json` has none; the `beat` and `run` rows of `orc_polar.csv` are also derived (see above).
 
 `appendages.json`
 
@@ -92,6 +92,7 @@ Every entry marked `estimated` or `derived` in the JSON files, 76 in total, gene
 - `foils.keel.wetted_area` (estimated): area of the mesh triangles whose centroid is below hull_visual.obj
 - `foils.keel.volume_below_hull` (estimated): mesh volume minus its intersection with hull_physics.obj (manifold3d boolean): fin, bulb, tip and the root fairing below the canoe body
 - `foils.keel.root_overlap` (derived): the root fairing extends 0.020 m into the canoe body at every root vertex, so the overlap is 0.020 m times the Section 1 area (0.0657 m^2)
+- `foils.keel.root_overlap_depth` (derived): depth the root fairing reaches into the canoe body above the hull bottom at every root vertex; the simulator places the root_overlap correction in this band below the top of the keel mesh
 - `foils.keel.root_fairing_height` (derived): range over the Section 1 outline of the height from root_z up to hull_visual.obj
 - `foils.rudder.span` (estimated): from the root at the flotation plane (appendages.json stock_axis z) down to Section 5
 - `foils.rudder.quarter_chord_sweep` (derived): least-squares slope of the mesh quarter-chord line over the whole span
@@ -120,11 +121,28 @@ Every entry marked `estimated` or `derived` in the JSON files, 76 in total, gene
 
 `mass.json`
 
-- `items.hull_deck_fittings` (estimated): residual: builder's weight mid-range (1437.5 kg) minus keel, rudder, mast, boom, standing and running rigging below
-- `items.standing_rigging_and_furler` (estimated): wire lengths from rig geometry times 1x19 stainless mass per metre (4.7 mm 0.113, 4.0 mm 0.080, 3.0 mm 0.045 kg/m), about 6 kg, plus turnbuckles and the furler, about 5 ...
+- `items.hull_deck_fittings` (derived): residual of 1438 kg
+- `items.hull_deck_fittings.cg` (derived): x solved so the measurement-trim LCG equals the total LCB (hull_hydro.json result lcb_x_total, -0.3436 m in the body frame), z solved so the VCG equals VCGM
+- `items.hull_deck_fittings.cg_z_bounds` (estimated): plausible band above the flotation plane for hull, deck and fittings, between the canoe-body bottom region and above the sheer
+- `items.hull_deck_fittings.shape` (estimated): LWL x maximum beam x depth
+- `items.keel_ballast.cg` (estimated): appendages.json keel ballast_centroid: centroid of the lead from the lead top depth to the tip
+- `items.keel_ballast.shape` (estimated): box with the same second moments as the lead: NACA 4-digit sections of the H.1 offsets from the lead top depth (0.363 m below Section 1) to the elliptical tip, integrated for the variance of x, y and z about the lead centroid
+- `items.rudder.cg` (estimated): blade about 19 kg at its volume centroid (0.521 m below the root, 0.42 chord aft of the stock axis, appendages.json rudder stock_axis) and tiller and gudgeons about 3 kg near the transom at the sheer (x -7.6, z +0.65)
+- `items.rudder.shape` (estimated): blade mean chord, thickness and span (Sections 1-5)
+- `items.mast.cg` (estimated): x on the mast axis at the sheer (rig.json mast_axis_at_sheer)
+- `items.mast.shape` (estimated): MDL1 x MDT1 x heel-to-top length (rig.json mast_top_above_water 11.35 m plus the 0.228 m heel depth), centred on the measured CG rather than on the mid-length
+- `items.boom.cg` (estimated): mid-length of E aft of the mast aft face (x = -(J + MDL1) - E/2), at the boom band height less half BD (rig.json boom_height_above_water 2.044 m - 0.047 m)
+- `items.boom.shape` (estimated): E x assumed width 0.06 m x BD
+- `items.jib_furler` (estimated): furler drum and foil only
+- `items.jib_furler.cg` (estimated): foil about 3 kg at the forestay mid-point (rig.json forestay_deck_point to hounds_forestay_on_mast) and drum about 1 kg just above the forestay deck point
 - `items.battery` (estimated): midpoint of the class range, 2 to 25 kg
+- `items.battery.cg` (estimated): low in the hull under the forward cockpit, on the centreline
 - `items.outboard_engine` (estimated): class minimum (empty of fuel)
+- `items.outboard_engine.cg` (estimated): stowed below on the cabin sole aft of the mast, on the centreline
 - `items.running_rigging` (estimated): sheets, halyards and control lines
+- `items.running_rigging.cg` (estimated): spread over the rig, so placed at the mast CG (see mast cg)
+- `items.mainsail.cg` (estimated): centroid of the sails.json main tack, head and clew
+- `items.jib.cg` (estimated): centroid of the sails.json jib tack, head and clew
 - `keel_lead_volume` (estimated): keel_ballast 635 kg / 11 000 kg/m^3
 - `keel_sump_volume` (estimated): offsets volume (0.0805 m^3) minus keel_lead_volume
 - `bulb_mass` (estimated): offsets volume below Section 4 (0.0292 m^3) x 11 000 kg/m^3, assuming the lead fills from the tip up
@@ -132,6 +150,7 @@ Every entry marked `estimated` or `derived` in the JSON files, 76 in total, gene
 - `crew_count` (estimated): the class sets no crew number
 - `crew_cg_x` (estimated): mid-cockpit on the deck plan, where the crew sit hiking
 - `crew_cg_above_sheer` (estimated): seated hip-to-chest height above the sheer for crew sitting on the deck edge
+- `added_mass` (estimated): surge added mass is surge_fraction of the rigid-body mass
 
 `rig.json`
 
@@ -181,6 +200,6 @@ From the repository root, with `.venv` set up (`tools/bootstrap.sh`):
 2. `.venv/bin/python -I tools/hull/morph.py` writes `hull_visual.obj`, `hull_physics.obj` and `hull_hydro.json`.
 3. `.venv/bin/python -I tools/hull/appendages.py` writes `appendages.obj` and the `foils` block of `appendages.json`.
 4. `tools/vpp/fetch_pyvpp.sh`, then `.venv/bin/python -I tools/vpp/run_pyvpp.py` (about 3 minutes) writes `pyvpp_polar_nospi.csv` and `pyvpp_polar_upwind_check.md`.
-5. `.venv/bin/python -I tools/dossier_checks.py` checks the transcribed data for consistency. The mass-sum line is informational, since hull/deck/fittings is a residual from the builder's weight.
+5. `.venv/bin/python -I tools/dossier_checks.py` checks the transcribed data for consistency. The mass-sum line is informational, since hull/deck/fittings is the residual of the certificate displacement.
 
 Verification: `.venv/bin/python -I tools/hull/morph.py --check` and `.venv/bin/python -I tools/hull/appendages.py --check` recompute from the written meshes and fail on any miss. `data/dsyhs/table.csv` is rebuilt by `tools/hull/dsyhs_table.py`.

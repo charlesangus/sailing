@@ -10,7 +10,7 @@ Python-VPP sails the boat at its sailing displacement, so the hull inputs are
 measured on hull_physics.obj + appendages.obj floated at the certificate
 displacement plus crew, sails and running rigging, not at the measurement trim
 of hull_hydro.json. The righting-arm curve comes from the same meshes, with the
-boat's VCG set so the mesh reproduces the certificate's measured RM at 1 deg.
+boat's VCG at the certificate VCGM.
 """
 
 import argparse
@@ -127,18 +127,19 @@ def build_inputs(boat):
     carried = {k: items[k]["value"] for k in ("mainsail", "jib", "running_rigging")}
     m_sail = m_boat + m_crew + sum(carried.values())
 
-    # VCG of the boat from the certificate's measured RM per degree at 1438 kg.
+    # ORC's VCGM is z up from the flotation plane, so a negative value is below it.
+    zg_boat = v(part, "vcgm")
     vol_meas = m_boat / rho
     gz1_at_zero = righting_arm(tris, vol_meas, 0.0, 1.0)
-    gz1_cert = v(part, "righting_moment_1deg") / (m_boat * G)
-    zg_boat = (gz1_at_zero - gz1_cert) / math.sin(math.radians(1.0))
+    rm1_mesh = m_boat * G * righting_arm(tris, vol_meas, zg_boat, 1.0)
 
     sheer = hh["sheer"]["points"]
     z_crew = sheer_z(sheer, v(mass, "crew_cg_x") + stem_x) + v(mass, "crew_cg_above_sheer")
     z_main = np.mean([v(sails, "main", k)[2] for k in ("tack", "head", "clew")])
     z_jib = np.mean([v(sails, "jib", k)[2] for k in ("tack", "head", "clew")])
-    # Running rigging is spread over the rig; put it at the mast CG.
-    z_rr = v(rig, "freeboard_at_mast") + v(rig, "mast_cg_height")
+    # mass.json puts running rigging at the mast CG, which is MCG above the mast heel
+    # (IMS F8.2), not above the sheer.
+    z_rr = items["running_rigging"]["cg"]["value"][2]
     zg_sail = (m_boat * zg_boat + m_crew * z_crew + carried["mainsail"] * z_main
                + carried["jib"] * z_jib + carried["running_rigging"] * z_rr) / m_sail
 
@@ -156,14 +157,16 @@ def build_inputs(boat):
     p, e = v(rig, "p"), v(rig, "e")
     return {
         "name": v(part, "name"),
-        "cert": {"rm1_kgm": v(part, "righting_moment_1deg") / G, "vcgm": v(part, "vcgm"),
+        "cert": {"rm1_kgm": v(part, "righting_moment_1deg") / G,
+                 "rm1_nm": v(part, "righting_moment_1deg"), "vcgm": v(part, "vcgm"),
                  "crew_default": v(part, "crew_weight_default")},
         "rho": rho,
         "sinkage": zw,
         "mass": {"boat": m_boat, "crew": m_crew, **carried, "sailing": m_sail},
-        "zg": {"boat_from_rm1": zg_boat, "crew": z_crew, "mainsail": float(z_main),
+        "zg": {"boat": zg_boat, "crew": z_crew, "mainsail": float(z_main),
                "jib": float(z_jib), "running_rigging": z_rr, "sailing": zg_sail},
         "gz1_mesh_at_zg0": gz1_at_zero,
+        "rm1_mesh_nm": rm1_mesh,
         "yacht": {
             "Lwl": canoe["lwl_m"],
             "Vol": canoe["vol_m3"],
@@ -365,10 +368,10 @@ def write_check(path, boat, inp, yacht, tws_kn, twa, bsp):
         f"(dossier {inp['areas_dossier']['jib']:.2f}) |",
         "",
         "Righting arm: the hull and appendage meshes heeled at level trim, at the sailing "
-        f"displacement, with G at {z['sailing']:.3f} m. The boat's own VCG, "
-        f"{z['boat_from_rm1']:+.3f} m, is the one at which the meshes reproduce the "
-        f"certificate's measured RM of {cert['rm1_kgm']:.1f} kg m per degree at "
-        f"{m['boat']:.0f} kg (the meshes give "
+        f"displacement, with G at {z['sailing']:.3f} m. The boat's own VCG is the "
+        f"certificate's VCGM, {z['boat']:+.3f} m, which ORC measures up from the "
+        f"flotation plane, so it is {abs(z['boat']):.3f} m "
+        f"{'below' if z['boat'] < 0 else 'above'} it (the meshes give "
         f"GZ(1 deg) = {inp['gz1_mesh_at_zg0']:.4f} m with G on the flotation plane). "
         f"Crew CG {z['crew']:.3f} m, mainsail {z['mainsail']:.3f} m, jib {z['jib']:.3f} m "
         f"and running rigging {z['running_rigging']:.3f} m above the flotation plane.",
@@ -400,9 +403,12 @@ def write_check(path, boat, inp, yacht, tws_kn, twa, bsp):
         "This polar is the downwind calibration target.",
         "- Its keel volume formula ignores thickness.",
         "- It doubles the rudder aspect ratio.",
-        f"- The VCG that matches the certificate's RM at 1 deg on the morphed mesh is "
-        f"{z['boat_from_rm1']:+.3f} m, against the certificate's VCGM of "
-        f"{cert['vcgm']:+.3f} m. This suggests the morphed hull's waterplane inertia is low.",
+        f"- At the certificate's VCGM of {cert['vcgm']:+.3f} m the morphed meshes give "
+        f"RM at 1 deg of {inp['rm1_mesh_nm']:.1f} N m at {m['boat']:.0f} kg, "
+        f"{pct(inp['rm1_mesh_nm'], cert['rm1_nm'])} against the certificate's measured "
+        f"{cert['rm1_nm']:.1f} N m ({cert['rm1_kgm']:.1f} kg m), so the morphed hull is "
+        f"{'stiffer' if inp['rm1_mesh_nm'] > cert['rm1_nm'] else 'more tender'} than the "
+        "real one. The VCGM is kept and the hull is to be corrected later.",
         "",
     ]
     path.write_text("\n".join(out))

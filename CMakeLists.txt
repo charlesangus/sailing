@@ -25,9 +25,28 @@ add_library(sail_eigen INTERFACE)
 target_include_directories(sail_eigen SYSTEM INTERFACE ${eigen_SOURCE_DIR})
 add_library(Eigen3::Eigen ALIAS sail_eigen)
 
+# Header-only as well; SYSTEM keeps its headers out of our -Werror.
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+    SOURCE_SUBDIR sail-headers-only
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(nlohmann_json)
+add_library(sail_nlohmann_json INTERFACE)
+target_include_directories(sail_nlohmann_json SYSTEM INTERFACE ${nlohmann_json_SOURCE_DIR}/include)
+add_library(nlohmann_json::nlohmann_json ALIAS sail_nlohmann_json)
+
 # Applied per target so third-party code fetched above never sees -Werror.
 function(sail_enable_warnings target)
     target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+endfunction()
+
+# Eigen at -O0 runs the per-triangle hydrostatics two orders of magnitude slower, which makes
+# simulation tests unusable in Debug. -O1 inlines Eigen while keeping asserts and usable debug info.
+function(sail_optimise_debug target)
+    target_compile_options(${target} PRIVATE $<$<CONFIG:Debug>:-O1>)
 endfunction()
 
 # ctest only looks for CTestTestfile.cmake in the build root, so this must not live in core/.

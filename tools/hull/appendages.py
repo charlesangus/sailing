@@ -441,6 +441,13 @@ def run(boat):
                     "derived",
                     method=f"the root fairing extends {OVERLAP:.3f} m into the canoe body at every root vertex, so the overlap is {OVERLAP:.3f} m times the Section 1 area ({kinfo['footprint_area']:.4f} m^2); volume_below_hull excludes it",
                 ),
+                "root_overlap_depth": item(
+                    OVERLAP,
+                    "m",
+                    "tools/hull/appendages.py",
+                    "derived",
+                    method="depth the root fairing reaches into the canoe body above the hull bottom at every root vertex; the simulator places the root_overlap correction in this band below the top of the keel mesh",
+                ),
                 "root_fairing_height": item(
                     [r(h_fair.min()), r(h_fair.max())],
                     "m",
