@@ -13,6 +13,8 @@ add_library(sailcore STATIC
     src/equilibrium.cpp
     src/foil.cpp
     src/gravity.cpp
+    src/harness/autopilot.cpp
+    src/harness/autotrim.cpp
     src/hull_forces.cpp
     src/hull_resistance.cpp
     src/hydrostatics.cpp
@@ -55,6 +57,7 @@ if(SAIL_BUILD_TESTS)
         tests/test_crew.cpp
         tests/test_damping.cpp
         tests/test_foil.cpp
+        tests/test_harness.cpp
         tests/test_hull_forces.cpp
         tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp

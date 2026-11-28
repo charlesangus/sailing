@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "sail/appendages.hpp"
+#include "sail/controls.hpp"
 #include "sail/crew.hpp"
 #include "sail/damping.hpp"
 #include "sail/equilibrium.hpp"
@@ -18,14 +19,19 @@
 #include "sail/hydrostatics.hpp"
 #include "sail/mass_model.hpp"
 #include "sail/rigid_body.hpp"
+#include "sail/sails.hpp"
+#include "sail/sheets.hpp"
 #include "sail/simulation.hpp"
 #include "sail/wind.hpp"
+#include "sail/windage.hpp"
 
 namespace sail {
 
 struct BoatSimOptions {
     // The model hull_resistance.json names when empty.
     std::optional<HullResistanceKind> resistance;
+    // The directory of the orc_<type>.csv sail tables; boat_dir/../../sails when empty.
+    std::optional<std::filesystem::path> sail_data_dir;
 };
 
 // A constant force along the body x axis at the CG, N.
@@ -39,12 +45,17 @@ private:
     double thrust_ = 0.0;
 };
 
-// A boat dossier assembled into its force modules: gravity, hydrostatics, damping, canoe-body
-// hull forces, keel, rudder and a body-x thrust (zero until set), all about the sailing
-// configuration's CG, in still flat water. Only the sailing configuration is offered because the
-// hull forces take their displacement, CLR and sinkage from hull_hydro.json conditions.sailing.
-// The modules are registered with the Simulation by reference, so a BoatSim is neither copyable
-// nor movable.
+// A boat dossier assembled into the whole sailing boat: gravity, hydrostatics, damping,
+// canoe-body hull forces, keel, rudder, a body-x thrust (zero until set), the sheet controller,
+// the sail set and the windage, all about the sailing configuration's CG, in flat still water,
+// with the crew controller moving the crew mass. Only the sailing configuration is offered
+// because the hull forces take their displacement, CLR and sinkage from hull_hydro.json
+// conditions.sailing. The wind is a parameter, calm until set_wind(). The modules are registered
+// with the Simulation by reference, so a BoatSim is neither copyable nor movable.
+//
+// With aero off (set_aero(false)) the sheet controller, sails and windage are left out of
+// evaluate() and of the Simulation start() builds: the bare hull that solve_tow() and
+// run_turn() use.
 class BoatSim {
 public:
     // `section` is the keel and rudder section table. Throws as the loaders it calls do.
@@ -74,18 +85,37 @@ public:
     BodyThrustModule& thrust() { return thrust_; }
     const BodyThrustModule& thrust() const { return thrust_; }
 
+    SailSet& sails() { return sails_; }
+    const SailSet& sails() const { return sails_; }
+    SheetController& sheets() { return sheets_; }
+    const SheetController& sheets() const { return sheets_; }
+    WindageModule& windage() { return windage_; }
+    const WindageModule& windage() const { return windage_; }
+
     CrewController& crew() { return crew_; }
     const CrewController& crew() const { return crew_; }
 
+    const std::shared_ptr<const WindField>& wind() const { return wind_; }
+    // Gives `wind` to the sails, sheets and windage and to step_crew(dt). Throws
+    // std::invalid_argument on a null wind.
+    void set_wind(std::shared_ptr<const WindField> wind);
+
+    // The tiller to the rudder, the sail controls to the sheet controller.
+    void set_controls(const Controls& controls);
+
+    // Takes effect in evaluate() at once and in the Simulation at the next start().
+    void set_aero(bool on) { aero_ = on; }
+    bool aero() const { return aero_; }
+
     // Called after every crew move with the new CG and crew position (hull frame) and the posture,
-    // so modules BoatSim does not own (sails, sheets, windage) can follow with their own
-    // set_reference_point and set_crew.
+    // after the modules BoatSim owns have followed, for anything else that needs the crew.
     using CrewListener =
         std::function<void(const Vec3& cg, const Vec3& crew_position, CrewPosture posture)>;
     void add_crew_listener(CrewListener listener) { crew_listeners_.push_back(std::move(listener)); }
 
     // Moves the crew point mass to (y, z), hull frame: recomputes the mass properties, then moves
-    // the CG reference point of gravity, hydrostatics, hull and appendages and calls the listeners.
+    // the CG reference point of gravity, hydrostatics, hull, appendages, sails and windage, gives
+    // the windage the crew's position and posture, and calls the listeners.
     // In a running Simulation the body is replaced by Simulation::set_body with the CG shift: the
     // hull's own motion is preserved (every hull point keeps its position and velocity), so
     // velocity is carried across, not momentum, which changes with the new mass distribution. It
@@ -98,25 +128,37 @@ public:
     // Simulation::step(), before it, with dt = Simulation::kFixedDt. Throws std::logic_error before
     // start().
     const CrewPosition& step_crew(double dt, const WindField& wind);
+    // The same in the boat's own wind.
+    const CrewPosition& step_crew(double dt) { return step_crew(dt, *wind_); }
+
+    // One fixed step: step_crew(Simulation::kFixedDt), then Simulation::step(). Throws
+    // std::logic_error before start().
+    void step();
 
     // Flat-water equilibrium of the sailing mass, hydrostatics alone.
     Equilibrium equilibrium(const EquilibriumRequest& request = {}) const;
 
     // Sum of every module's wrench at `state` and time `t`, body frame about the CG, leaving
-    // each module's last_result() at that state. Steps the rudder actuator as a Simulation step
-    // would when `t` is later than the previous call's.
+    // each module's last_result() at that state. Steps the rudder actuator and the reef as a
+    // Simulation step would when `t` is later than the previous call's.
     Wrench evaluate(const State& state, double t);
 
-    // A new Simulation from `initial` with every module registered, replacing any earlier one.
-    // The crew goes back to the centreline and the controller is reset.
-    // Extra modules may be added to the returned Simulation.
+    // A new Simulation from `initial` with every module registered, replacing any earlier one:
+    // the sheet controller first, so it trims the sails before they are evaluated, then gravity,
+    // hydrostatics, damping, hull, keel, rudder, thrust, and with aero on the sails and the
+    // windage. The crew goes back to the centreline, or to lateral position `crew_y` (clamped to
+    // the hiking range), the crew controller is reset there, and the sheet controller is reset
+    // with the reef at its control's value. Extra modules may be added to the returned
+    // Simulation.
     Simulation& start(const State& initial);
+    Simulation& start(const State& initial, double crew_y);
     // Throws std::logic_error before start().
     Simulation& simulation();
 
 private:
     // Everything update_crew() does except the Simulation; returns the CG shift.
     Vec3 apply_crew(double y, double z, CrewPosture posture);
+    Simulation& start_with_crew(const State& initial);
 
     MassModel model_;
     BodyProperties body_;
@@ -128,6 +170,11 @@ private:
     HullForceModule hull_;
     Appendages appendages_;
     BodyThrustModule thrust_;
+    std::shared_ptr<const WindField> wind_;
+    SailSet sails_;
+    SheetController sheets_;
+    WindageModule windage_;
+    bool aero_ = true;
     CrewController crew_;
     Vec3 pushed_crew_;
     CrewPosture pushed_posture_ = CrewPosture::sitting;
@@ -181,8 +228,9 @@ struct TowResult {
 // with every module acting at the towed velocity, by Newton iteration from the static
 // equilibrium, the heel and heading held. The tow force is then the direct horizontal balance at
 // that state, applied at the CG, so the boat would not accelerate. The thrust is set to zero and
-// the rudder centred, its actuator time base cleared, first. The modules are left evaluated at
-// the balance.
+// the rudder centred, its actuator time base cleared, first. The hull is towed bare: aero is
+// off for the solve and set back as it was afterwards. The modules are left evaluated at the
+// balance.
 TowResult solve_tow(BoatSim& boat, const TowRequest& request);
 
 // A turning manoeuvre in flat water from the tow balance at `speed` (m/s, negative for sternway)
@@ -260,8 +308,8 @@ struct TurnResult {
     double max_rudder_hinge_moment_time = 0.0;
 };
 
-// Runs the turn on `boat`, replacing its Simulation; boat.thrust() keeps the turn's thrust, so the
-// Simulation may be stepped on. The boat's modules are left evaluated at the last state.
+// Runs the turn on `boat` with aero off, which it leaves off, replacing its Simulation;
+// boat.thrust() keeps the turn's thrust, so the Simulation may be stepped on. The boat's modules are left evaluated at the last state.
 TurnResult run_turn(BoatSim& boat, const TurnRequest& request);
 
 }  // namespace sail

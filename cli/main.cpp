@@ -6,6 +6,10 @@
 #include "common.hpp"
 #include "sail/version.hpp"
 
+namespace sailcli {
+int run_polar(const Args& args);
+}
+
 namespace {
 
 using sailcli::Args;
@@ -41,6 +45,7 @@ const std::vector<Command>& commands() {
         {"bench", "per-module step cost of the J/80 simulation held at a heel, as JSON", sailcli::run_bench},
         {"tow", "steady tow resistance and side force by component over speed, as JSON", sailcli::run_tow},
         {"turn", "turning-circle manoeuvre at constant thrust and tiller, as JSON", sailcli::run_turn},
+        {"polar", "auto-trimmed steady polar by dynamic simulation, as CSV", sailcli::run_polar},
     };
     return table;
 }
