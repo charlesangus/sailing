@@ -72,7 +72,7 @@ panel scaffold and a debug HUD. Constant uniform wind.
   - approach: Chase (behind and above, heading-smoothed), orbit (mouse drag / right stick, zoom), helm POV (in the cockpit at the helmsman's eye, rolls and pitches with the boat). Camera-switch action cycles them.
   - verify: `test_cameras.gd` headless cycles all three without errors; UAT for feel.
   - size: M
-- [ ] M6.P2.T7 — Debug HUD and settings panel scaffold
+- [x] M6.P2.T7 — Debug HUD and settings panel scaffold
   - files: game/scenes/hud.tscn, game/scripts/hud.gd, game/scenes/settings_panel.tscn, game/scripts/settings_panel.gd
   - approach: Debug HUD text: BSP, TWS/TWA, AWS/AWA, heel, leeway, rudder, every control position, sim step µs, a wind-direction arrow. Settings panel (toggle key) with a section-based layout that later milestones add sections to; first section: TWS and wind direction sliders wired to `SailBoat`.
   - verify: `test_hud.gd` headless: HUD values update from a running sim; changing the TWS slider changes the sim's TWS.
