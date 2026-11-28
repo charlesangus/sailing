@@ -54,7 +54,7 @@ TWS 6/10/16 kn.
   - size: M
 - [ ] M5.P1.T5 — Auto-hiking crew controller
   - files: core/include/sail/crew.hpp, core/src/crew.cpp, core/tests/test_crew.cpp
-  - approach: Moves the crew point mass (M3 `set_crew_position`) toward the windward rail in proportion to heel above a threshold (full rail-out by ~15°), centreline in light air (< ~6 kn AWS) and downwind, with a 2 s transit lag when the windward side changes. Parameters in `data/boats/j80/crew.json`.
+  - approach: Moves the crew point mass (M3 `set_crew_position`) toward the windward rail in proportion to heel above a threshold (full rail-out by ~15°), centreline in light air (< ~6 kn AWS) and downwind, with a 2 s transit lag when the windward side changes. Parameters in `data/boats/j80/crew.json`. Drive the crew through `MassModel::set_crew_position` and push the result into the running sim with `Simulation::set_body` plus each module's `set_reference_point` (the M3/M4 mid-run CG update path; `BoatSim` owns the modules).
   - verify: doctest: crew is at the windward rail at 20° heel, centred at 0°; switching tack moves it across in ~2 s.
   - size: M
 
@@ -62,7 +62,7 @@ TWS 6/10/16 kn.
 
 - [ ] M5.P2.T1 — Autopilot, auto-trimmer and `sailsim polar`
   - files: cli/cmd_polar.cpp, core/include/sail/harness/autopilot.hpp, core/src/harness/autopilot.cpp, core/include/sail/harness/autotrim.hpp, core/src/harness/autotrim.cpp
-  - approach: PID autopilot on tiller holding a TWA. Auto-trimmer: coordinate-wise golden-section search over sheets, traveler, backstay, jib car and reef maximising time-averaged steady BSP (optionally VMG for beat/run), each evaluation running the dynamic sim to steady state (settle detection on BSP, heel, leeway). `sailsim polar --boat … --tws 6,10,16 --twa …` (with `--beat` / `--run` modes searching optimal VMG angles) writes CSV: tws, twa, bsp, heel, leeway, rudder, trim settings.
+  - approach: PID autopilot on tiller holding a TWA. Auto-trimmer: coordinate-wise golden-section search over sheets, traveler, backstay, jib car and reef maximising time-averaged steady BSP (optionally VMG for beat/run), each evaluation running the dynamic sim to steady state (settle detection on BSP, heel, leeway). Build on M4's `BoatSim` (core/include/sail/boat_sim.hpp), which already assembles the full J/80 and runs turns and tows; settle detection must recognise a non-settling run (M4 saw a roll–yaw limit cycle in a hard-over 7 kn turn) and report it rather than averaging an oscillation. `sailsim polar --boat … --tws 6,10,16 --twa …` (with `--beat` / `--run` modes searching optimal VMG angles) writes CSV: tws, twa, bsp, heel, leeway, rudder, trim settings.
   - verify: Running TWS 10, TWA 90 converges to a steady BSP repeatably (two runs within 0.5%); output CSV loads.
   - size: L
 - [ ] M5.P2.T2 — Polar comparison report
@@ -80,13 +80,14 @@ TWS 6/10/16 kn.
   - size: L
 - [ ] M5.P3.T2 — Polar regression test
   - files: core/tests/test_j80_polar.cpp
-  - approach: ctest (Release only, labelled `slow`) runs a reduced polar — TWS 10, TWA 45/90/135 with stored optimal trim from M5.P3.T1 — and asserts BSP within 5% of the reference.
-  - verify: `ctest --preset release -L slow` passes.
+  - approach: ctest (Release only, labelled `slow`, run with the `bench` preset — Release, tests on, no GDExtension; the `release` preset has tests off) runs a reduced polar — TWS 10, TWA 45/90/135 with stored optimal trim from M5.P3.T1 — and asserts BSP within 5% of the reference.
+  - verify: `ctest --preset bench -L slow` passes.
   - size: M
 
-**Verification gate:** `sailsim polar` at TWS 6/10/16 fed to `compare_polar.py` passes (BSP within 5%, beat angle within 2°) and `docs/calibration/j80-polar.md` is committed; `ctest` (dev and release `slow`) passes.
+**Verification gate:** `sailsim polar` at TWS 6/10/16 fed to `compare_polar.py` passes (BSP within 5%, beat angle within 2°) and `docs/calibration/j80-polar.md` is committed; `ctest` (dev, and bench `-L slow`) passes.
 
 ## Decisions
 
 - 2026-11-27 — Main + jib only, no asymmetric spinnaker: user's choice; downwind calibrated to a non-spi ORC certificate if found, else Python-VPP main+jib.
+- 2026-11-28 — Freshness check at claim: the slow regression runs under the `bench` preset (the `release` preset has tests off); the harness builds on M4's `BoatSim`; calibration starts from a hull ~13% stiffer than the certificate at small heel (M3 decision) and the `orc` hull resistance default (M4 decision), both of which the sail multipliers will partly absorb — record that in calibration.json.
 - 2026-11-27 — Control set: mainsheet, traveler, backstay, jib sheet, jib car, one reef — user chose the core racing set.
