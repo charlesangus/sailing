@@ -37,7 +37,7 @@ TWS 6/10/16 kn.
   - approach: A `WindField` interface (`sample(world_pos, t) → world velocity`) with a `UniformWind` implementation (TWS, direction). A helper computes apparent wind at a body-frame point from the boat state (velocity + ω × r), and the effective AWA/AWS in the heeled sail plane (heel reduces the effective angle per standard cos-heel projection). M7 adds gradient and gusts behind the same interface.
   - verify: doctest: boat at 5 kn into a 10 kn TWS at TWA 90° gives the analytic AWA/AWS; heel 20° reduces effective AWA as expected; ω contributes at the masthead.
   - size: M
-- [ ] M5.P1.T2 — Data-driven sail aero model
+- [x] M5.P1.T2 — Data-driven sail aero model
   - files: core/include/sail/sails.hpp, core/src/sails.cpp, core/tests/test_sails.cpp, data/sails/orc_main.csv, data/sails/orc_jib.csv
   - approach: Load any number of sails from `sails.json` (type, area, luff/foot/roach, CE height, attachment points). Per-sail Cl/Cd tables vs AWA from ORC documentation (main, jib) extended to ±180° for backed sails; ORC flat and reef parameters scale Cl and area/CE; effective height drives induced drag; a jib-on-main interaction term per ORC's combined-rig method. Force applied at each sail's CE (heel moment emerges). Output per-sail force, CE, and state (AoA, luffing/stalled flags) for visuals.
   - verify: doctest: combined Cl/Cd at sample AWAs reproduce ORC documentation values within 2% at flat = 1, reef = 1; flat < 1 reduces Cl monotonically; force is zero with zero apparent wind.
@@ -90,4 +90,5 @@ TWS 6/10/16 kn.
 
 - 2026-11-27 — Main + jib only, no asymmetric spinnaker: user's choice; downwind calibrated to a non-spi ORC certificate if found, else Python-VPP main+jib.
 - 2026-11-28 — Freshness check at claim: the slow regression runs under the `bench` preset (the `release` preset has tests off); the harness builds on M4's `BoatSim`; calibration starts from a hull ~13% stiffer than the certificate at small heel (M3 decision) and the `orc` hull resistance default (M4 decision), both of which the sail multipliers will partly absorb — record that in calibration.json.
+- 2026-11-28 — Sails follow ORC VPP Documentation 2023 (§5.2 Tables 5.1/5.4, §5.4 combination with the 2023 kheff, §5.6 blanketing), high coefficient sets by default as Python-VPP does. ORC blanketing only shades headsail area outside the foretriangle (~1% for the J/80 jib) and Python-VPP has none, so the plan's "jib blanketed downwind" edge case is intentionally not modelled: the jib carries ~30% of the force at 180°, matching both calibration targets. The AoA override wraps the ORC optimum in a provisional luff/stall envelope (parameters are estimates, marked in data/sails/README.md).
 - 2026-11-27 — Control set: mainsheet, traveler, backstay, jib sheet, jib car, one reef — user chose the core racing set.
