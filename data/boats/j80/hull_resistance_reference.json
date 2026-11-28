@@ -126,5 +126,96 @@
       "viscous_N": 190.17608140271142,
       "total_N": 1018.4169965161514
     }
-  ]
+  ],
+  "tow": {
+    "description": "Upright, zero-leeway tow resistance at fixed speeds of the canoe body with Python-VPP's Keel and Rudder (the trapezoids run_pyvpp.py builds), same hull inputs as `points`. total_N is Python-VPP's _get_Rr + _get_Rv + _get_Ri at zero leeway, so induced_N is zero.",
+    "method": [
+      "Speed V = speed_kn * 0.514444 m/s; Fn = V / sqrt(g Lwl).",
+      "Keel residuary: Python-VPP's rrk curve at Fn (clamped to 0..0.6) times the keel volume 0.666 c_mean 1.2 span, rho g 1e-3. The rudder has none.",
+      "Appendage viscous: ORC 6.1.2 strips, 0.5 rho V^2 sum(wsa/5 (Cf_app(c) (1 + k) + dcd)) with wsa = 2 c_mean span and dcd zero at zero side force.",
+      "canoe is the remainder of _get_Rr and _get_Rv once the appendage terms are taken out; it equals the canoe-only evaluation."
+    ],
+    "appendages": {
+      "keel": {
+        "Cu": 0.96,
+        "Cl": 0.7931274742676169,
+        "Span": 1.263,
+        "Tc_ratio": 0.1259641163126418
+      },
+      "rudder": {
+        "Cu": 0.34,
+        "Cl": 0.2951091703056768,
+        "Span": 1.145,
+        "Tc_ratio": 0.12
+      }
+    },
+    "points": [
+      {
+        "speed_kn": 3.0,
+        "speed_mps": 1.543332,
+        "fn": 0.18432294399806495,
+        "canoe": {
+          "residuary_N": 5.216266636739215,
+          "viscous_N": 37.18077679163538,
+          "total_N": 42.3970434283746
+        },
+        "keel": {
+          "residuary_N": 0.01639889545089368,
+          "viscous_N": 11.816684033222613,
+          "total_N": 11.833082928673507
+        },
+        "rudder": {
+          "residuary_N": 0.0,
+          "viscous_N": 4.543855823635331,
+          "total_N": 4.543855823635331
+        },
+        "induced_N": 0.0,
+        "total_N": 58.77398218068344
+      },
+      {
+        "speed_kn": 5.0,
+        "speed_mps": 2.57222,
+        "fn": 0.30720490666344163,
+        "canoe": {
+          "residuary_N": 66.7423060205211,
+          "viscous_N": 94.48836686312302,
+          "total_N": 161.23067288364413
+        },
+        "keel": {
+          "residuary_N": -8.17440154873872,
+          "viscous_N": 30.95455881919444,
+          "total_N": 22.780157270455717
+        },
+        "rudder": {
+          "residuary_N": 0.0,
+          "viscous_N": 11.488156379154278,
+          "total_N": 11.488156379154278
+        },
+        "induced_N": 0.0,
+        "total_N": 195.4989865332541
+      },
+      {
+        "speed_kn": 6.0,
+        "speed_mps": 3.086664,
+        "fn": 0.3686458879961299,
+        "canoe": {
+          "residuary_N": 209.18413757627718,
+          "viscous_N": 131.93388477743895,
+          "total_N": 341.1180223537161
+        },
+        "keel": {
+          "residuary_N": 24.876372043573348,
+          "viscous_N": 43.77510639776122,
+          "total_N": 68.65147844133458
+        },
+        "rudder": {
+          "residuary_N": 0.0,
+          "viscous_N": 16.07691470207059,
+          "total_N": 16.07691470207059
+        },
+        "induced_N": 0.0,
+        "total_N": 425.84641549712126
+      }
+    ]
+  }
 }

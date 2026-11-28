@@ -109,12 +109,23 @@ DampingModule::DampingModule(const DampingCoefficients& coefficients)
     : coefficients_(coefficients) {}
 
 void DampingModule::accumulate(const State& state, double, Wrench& wrench) {
-    wrench.force.z() +=
-        damping_force(coefficients_.heave, multipliers_[0], state.linear_velocity.z());
-    wrench.moment.x() +=
-        damping_force(coefficients_.roll, multipliers_[1], state.angular_velocity.x());
-    wrench.moment.y() +=
-        damping_force(coefficients_.pitch, multipliers_[2], state.angular_velocity.y());
+    const Mat3 rot = state.rotation();
+    const Vec3 body_x = rot.col(0);
+    const double heading = std::atan2(body_x.y(), body_x.x());
+    const Vec3 x_h(std::cos(heading), std::sin(heading), 0.0);
+    const Vec3 y_h(-x_h.y(), x_h.x(), 0.0);
+
+    const double heave_rate = (rot * state.linear_velocity).z();
+    const Vec3 omega_world = rot * state.angular_velocity;
+    const double roll_rate = x_h.dot(omega_world);
+    const double pitch_rate = y_h.dot(omega_world);
+
+    const double heave = damping_force(coefficients_.heave, multipliers_[0], heave_rate);
+    const double roll = damping_force(coefficients_.roll, multipliers_[1], roll_rate);
+    const double pitch = damping_force(coefficients_.pitch, multipliers_[2], pitch_rate);
+
+    wrench.force += rot.transpose() * Vec3(0.0, 0.0, heave);
+    wrench.moment += rot.transpose() * (roll * x_h + pitch * y_h);
 }
 
 void DampingModule::set_multiplier(DampingDof dof, double multiplier) {

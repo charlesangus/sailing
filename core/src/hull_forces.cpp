@@ -40,7 +40,7 @@ double damping_force(const DampingCoefficient& c, double velocity) {
 }  // namespace
 
 HullForceParams load_hull_force_params(const std::filesystem::path& boat_dir,
-                                       const Vec3& reference_point) {
+                                       const Vec3& reference_point, const BodyProperties& body) {
     const Document forces_doc = read_document(boat_dir / "hull_forces.json");
     const Document hull_doc = read_document(boat_dir / "hull_hydro.json");
     const Document res_doc = read_document(boat_dir / "hull_resistance.json");
@@ -80,7 +80,15 @@ HullForceParams load_hull_force_params(const std::filesystem::path& boat_dir,
         0.5 * p.density * non_negative(yaw.at("crossflow_drag_coefficient")) * tc * l2 * l2 / 96.0;
     p.yaw = {yaw_quadratic * non_negative(yaw.at("linear_crossover_speed")) / (0.5 * lwl),
              yaw_quadratic};
+
+    p.munk_correction_fraction = non_negative(root.at("munk_correction").at("fraction"));
+    p.added_mass_surge = body.added_mass(0, 0);
+    p.added_mass_sway = body.added_mass(1, 1);
     return p;
+}
+
+HullForceParams load_hull_force_params(const MassModel& model) {
+    return load_hull_force_params(model.data().directory, model.cg(), model.body_properties());
 }
 
 HullForceModule::HullForceModule(std::shared_ptr<const HullResistanceModel> resistance,
@@ -140,9 +148,13 @@ void HullForceModule::accumulate(const State& state, double t, Wrench& wrench) {
     r.damping_force = Vec3(0.0, damping_force(params_.sway, relative_body.y()), 0.0);
     r.damping_moment = Vec3(0.0, 0.0, damping_force(params_.yaw, state.angular_velocity.z()));
 
+    r.munk_correction = blend * params_.munk_correction_fraction *
+                        (params_.added_mass_sway - params_.added_mass_surge) *
+                        relative_body.x() * relative_body.y();
+
     const Vec3 force = hydro_body + r.damping_force;
     r.wrench.force = force;
-    r.wrench.moment = arm.cross(force) + r.damping_moment;
+    r.wrench.moment = arm.cross(force) + r.damping_moment + Vec3(0.0, 0.0, r.munk_correction);
     wrench += r.wrench;
 }
 

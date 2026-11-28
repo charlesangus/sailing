@@ -102,7 +102,7 @@ double roll_decay_zeta(double speed, bool with_foils) {
     sail::HydrostaticsModule hydrostatics(hydro.mesh, params);
     sail::DampingModule damping(sail::load_damping(model));
     sail::HullForceModule hull(sail::load_hull_resistance(kBoatDir),
-                               sail::load_hull_force_params(kBoatDir, model.cg()));
+                               sail::load_hull_force_params(model));
     Appendages app(naca0012(), naca0012(), kBoatDir, model.cg());
     SpeedHold hold(body.mass, speed);
 
@@ -262,7 +262,7 @@ TEST_CASE("positive tiller turns the boat to starboard: negative yaw moment at s
         Foils f;
         const sail::BodyProperties body = f.model.body_properties();
         sail::HullForceModule hull(sail::load_hull_resistance(kBoatDir),
-                                   sail::load_hull_force_params(kBoatDir, f.model.cg()));
+                                   sail::load_hull_force_params(f.model));
         SpeedHold hold(body.mass, 3.0);
         Simulation sim(body, moving(Vec3(3.0, 0.0, 0.0)));
         sim.add_module(hull);

@@ -19,7 +19,7 @@ Geometry, mass, rig, sail and performance data for a generic (class-standard) J/
 | `appendages.obj` | Keel and rudder solids (objects `keel`, `rudder`), each watertight | m; body frame | `tools/hull/appendages.py` |
 | `pyvpp_polar_nospi.csv` | Python-VPP main + jib polar, same columns as `orc_polar.csv` | kn, deg | `tools/vpp/run_pyvpp.py` |
 | `pyvpp_polar_upwind_check.md` | Upwind comparison with the certificate and the full VPP input list | prose | `tools/vpp/run_pyvpp.py` |
-| `controls.json` | Rudder hard-over angle, actuation rate and keel downwash factor, with the tiller and rudder sign convention | deg, deg/s | by hand (estimates) |
+| `controls.json` | Rudder hard-over angle, actuation rate and keel downwash factor, with the tiller and rudder sign convention | deg, deg/s | by hand (rudder stop calibrated to a 1.5 LOA turning circle at 5 kn; rate and downwash estimated) |
 | `hull_resistance.json` | Hull resistance model choice (`orc`), water density and viscosity, path to the shared ORC drag surfaces, Python-VPP immersed-rail factor (not ORC 2023) | SI, deg | by hand |
 | `hull_resistance_reference.json` | Python-VPP canoe-body Rr, Rv and total at Fn 0.20/0.35/0.45 and heel 0/20/35 deg, with the deviations from ORC 2023 | N, m/s, deg | `tools/vpp/hull_reference.py` |
 

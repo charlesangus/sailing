@@ -25,6 +25,7 @@ using sail::MassModel;
 using sail::Quat;
 using sail::State;
 using sail::Vec3;
+using sail::Vec6;
 using sail::Wrench;
 
 const std::filesystem::path kBoatDir = std::filesystem::path(SAIL_TEST_DATA_DIR) / "boats" / "j80";
@@ -35,7 +36,7 @@ struct Hull {
     MassModel model = MassModel::load(kBoatDir);
     std::shared_ptr<const sail::HullResistanceModel> resistance =
         sail::load_hull_resistance(kBoatDir);
-    HullForceParams params = sail::load_hull_force_params(kBoatDir, model.cg());
+    HullForceParams params = sail::load_hull_force_params(model);
     HullForceModule module{resistance, params};
 
     Wrench apply(const State& state) {
@@ -84,7 +85,8 @@ TEST_CASE("hull force parameters derive from the J/80 dossier") {
                    << ", k " << p.side_force_coefficient << ", sway " << p.sway.linear << " / "
                    << p.sway.quadratic << ", yaw " << p.yaw.linear << " / " << p.yaw.quadratic);
 
-    CHECK_THROWS_AS(sail::load_hull_force_params(kBoatDir / "no_such_dir"), sail::BoatDataError);
+    CHECK_THROWS_AS(sail::load_hull_force_params(kBoatDir / "no_such_dir", Vec3::Zero(),
+                                                    sail::BodyProperties{}), sail::BoatDataError);
 }
 
 TEST_CASE("towed upright at zero leeway the drag is the model's total, opposite the velocity") {
@@ -188,7 +190,7 @@ TEST_CASE("water moving with the hull gives no force") {
     MassModel model = MassModel::load(kBoatDir);
     const Vec3 v_world(1.2, -0.4, 0.0);
     HullForceModule module(sail::load_hull_resistance(kBoatDir),
-                           sail::load_hull_force_params(kBoatDir, model.cg()),
+                           sail::load_hull_force_params(model),
                            std::make_shared<UniformCurrent>(v_world));
     State s = moving(Vec3::Zero(), Quat(Eigen::AngleAxisd(0.7, Vec3::UnitZ())));
     s.linear_velocity = s.orientation.conjugate() * v_world;
@@ -238,7 +240,7 @@ TEST_CASE("J/80 drifting sideways at 1 m/s decelerates monotonically") {
     sim.add_module(std::make_unique<sail::HydrostaticsModule>(hydro.mesh, hparams));
     sim.add_module(std::make_unique<sail::DampingModule>(sail::load_damping(model)));
     sim.add_module(std::make_unique<HullForceModule>(
-        sail::load_hull_resistance(kBoatDir), sail::load_hull_force_params(kBoatDir, model.cg())));
+        sail::load_hull_resistance(kBoatDir), sail::load_hull_force_params(model)));
 
     const auto horizontal_speed = [](const State& s) {
         const Vec3 v = s.world_linear_velocity();
@@ -261,4 +263,43 @@ TEST_CASE("J/80 drifting sideways at 1 m/s decelerates monotonically") {
     CHECK(previous < 0.6);
     CHECK(previous > 0.0);
     MESSAGE("horizontal speed after 10 s of beam-on drift: " << previous << " m/s");
+}
+
+TEST_CASE("the Munk correction cancels the fraction f of the integrator's Munk yaw moment") {
+    Hull hull;
+    const sail::BodyProperties body = hull.model.body_properties();
+    CHECK(hull.params.munk_correction_fraction == doctest::Approx(0.5));
+    CHECK(hull.params.added_mass_surge == doctest::Approx(body.added_mass(0, 0)));
+    CHECK(hull.params.added_mass_sway == doctest::Approx(body.added_mass(1, 1)));
+
+    HullForceParams without = hull.params;
+    without.munk_correction_fraction = 0.0;
+    HullForceModule uncorrected(hull.resistance, without);
+
+    for (const Vec3& v : {Vec3(2.5, 0.2, 0.0), Vec3(3.0, -0.25, 0.1), Vec3(-1.0, 0.3, 0.0)}) {
+        CAPTURE(v.transpose());
+        const State s = moving(v);
+        Vec6 nu;
+        nu << s.linear_velocity, s.angular_velocity;
+        const Vec6 p = body.generalised_mass() * nu;
+        const double integrator_munk = -v.cross(p.head<3>()).z();
+
+        const Wrench w = hull.apply(s);
+        const double correction = hull.module.last_result().munk_correction;
+        CHECK(correction == doctest::Approx(-0.5 * integrator_munk));
+        Wrench base;
+        uncorrected.accumulate(s, 0.0, base);
+        CHECK(w.moment.z() - base.moment.z() == doctest::Approx(correction));
+        CHECK((w.force - base.force).norm() == 0.0);
+    }
+}
+
+TEST_CASE("the Munk correction is zero at rest and with no drift") {
+    Hull hull;
+    hull.apply(moving(Vec3::Zero()));
+    CHECK(hull.module.last_result().munk_correction == 0.0);
+    hull.apply(moving(Vec3(3.0, 0.0, 0.0)));
+    CHECK(hull.module.last_result().munk_correction == 0.0);
+    hull.apply(moving(Vec3(0.0, 0.8, 0.0)));
+    CHECK(hull.module.last_result().munk_correction == 0.0);
 }

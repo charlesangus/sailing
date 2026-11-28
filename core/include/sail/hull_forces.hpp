@@ -5,6 +5,7 @@
 
 #include "sail/damping.hpp"
 #include "sail/hull_resistance.hpp"
+#include "sail/mass_model.hpp"
 #include "sail/rigid_body.hpp"
 #include "sail/simulation.hpp"
 
@@ -40,14 +41,23 @@ struct HullForceParams {
     // (N*m*s/rad, N*m*s^2/rad^2).
     DampingCoefficient sway;
     DampingCoefficient yaw;
+    // Fraction f of the integrator's ideal-fluid Munk yaw moment that this module cancels.
+    double munk_correction_fraction = 0.0;
+    // kg, the surge and sway diagonal of the body's added mass.
+    double added_mass_surge = 0.0;
+    double added_mass_sway = 0.0;
 };
 
 // Reads hull_forces.json, hull_hydro.json `conditions.sailing.result` (lwl, tc, lcb_x_canoe,
 // sinkage_m) and hull_resistance.json `water.density` from a boat dossier directory and derives
-// the coefficients as hull_forces.json describes. `reference_point` is the CG, hull frame. Throws
-// BoatDataError on a missing or malformed file or field, or a negative or non-positive value.
+// the coefficients as hull_forces.json describes. `reference_point` is the CG, hull frame, and
+// `body` supplies the surge and sway added mass. Throws BoatDataError on a missing or malformed
+// file or field, or a negative or non-positive value.
 HullForceParams load_hull_force_params(const std::filesystem::path& boat_dir,
-                                       const Vec3& reference_point = Vec3::Zero());
+                                       const Vec3& reference_point, const BodyProperties& body);
+
+// The same for the model's boat directory, CG and body properties.
+HullForceParams load_hull_force_params(const MassModel& model);
 
 // What the latest accumulate() computed.
 struct HullForceResult {
@@ -68,6 +78,8 @@ struct HullForceResult {
     // Body frame: sway damping force at the CLR, and the yaw damping moment.
     Vec3 damping_force = Vec3::Zero();
     Vec3 damping_moment = Vec3::Zero();
+    // Body-frame yaw moment of the Munk correction, N*m.
+    double munk_correction = 0.0;
     // Everything above, body frame, about the CG.
     Wrench wrench;
 };
@@ -81,6 +93,15 @@ struct HullForceResult {
 // the horizontal velocity, signed to oppose u_lat ahead and astern alike, and the induced drag
 // opposes the velocity. The leeway angle is never divided by speed: its sine and cosine come from
 // atan2, and below blend_speed the leeway terms fade to zero.
+//
+// Force modules add no Munk terms, yet this one adds the yaw moment
+// +f (A_sway - A_surge) u v, with u and v the body-frame water-relative velocity at the CLR, also
+// faded in by smoothstep(U / blend_speed). It is not a second Munk term but a lift correction to
+// the integrator's: the integrator applies the full ideal-fluid moment -(A_sway - A_surge) u v from
+// the constant added mass, which assumes attached potential flow over the whole body. A lifting
+// canoe body sheds its cross-flow from about the maximum section aft, and slender-body theory with
+// that Kutta-like condition gives only about half the ideal-fluid moment, so this module cancels
+// the fraction f of it.
 class HullForceModule final : public ForceModule {
 public:
     // A null `current` means still water.

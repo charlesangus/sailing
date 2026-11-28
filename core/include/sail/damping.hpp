@@ -77,7 +77,16 @@ DampingCoefficients derive_damping(const DampingSpec& spec, const DampingStiffne
 // model's current mass properties.
 DampingCoefficients load_damping(const MassModel& model);
 
-// Damping of heave (body z velocity), roll and pitch (body x and y angular velocity).
+// Damping of heave, roll and pitch, measured against the water surface rather than the hull.
+//
+// Heave is the CG's world-vertical velocity and its force acts along world z; roll and pitch are
+// the components of the world angular velocity about the horizontal heading axis x_h and the
+// horizontal axis 90 degrees to port of it, y_h, and their moments act about those same axes.
+// With yaw-pitch-roll angles these rates are phi_dot cos(theta) and theta_dot. Body-frame rates
+// would damp motions with no restoring stiffness behind them: at a trim angle or heeled with
+// leeway, steady forward motion has a body-z velocity, and in a heeled turn body q picks up
+// r sin(phi). Each force or moment acts along the rate it damps, so the module only ever
+// removes energy.
 class DampingModule final : public ForceModule {
 public:
     explicit DampingModule(const DampingCoefficients& coefficients);

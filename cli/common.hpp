@@ -1,13 +1,16 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include "sail/boat_sim.hpp"
 #include "sail/equilibrium.hpp"
+#include "sail/hull_resistance.hpp"
 #include "sail/mass_model.hpp"
 
 namespace sailcli {
@@ -49,6 +52,15 @@ struct LoadedBoat {
 // Throws UsageError when --boat is missing or not a directory.
 LoadedBoat load_boat(const Options& options, sail::MassConfiguration configuration);
 
+// "orc" or "dsyhs"; absent means the dossier's choice.
+std::optional<sail::HullResistanceKind> parse_resistance_model(const std::optional<std::string>& value);
+
+// The full force model of --boat with the keel and rudder section from --section, by default
+// foils/naca0012.csv two directories above the boat dossier. Throws UsageError when --boat is
+// missing or not a directory, or the section file does not exist.
+std::unique_ptr<sail::BoatSim> load_boat_sim(const Options& options,
+                                             const sail::BoatSimOptions& sim_options);
+
 double deg(double rad);
 double rad(double deg);
 
@@ -59,5 +71,7 @@ int guarded(const char* command, const char* usage, int (*body)(const Options&),
 int run_hydro(const Args& args);
 int run_gz(const Args& args);
 int run_bench(const Args& args);
+int run_tow(const Args& args);
+int run_turn(const Args& args);
 
 }  // namespace sailcli

@@ -6,6 +6,7 @@ configure_file(
 
 add_library(sailcore STATIC
     src/appendages.cpp
+    src/boat_sim.cpp
     src/boat_data.cpp
     src/damping.cpp
     src/equilibrium.cpp
@@ -52,6 +53,8 @@ if(SAIL_BUILD_TESTS)
         tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp
         tests/test_j80_hydrostatics.cpp
+        tests/test_j80_tow.cpp
+        tests/test_j80_turn.cpp
         tests/test_main.cpp
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
