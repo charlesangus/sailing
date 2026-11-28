@@ -59,7 +59,7 @@ and trim and reproducing the certificate's righting-moment figures.
 
 ## Phase 3.3: Validation
 
-- [ ] M3.P3.T1 — J/80 hydrostatic and stability regression tests
+- [x] M3.P3.T1 — J/80 hydrostatic and stability regression tests
   - files: core/tests/test_j80_hydrostatics.cpp
   - approach: doctest cases loading the real dossier, at measurement trim (1438 kg, no crew). At rest: displaced mass equals dossier displacement within 1%, trim within 0.5° of level DWL, draft matches dossier within 2%. Stability: report RM at 1° against the certificate (expected about +13%: the morphed hull is too stiff, accepted by user decision) and assert it lies between 0% and +20%. AVS in the ORC stability-trim configuration (VCG at VCGM, crew and gear per the mass model's ORC configuration, trim held level) within 5° of the certificate LPS 111.7° (consultant measured 111.6°); report measurement-trim AVS and free-trim AVS for information. Knockdown: released from 100° heel in flat water with heavy roll damping, the boat returns within 10° of upright within 20 s.
   - verify: `ctest --preset dev -R j80_hydro` passes.
