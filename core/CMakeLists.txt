@@ -8,6 +8,7 @@ add_library(sailcore STATIC
     src/boat_data.cpp
     src/damping.cpp
     src/equilibrium.cpp
+    src/foil.cpp
     src/gravity.cpp
     src/hull_forces.cpp
     src/hull_resistance.cpp
@@ -44,6 +45,7 @@ if(SAIL_BUILD_TESTS)
     add_executable(sailcore_tests
         tests/test_bench_budget.cpp
         tests/test_damping.cpp
+        tests/test_foil.cpp
         tests/test_hull_forces.cpp
         tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp
