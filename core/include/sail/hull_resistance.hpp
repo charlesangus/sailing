@@ -281,10 +281,27 @@ DsyhsHullParameters load_dsyhs_hull_parameters(const std::filesystem::path& boat
 // is not strictly ascending.
 OrcHullParameters load_orc_hull_parameters(const std::filesystem::path& boat_dir);
 
-// The model hull_resistance.json `model` names ("orc" when absent), built from the boat dir.
+// Another model's residuary, viscous and total resistance times `factor`; the range fields
+// are the other model's.
+class ScaledHullResistance final : public HullResistanceModel {
+public:
+    // Throws std::invalid_argument on a null model or a non-positive factor.
+    ScaledHullResistance(std::unique_ptr<HullResistanceModel> model, double factor);
+
+    HullResistance resistance(double speed_mps, double heel_rad) const override;
+    HullResistanceKind kind() const override { return model_->kind(); }
+    double factor() const { return factor_; }
+
+private:
+    std::unique_ptr<HullResistanceModel> model_;
+    double factor_;
+};
+
+// The model hull_resistance.json `model` names ("orc" when absent), built from the boat dir and
+// scaled by calibration.json's hull_resistance when that is not 1.
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir);
 
-// The given model, ignoring hull_resistance.json `model`.
+// The given model, ignoring hull_resistance.json `model`, with the same calibration.
 std::unique_ptr<HullResistanceModel> load_hull_resistance(const std::filesystem::path& boat_dir,
                                                           HullResistanceKind kind);
 

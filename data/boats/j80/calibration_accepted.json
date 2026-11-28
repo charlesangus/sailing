@@ -1,0 +1,10 @@
+[
+  {
+    "tws": 16,
+    "point": 75,
+    "metric": "bsp",
+    "min_error_pct": -6.0,
+    "max_error_pct": 0.0,
+    "reason": "owner accepted: -5.4% against the ORC certificate; the certificate polar assumes ORC's default 411 kg crew while the sim sails the 350 kg class maximum (a 411 kg probe recovers about 2 points); bound 0.6 points beyond the residual so a drift fails, signed so a fast point is not accepted"
+  }
+]

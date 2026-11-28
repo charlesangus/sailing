@@ -37,6 +37,8 @@ The `release` preset (`cmake --preset release`, `cmake --build --preset release`
 
 The `bench` preset (`cmake --preset bench`, `cmake --build --preset bench`, `ctest --preset bench`) builds the core, CLI and tests in Release without godot-cpp, in about a minute. Use it for `build/bench/cli/sailsim bench --boat data/boats/j80` and for the step-cost budget test. Other builds mark that test with doctest's skip decorator: ctest does not list it, and a direct run of `sailcore_tests` counts it as skipped.
 
+The milestone gate is `ctest --preset bench -L slow`. It runs the polar regression (`core/tests/test_j80_polar.cpp`): TWS 10 kn at TWA 45, 90 and 135 deg, sailed with the stored trims in `data/boats/j80/polar_regression.json` and no trim search, each point required to settle and to land within 5% of the reference polar (ORC certificate up to 75 deg, Python-VPP above, linear in TWA). It is Release-only like the budget test, so `ctest --preset dev` neither lists nor runs it; plain `ctest --preset bench` runs it with everything else, which costs a few seconds, and `-L slow` runs it alone. Its TWA is the course's, heading plus leeway, like every polar TWA. Refresh the stored trims from `sim_polar.csv` when the calibrated polar is regenerated; the current ones come from a polar that held the heading TWA, so they are 3 to 5 deg off their course angle upwind and a little off it at 90 deg.
+
 Build output goes to `build/<preset>/`.
 
 ## Layout

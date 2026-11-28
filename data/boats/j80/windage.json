@@ -1,0 +1,146 @@
+{
+  "comments": "Aerodynamic drag of the above-water boat that is not a sail: mast, boom, standing rigging, hull topsides and crew, for sail::WindageModule. Element dimensions are not repeated here: the mast section, heights and boom come from rig.json, the wire attachment points from rig.json, the freeboards, beam and LOA from particulars.json, the canoe-body draft from hull_hydro.json and the crew count from mass.json. This file holds the drag coefficients, the wire diameters, the crew areas and the discretisation. Drag of an element is 0.5 rho Cd A |V| V along the apparent wind V at the element's centre, with A the area projected normal to V; the Cd values are ORC VPP Documentation 2023 table 5.10 where it gives one. The ORC rig windage assumes the mainsail is set (MAST-Sail, Cd 0.4 to 0.6); this model always uses the bare-mast Cd, so with sails set the mast drag is overstated by the difference.",
+  "mast": {
+    "strips": {
+      "value": 10,
+      "unit": "-",
+      "source": "choice",
+      "confidence": "high",
+      "method": "equal-height strips from the sheer at the mast to the masthead, each with the apparent wind at its own height"
+    },
+    "cd_front": {
+      "value": 0.8,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, table 5.10, MAST-Bare, apparent wind angle 0",
+      "confidence": "medium",
+      "method": "ORC's value is on the front area; ORC's EDM factor for a non-standard section aspect ratio is not applied"
+    },
+    "cd_side": {
+      "value": 0.8,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, table 5.10, MAST-Bare, apparent wind angle 90",
+      "confidence": "medium",
+      "method": "ORC's value is on the side area; the section is the constant mast_section_transverse by mast_section_fore_aft of rig.json, ignoring taper and rake"
+    }
+  },
+  "boom": {
+    "cd_side": {
+      "value": 1.0,
+      "unit": "-",
+      "source": "standard value for a bluff cylinder or rounded rectangle in cross-flow at Re of 1e4 to 1e5",
+      "confidence": "low",
+      "method": "ORC folds the boom into the mainsail; here it is a box of rig.json boom_section_depth square and e long"
+    },
+    "cd_end": {
+      "value": 1.1,
+      "unit": "-",
+      "source": "standard value for a flat blunt end face in axial flow",
+      "confidence": "low",
+      "method": "applied to the depth by depth end area"
+    }
+  },
+  "rigging": {
+    "cd": {
+      "value": 1.0,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, table 5.10, RIGGING, 1.0",
+      "confidence": "medium",
+      "method": "normal-flow Cd of a wire on its diameter times length times the sine of the angle to the wind"
+    },
+    "spreader_factor": {
+      "value": 0.2,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, eq. 5.33, spreader Factor windage",
+      "confidence": "high",
+      "method": "the wire Cd is multiplied by 1 + this factor to stand for the swept spreaders"
+    },
+    "forestay_diameter": {
+      "value": 0.0047,
+      "unit": "m",
+      "source": "rig.json standing_rigging_wire: uppers, lowers and forestay 4.7 mm",
+      "confidence": "medium",
+      "method": "the furled jib's roller-furling foil is not modelled"
+    },
+    "upper_shroud_diameter": {
+      "value": 0.0047,
+      "unit": "m",
+      "source": "rig.json standing_rigging_wire: uppers 4.7 mm",
+      "confidence": "medium",
+      "method": "one wire per side from the hounds to the chainplate"
+    },
+    "intermediate_shroud_diameter": {
+      "value": 0.004,
+      "unit": "m",
+      "source": "rig.json standing_rigging_wire: intermediates 4.0 mm",
+      "confidence": "medium",
+      "method": "one wire per side from the upper spreader height on the mast to the chainplate, a straight line that ignores the spreader tips"
+    },
+    "lower_shroud_diameter": {
+      "value": 0.0047,
+      "unit": "m",
+      "source": "rig.json standing_rigging_wire: lowers 4.7 mm",
+      "confidence": "medium",
+      "method": "one wire per side from the lower spreader height on the mast to the chainplate; the fore and aft lowers of a real rig are one wire here"
+    },
+    "backstay_diameter": {
+      "value": 0.004,
+      "unit": "m",
+      "source": "rig.json standing_rigging_wire: upper backstay 4.0 mm",
+      "confidence": "low",
+      "method": "one wire from the masthead to the transom centreline at the aft freeboard; the 3.0 mm lower legs of the split backstay are left out"
+    }
+  },
+  "hull": {
+    "cd": {
+      "value": 0.816,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, table 5.10, HULL, 0.816 at apparent wind angles 0 and 90",
+      "confidence": "medium",
+      "method": "applied to each topsides panel on its area above the water, projected normal to the wind"
+    },
+    "panels_per_side": {
+      "value": 8,
+      "unit": "-",
+      "source": "choice",
+      "confidence": "high",
+      "method": "each side is this many vertical panels at y = +-beam/2 from the stem to the transom, with freeboard piecewise linear through freeboard_fwd_ffm at the stem, freeboard_at_mast at the mast and freeboard_aft_fam at the transom; the bottom edge is the canoe-body draft tc below the flotation plane, and only the area above the water, found per panel by clipping the rotated panel at world z = 0, is used"
+    }
+  },
+  "crew": {
+    "cd": {
+      "value": 1.08,
+      "unit": "-",
+      "source": "ORC VPP Documentation 2023, table 5.10, CREW, 1.08",
+      "confidence": "medium",
+      "method": "one box per crew point at the MassModel crew position, areas per person below times crew_count of mass.json"
+    },
+    "sitting_front_area_per_person": {
+      "value": 0.25,
+      "unit": "m^2",
+      "source": "ORC VPP Documentation 2023, table 5.10, CREW reference area at apparent wind angle 0, 0.25",
+      "confidence": "low",
+      "method": "ORC gives one figure for the crew; read here as per person, which is an interpretation"
+    },
+    "sitting_side_area_per_person": {
+      "value": 0.5,
+      "unit": "m^2",
+      "source": "ORC VPP Documentation 2023, table 5.10, CREW reference area at apparent wind angle 90, 0.5 times the crew mass term",
+      "confidence": "low",
+      "method": "the mass term is unclear in the text; 0.5 m^2 per person is used as a seated person's side silhouette"
+    },
+    "hiking_front_area_per_person": {
+      "value": 0.3,
+      "unit": "m^2",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "the body leans out, so the head-on silhouette widens slightly over the seated one"
+    },
+    "hiking_side_area_per_person": {
+      "value": 0.4,
+      "unit": "m^2",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "the body leans out and shows less of the side silhouette than a seated one"
+    }
+  }
+}

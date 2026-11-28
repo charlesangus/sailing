@@ -1,5 +1,6 @@
-add_executable(sailsim main.cpp common.cpp cmd_bench.cpp cmd_hydro.cpp cmd_gz.cpp cmd_tow.cpp cmd_turn.cpp)
-target_link_libraries(sailsim PRIVATE sailcore nlohmann_json::nlohmann_json)
+add_executable(sailsim main.cpp common.cpp cmd_bench.cpp cmd_hydro.cpp cmd_gz.cpp cmd_polar.cpp cmd_tow.cpp cmd_turn.cpp)
+find_package(Threads REQUIRED)
+target_link_libraries(sailsim PRIVATE sailcore nlohmann_json::nlohmann_json Threads::Threads)
 target_compile_definitions(sailsim PRIVATE SAIL_BUILD_TYPE="$<CONFIG>")
 sail_enable_warnings(sailsim)
 sail_optimise_debug(sailsim)

@@ -22,6 +22,15 @@ Geometry, mass, rig, sail and performance data for a generic (class-standard) J/
 | `controls.json` | Rudder hard-over angle, actuation rate and keel downwash factor, with the tiller and rudder sign convention | deg, deg/s | by hand (rudder stop calibrated to a 1.5 LOA turning circle at 5 kn; rate and downwash estimated) |
 | `hull_resistance.json` | Hull resistance model choice (`orc`), water density and viscosity, path to the shared ORC drag surfaces, Python-VPP immersed-rail factor (not ORC 2023) | SI, deg | by hand |
 | `hull_resistance_reference.json` | Python-VPP canoe-body Rr, Rv and total at Fn 0.20/0.35/0.45 and heel 0/20/35 deg, with the deviations from ORC 2023 | N, m/s, deg | `tools/vpp/hull_reference.py` |
+| `sheets.json` | Main and jib sheet, traveler, backstay, jib car and reef mappings (max angle, flat at full backstay, flat with car aft, reefed area fraction, reef transition time), all low-confidence estimates | deg, m, s, dimensionless | by hand |
+| `windage.json` | Drag coefficients (ORC table 5.10 where given), wire diameters and crew areas for mast, boom, rigging, topsides and crew; dimensions come from rig.json, particulars.json, hull_hydro.json and mass.json | m, m^2, dimensionless | ORC VPP Documentation 2023, estimates |
+| `damping.json` | Linear and quadratic heave, roll and pitch damping for `sail::DampingModule`, measured against the water surface | SI, per DOF | by hand |
+| `hull_forces.json` | Canoe-body side force, sway, Munk correction and yaw coefficients for `sail::HullForceModule`, keel and rudder excluded | dimensionless; body frame | by hand |
+| `crew.json` | Auto-hiking crew controller: rail geometry, heel threshold and full-hike heel, light-air and downwind fades, rail-to-rail transit time, posture and update thresholds | m, deg, kn, s | deck half-width from `hull_visual.obj`; the rest judgement values |
+| `calibration.json` | Calibration multipliers on the sail, hull and windage force models, each with its meaning, source, rationale and change; every one at 1 | dimensionless | by hand, against `tools/calib/compare_polar.py` |
+| `calibration_accepted.json` | Residuals the owner accepted outside the 5% tolerance, each with a bound (signed when `min_error_pct` is given) and a reason, read by `compare_polar.py` | %, deg | by hand |
+| `sim_polar.csv` | The calibrated `sailsim polar` output: beat, fixed TWA and run rows per TWS, with course and heading TWA, BSP, VMG, heel, leeway, rudder and the trim found | kn, deg; trim controls 0..1 or -1..1 | `sailsim polar --beat --run` |
+| `polar_regression.json` | Stored trims at TWS 10 kn, TWA 45, 90 and 135 deg for the slow polar regression test, with each point's provenance | trim controls as `sim_polar.csv` | copied from `sim_polar.csv` by hand |
 
 The DSYHS hull table the morph reads is `data/dsyhs/table.csv`; see `data/dsyhs/README.md`. The ORC residuary resistance surfaces are `data/hull/ORCi_Drag_Surfaces.csv`; see `data/hull/README.md`.
 

@@ -16,6 +16,12 @@ std::shared_ptr<const HullResistanceModel> resistance_model(
     return load_hull_resistance(boat_dir);
 }
 
+std::filesystem::path sail_dir(const std::filesystem::path& boat_dir,
+                               const std::optional<std::filesystem::path>& dir) {
+    if (dir) return *dir;
+    return boat_dir / ".." / ".." / "sails";
+}
+
 TowComponent resolve(const Vec3& force_world, const Vec3& d, const Vec3& n) {
     TowComponent c;
     c.resistance = -force_world.dot(d);
@@ -79,7 +85,14 @@ BoatSim::BoatSim(const std::filesystem::path& boat_dir, std::shared_ptr<const Fo
       damping_(load_damping(model_)),
       hull_(resistance_model(boat_dir, options.resistance),
             load_hull_force_params(model_)),
-      appendages_(section, section, boat_dir, model_.cg()) {}
+      appendages_(section, section, boat_dir, model_.cg()),
+      wind_(std::make_shared<const UniformWind>(0.0, 0.0)),
+      sails_(load_sail_set_params(boat_dir, sail_dir(boat_dir, options.sail_data_dir), model_.cg()),
+             wind_),
+      sheets_(load_sheet_params(boat_dir), sails_, wind_),
+      windage_(load_windage_params(model_), wind_),
+      crew_(load_crew_params(boat_dir, model_)),
+      pushed_crew_(model_.crew_position()) {}
 
 std::unique_ptr<BoatSim> BoatSim::load(const std::filesystem::path& boat_dir,
                                        std::shared_ptr<const FoilSection> section,
@@ -91,8 +104,22 @@ Equilibrium BoatSim::equilibrium(const EquilibriumRequest& request) const {
     return solve_equilibrium(hydro_.mesh, params_, body_.mass, request);
 }
 
+void BoatSim::set_wind(std::shared_ptr<const WindField> wind) {
+    if (!wind) throw std::invalid_argument("BoatSim::set_wind: null wind field");
+    sails_.set_wind(wind);
+    sheets_.set_wind(wind);
+    windage_.set_wind(wind);
+    wind_ = std::move(wind);
+}
+
+void BoatSim::set_controls(const Controls& controls) {
+    appendages_.set_controls(controls);
+    sheets_.set_controls(controls);
+}
+
 Wrench BoatSim::evaluate(const State& state, double t) {
     Wrench w;
+    if (aero_) sheets_.accumulate(state, t, w);
     gravity_.accumulate(state, t, w);
     hydrostatics_.accumulate(state, t, w);
     damping_.accumulate(state, t, w);
@@ -100,18 +127,106 @@ Wrench BoatSim::evaluate(const State& state, double t) {
     appendages_.keel().accumulate(state, t, w);
     appendages_.rudder().accumulate(state, t, w);
     thrust_.accumulate(state, t, w);
+    if (aero_) {
+        sails_.accumulate(state, t, w);
+        windage_.accumulate(state, t, w);
+    }
     return w;
 }
 
-Simulation& BoatSim::start(const State& initial) {
+Vec3 BoatSim::apply_crew(double y, double z, CrewPosture posture) {
+    const Vec3 old_cg = model_.cg();
+    model_.set_crew_position(y, z);
+    body_ = model_.body_properties();
+    const Vec3 shift = model_.cg() - old_cg;
+    const Vec3& cg = model_.cg();
+    params_.reference_point = cg;
+    gravity_.set_mass(body_.mass);
+    hydrostatics_.set_reference_point(cg);
+    hull_.set_reference_point(cg);
+    appendages_.set_reference_point(cg);
+    sails_.set_reference_point(cg);
+    windage_.set_reference_point(cg);
+    windage_.set_crew(windage_.params().crew.count, model_.crew_position(), posture);
+    pushed_crew_ = model_.crew_position();
+    pushed_posture_ = posture;
+    for (const CrewListener& listener : crew_listeners_) listener(cg, pushed_crew_, posture);
+    return shift;
+}
+
+void BoatSim::update_crew(double y, double z, CrewPosture posture) {
+    const Vec3 shift = apply_crew(y, z, posture);
+    if (sim_) sim_->set_body(body_, shift);
+}
+
+const CrewPosition& BoatSim::step_crew(double dt, const WindField& wind) {
+    Simulation& sim = simulation();
+    const State& state = sim.state();
+    const ApparentWind apparent = apparent_wind(state, rig_point(), wind, sim.time());
+    const CrewPosition& pos = crew_.step(dt, heel_angle(state.rotation()), apparent);
+    const double moved = std::hypot(pos.y - pushed_crew_.y(), pos.z - pushed_crew_.z());
+    if (moved >= crew_.params().update_min_move || pos.posture != pushed_posture_) {
+        update_crew(pos.y, pos.z, pos.posture);
+    }
+    return pos;
+}
+
+Vec3 BoatSim::rig_point() const {
+    const SailSetResult& sails = sails_.last_result();
+    Vec3 sum = Vec3::Zero();
+    double area = 0.0;
+    for (const SailState& st : sails.sails) {
+        sum += st.area * st.centre_of_effort;
+        area += st.area;
+    }
+    if (!(area > 0.0)) return Vec3::Zero();
+    return sum / area - sails_.params().reference_point;
+}
+
+void BoatSim::reset() {
     sim_.reset();
+    crew_.reset();
+    apply_crew(crew_.position().y, crew_.position().z, crew_.position().posture);
+    set_controls(Controls{});
+    sheets_.reset(0.0);
+    sails_.reset();
+    appendages_.rudder().reset(0.0);
+    thrust_.set_thrust(0.0);
+    aero_ = true;
+    set_wind(std::make_shared<const UniformWind>(0.0, 0.0));
+}
+
+void BoatSim::step() {
+    step_crew(Simulation::kFixedDt);
+    sim_->step();
+}
+
+Simulation& BoatSim::start(const State& initial) {
+    crew_.reset();
+    return start_with_crew(initial);
+}
+
+Simulation& BoatSim::start(const State& initial, double crew_y) {
+    crew_.reset(crew_y);
+    return start_with_crew(initial);
+}
+
+Simulation& BoatSim::start_with_crew(const State& initial) {
+    sim_.reset();
+    apply_crew(crew_.position().y, crew_.position().z, crew_.position().posture);
+    sheets_.reset(sheets_.controls().reef);
     sim_.emplace(body_, initial);
+    if (aero_) sim_->add_module(sheets_);
     sim_->add_module(gravity_);
     sim_->add_module(hydrostatics_);
     sim_->add_module(damping_);
     sim_->add_module(hull_);
     appendages_.add_to(*sim_);
     sim_->add_module(thrust_);
+    if (aero_) {
+        sim_->add_module(sails_);
+        sim_->add_module(windage_);
+    }
     return *sim_;
 }
 
@@ -121,6 +236,12 @@ Simulation& BoatSim::simulation() {
 }
 
 TowResult solve_tow(BoatSim& boat, const TowRequest& request) {
+    struct AeroRestore {
+        BoatSim& boat;
+        bool was;
+        ~AeroRestore() { boat.set_aero(was); }
+    } restore{boat, boat.aero()};
+    boat.set_aero(false);
     TowResult out;
     boat.thrust().set_thrust(0.0);
     boat.appendages().rudder().reset();
@@ -207,6 +328,7 @@ TurnResult run_turn(BoatSim& boat, const TurnRequest& request) {
     out.thrust = straight.tow_force_world.x();
 
     boat.thrust().set_thrust(out.thrust);
+    boat.set_aero(false);
     Simulation& sim = boat.start(straight.state);
     boat.appendages().set_controls(Controls{request.tiller});
 

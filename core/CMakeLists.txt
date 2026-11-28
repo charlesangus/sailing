@@ -8,18 +8,26 @@ add_library(sailcore STATIC
     src/appendages.cpp
     src/boat_sim.cpp
     src/boat_data.cpp
+    src/calibration.cpp
+    src/crew.cpp
     src/damping.cpp
     src/equilibrium.cpp
     src/foil.cpp
     src/gravity.cpp
+    src/harness/autopilot.cpp
+    src/harness/autotrim.cpp
     src/hull_forces.cpp
     src/hull_resistance.cpp
     src/hydrostatics.cpp
     src/mass_model.cpp
     src/mesh.cpp
     src/rigid_body.cpp
+    src/sails.cpp
+    src/sheets.cpp
     src/simulation.cpp
     src/version.cpp
+    src/wind.cpp
+    src/windage.cpp
 )
 add_library(sail::core ALIAS sailcore)
 target_include_directories(sailcore
@@ -47,18 +55,26 @@ if(SAIL_BUILD_TESTS)
     add_executable(sailcore_tests
         tests/test_appendages.cpp
         tests/test_bench_budget.cpp
+        tests/test_calibration.cpp
+        tests/test_crew.cpp
         tests/test_damping.cpp
         tests/test_foil.cpp
+        tests/test_harness.cpp
         tests/test_hull_forces.cpp
         tests/test_hull_resistance.cpp
         tests/test_hydrostatics.cpp
         tests/test_j80_hydrostatics.cpp
+        tests/test_j80_polar.cpp
         tests/test_j80_tow.cpp
         tests/test_j80_turn.cpp
         tests/test_main.cpp
         tests/test_mass_model.cpp
         tests/test_rigid_body.cpp
+        tests/test_sails.cpp
+        tests/test_sheets.cpp
         tests/test_version.cpp
+        tests/test_wind.cpp
+        tests/test_windage.cpp
     )
     target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest nlohmann_json::nlohmann_json)
     target_compile_definitions(sailcore_tests PRIVATE
@@ -67,5 +83,11 @@ if(SAIL_BUILD_TESTS)
     )
     sail_enable_warnings(sailcore_tests)
     sail_optimise_debug(sailcore_tests)
-    doctest_discover_tests(sailcore_tests)
+    doctest_discover_tests(sailcore_tests TEST_SPEC "*;--test-case-exclude=j80_polar*")
+    # The reduced-polar regression simulates minutes of sailing per point, so it carries the
+    # `slow` label that `ctest -L slow` selects, and it is Release-only (see the test).
+    doctest_discover_tests(sailcore_tests
+        TEST_SPEC "j80_polar*"
+        TEST_PREFIX "slow."
+        PROPERTIES LABELS slow TIMEOUT 900)
 endif()

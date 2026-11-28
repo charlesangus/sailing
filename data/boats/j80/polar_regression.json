@@ -1,0 +1,36 @@
+{
+  "source": "Trims copied from data/boats/j80/sim_polar.csv (sailsim polar, calibrated J/80), TWS 10 kn, starboard tack, jib sheets both sides equal.",
+  "tws_kn": 10.0,
+  "points": [
+    {
+      "twa_deg": 45.0,
+      "provenance": "sim_polar.csv has no 45 deg row: linear interpolation in TWA between the TWS 10 beat row (42.0622 deg, TWA to the course over water) and the 52 deg row, weight 0.2956 on the 52 deg row.",
+      "mainsheet": 0.9606,
+      "traveler": -0.9052,
+      "backstay": 0.0,
+      "jib_sheet": 0.9850,
+      "jib_car": 0.9318,
+      "reef": 0
+    },
+    {
+      "twa_deg": 90.0,
+      "provenance": "sim_polar.csv, TWS 10, fixed row 90 deg (TWA to the course over water).",
+      "mainsheet": 0.7659,
+      "traveler": 0.0557,
+      "backstay": 0.0,
+      "jib_sheet": 0.6200,
+      "jib_car": 0.4638,
+      "reef": 0
+    },
+    {
+      "twa_deg": 135.0,
+      "provenance": "sim_polar.csv, TWS 10, fixed row 135 deg (TWA to the course over water).",
+      "mainsheet": 0.0902,
+      "traveler": 0.0872,
+      "backstay": 0.0,
+      "jib_sheet": 0.7195,
+      "jib_car": 0.0115,
+      "reef": 0
+    }
+  ]
+}
