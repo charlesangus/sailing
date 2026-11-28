@@ -60,5 +60,6 @@ int guarded(const char* command, const char* usage, int (*body)(const Options&),
 
 int run_hydro(const Args& args);
 int run_gz(const Args& args);
+int run_bench(const Args& args);
 
 }  // namespace sailcli

@@ -39,6 +39,7 @@ if(SAIL_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
     add_executable(sailcore_tests
+        tests/test_bench_budget.cpp
         tests/test_damping.cpp
         tests/test_hydrostatics.cpp
         tests/test_j80_hydrostatics.cpp

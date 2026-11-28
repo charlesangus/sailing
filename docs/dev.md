@@ -35,6 +35,8 @@ The first build compiles godot-cpp from source, which takes about 15 minutes on 
 
 The `release` preset (`cmake --preset release`, `cmake --build --preset release`) builds an optimised core, CLI and GDExtension with tests off. The Godot test script uses the `dev` build.
 
+The `bench` preset (`cmake --preset bench`, `cmake --build --preset bench`, `ctest --preset bench`) builds the core, CLI and tests in Release without godot-cpp, in about a minute. Use it for `build/bench/cli/sailsim bench --boat data/boats/j80` and for the step-cost budget test, which is skipped in non-Release builds.
+
 Build output goes to `build/<preset>/`.
 
 ## Layout

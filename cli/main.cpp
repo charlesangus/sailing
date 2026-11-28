@@ -38,6 +38,7 @@ const std::vector<Command>& commands() {
         {"--help", "show this help", print_help},
         {"hydro", "upright flat-water equilibrium as JSON", sailcli::run_hydro},
         {"gz", "righting-moment and GZ curve over 0-180 deg heel as JSON", sailcli::run_gz},
+        {"bench", "per-module step cost of the J/80 simulation held at a heel, as JSON", sailcli::run_bench},
     };
     return table;
 }
