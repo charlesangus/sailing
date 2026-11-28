@@ -1,0 +1,26 @@
+{
+  "comments": "Helm and rudder actuation for sail::RudderForceModule. The rudder angle is right-handed about appendages.json foils.rudder stock_axis_direction (body +z, up): positive is the tiller to port and the trailing edge to starboard, which turns the boat to starboard. Controls::tiller in [-1, 1] commands tiller * max_angle, and the angle follows the command at no more than max_rate. The keel's downwash turns the rudder's inflow by keel_downwash_factor * alpha_keel.",
+  "rudder": {
+    "max_angle": {
+      "value": 35.0,
+      "unit": "deg",
+      "source": "estimate; no J/80 class rule or builder figure limits the rudder angle",
+      "confidence": "low",
+      "method": "the usual hard-over limit of a tiller-steered keelboat; well past the blade's stall (NACA 0012 at about 16 deg), so it is a stop, not a working angle"
+    },
+    "max_rate": {
+      "value": 60.0,
+      "unit": "deg/s",
+      "source": "estimate; no measurement",
+      "confidence": "low",
+      "method": "a helmsman sweeping the tiller across its range in about one second, i.e. lock to lock (70 deg) in a little over 1 s"
+    },
+    "keel_downwash_factor": {
+      "value": 0.5,
+      "unit": "-",
+      "source": "Prandtl lifting-line theory, far-wake downwash of an elliptically loaded wing eps = 2*CL/(pi*A) (e.g. J. D. Anderson, Fundamentals of Aerodynamics, ch. 5); estimate for the rudder's position",
+      "confidence": "low",
+      "method": "for the keel, CL = a*alpha with the Helmbold slope a = 3.21 /rad at A_eff = 2.88 (appendages.json foils.keel), so the far-wake downwash is 2*a/(pi*A_eff) = 0.71*alpha_keel. The rudder is 4.1 m (about 4 keel chords) aft, so the wake is near its far-field value, but the keel's effective aspect ratio is an upper bound (appendages.json) and the rudder spans only the upper part of the keel's wake near the free surface, both of which lower it; 0.5, about 70% of the far-wake value, is taken"
+    }
+  }
+}

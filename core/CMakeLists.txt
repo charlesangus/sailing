@@ -5,6 +5,7 @@ configure_file(
 )
 
 add_library(sailcore STATIC
+    src/appendages.cpp
     src/boat_data.cpp
     src/damping.cpp
     src/equilibrium.cpp
@@ -43,6 +44,7 @@ if(SAIL_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
     add_executable(sailcore_tests
+        tests/test_appendages.cpp
         tests/test_bench_budget.cpp
         tests/test_damping.cpp
         tests/test_foil.cpp
