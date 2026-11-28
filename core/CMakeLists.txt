@@ -5,6 +5,8 @@ configure_file(
 )
 
 add_library(sailcore STATIC
+    src/hydrostatics.cpp
+    src/mesh.cpp
     src/rigid_body.cpp
     src/simulation.cpp
     src/version.cpp
@@ -32,12 +34,16 @@ if(SAIL_BUILD_TESTS)
     include(${doctest_SOURCE_DIR}/scripts/cmake/doctest.cmake)
 
     add_executable(sailcore_tests
+        tests/test_hydrostatics.cpp
         tests/test_main.cpp
         tests/test_rigid_body.cpp
         tests/test_version.cpp
     )
     target_link_libraries(sailcore_tests PRIVATE sailcore doctest::doctest)
-    target_compile_definitions(sailcore_tests PRIVATE SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}")
+    target_compile_definitions(sailcore_tests PRIVATE
+        SAIL_TEST_EXPECTED_VERSION="${PROJECT_VERSION}"
+        SAIL_TEST_DATA_DIR="${PROJECT_SOURCE_DIR}/data"
+    )
     sail_enable_warnings(sailcore_tests)
     doctest_discover_tests(sailcore_tests)
 endif()
