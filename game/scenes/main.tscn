@@ -1,19 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://scenes/bay_terrain.tscn" id="2_terrain"]
 [ext_resource type="PackedScene" path="res://scenes/boat.tscn" id="3_boat"]
-
-[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_1"]
-
-[sub_resource type="Sky" id="Sky_1"]
-sky_material = SubResource("SkyMaterial_1")
-
-[sub_resource type="Environment" id="Environment_1"]
-background_mode = 2
-sky = SubResource("Sky_1")
-ambient_light_source = 3
-ambient_light_energy = 0.8
+[ext_resource type="PackedScene" path="res://scenes/environment.tscn" id="4_env"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -21,14 +11,9 @@ boat_path = NodePath("Boat")
 terrain_path = NodePath("BayTerrain")
 camera_path = NodePath("Camera")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment_1")
-
-[node name="Sun" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.866, -0.25, 0.433, 0, 0.866, 0.5, -0.5, -0.433, 0.75, 0, 100, 0)
-light_energy = 1.2
-
 [node name="BayTerrain" parent="." instance=ExtResource("2_terrain")]
+
+[node name="Environment" parent="." instance=ExtResource("4_env")]
 
 [node name="Boat" parent="." instance=ExtResource("3_boat")]
 
