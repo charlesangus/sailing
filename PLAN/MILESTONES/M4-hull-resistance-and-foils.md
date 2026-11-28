@@ -63,7 +63,7 @@ turning behaviour.
   - size: L
 - [ ] M4.P2.T2 — Keel and rudder with tiller input
   - files: core/include/sail/appendages.hpp, core/src/appendages.cpp, core/include/sail/controls.hpp, core/tests/test_appendages.cpp
-  - approach: Instantiate keel and rudder `Foil`s from `appendages.json`. Rudder angle from a `Controls` struct field `tiller` (−1..1 → ±35°) through a rate limit (~60°/s). Apply a downwash factor from the keel to the rudder's inflow angle (simple ε = k·α_keel, k configurable). Both are `ForceModule`s.
+  - approach: Instantiate keel and rudder `Foil`s from `appendages.json`. Rudder angle from a `Controls` struct field `tiller` (−1..1 → ±35°) through a rate limit (~60°/s). Apply a downwash factor from the keel to the rudder's inflow angle (simple ε = k·α_keel, k configurable). Both are `ForceModule`s. The generic `FoilForceModule` uses the full ω at the quarter-chord centre, so the keel already produces roll (and pitch) damping physically, while `damping.json` also carries a lumped roll ζ: decide how not to double-count it (e.g. reduce damping.json's roll ζ to the hull-only share, or let the foil carry roll damping and drop the lumped term) and check the J/80 roll decay stays plausible.
   - verify: doctest: at 5 kn with 3° leeway the keel produces side force of the expected sign and magnitude (hand-computed); the rudder angle follows a step tiller command at the rate limit.
   - size: M
 - [ ] M4.P2.T3 — Rudder hinge moment output
